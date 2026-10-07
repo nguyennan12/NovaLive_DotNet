@@ -1,42 +1,55 @@
-## Visual Studio / .NET Core
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+## Visual Studio / .NET Core build outputs
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+**/[Ll]ogs/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/x64/
+**/x86/
+**/[Aa]rms/
+**/[Aa]rm64/
+**/build/
+**/publish/
+
+## Test and coverage output
+**/TestResults/
+**/*.trx
+**/coverage/
+**/coverage.*
+
+## IDE & Editor configs
 .vs/
 .vscode/
 .idea/
+_ReSharper*/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 *.DotSettings.user
 
-# Build results
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa]rms/
-[Aa]rm64/
-build/
-
-# NuGet Packages
+## NuGet Packages & local caches
 *.nupkg
 *.snupkg
 **/packages/*
 !**/packages/build/
+.nuget/
 *.nuget.props
 *.nuget.targets
 project.lock.json
 project.assets.json
 
-# Environment Variables & Secrets
+## Environment Variables & Secrets
 .env
 .env.*
 !.env.example
+secrets.json
 
-# Local history & temp files
+## Docker local overrides
+docker-compose.override.yml
+
+## Operating system & temp files
 *.swp
 *~
 .DS_Store
