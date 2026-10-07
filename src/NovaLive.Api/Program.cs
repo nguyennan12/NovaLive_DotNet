@@ -72,15 +72,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Auto-run Database Seeders on Startup
-using (var scope = app.Services.CreateScope())
-{
-    var seeders = scope.ServiceProvider.GetServices<IDataSeeder>().OrderBy(s => s.Order);
-    foreach (var seeder in seeders)
-    {
-        await seeder.SeedAsync();
-    }
-}
+// Auto-run Database Migrations & Seeding on Startup
+await app.ApplyMigrationsAsync();
 
 // Middleware Pipeline
 app.UseExceptionHandler();

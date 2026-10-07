@@ -48,8 +48,9 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
-        // Seeding
+        // Migration & Seeding
         services.AddScoped<IDataSeeder, SystemDataSeeder>();
+        services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");

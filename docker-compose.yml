@@ -1,0 +1,3 @@
+# Quick root shortcut pointing to development environment
+include:
+  - docker/dev/docker-compose.yml
