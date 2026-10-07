@@ -1,6 +1,23 @@
 namespace NovaLive.Contracts.Common;
 
-public sealed record ApiResponse<T>(T Data, string? Message = null)
+public class ApiResponse<T>
 {
-    public static ApiResponse<T> Ok(T data, string? message = null) => new(data, message);
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public T? Data { get; set; }
+    public ApiError? Error { get; set; }
+
+    public static ApiResponse<T> Ok(T? data = default, string? message = null) => new()
+    {
+        Success = true,
+        Data = data,
+        Message = message
+    };
+
+    public static ApiResponse<T> Fail(ApiError error, string? message = null) => new()
+    {
+        Success = false,
+        Error = error,
+        Message = message ?? error?.Message
+    };
 }

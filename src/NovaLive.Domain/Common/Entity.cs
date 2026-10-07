@@ -1,14 +1,14 @@
 namespace NovaLive.Domain.Common;
 
-public abstract class Entity
+public abstract class Entity<TId> : IEntity<TId>
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
-    public Guid Id { get; protected set; } = Guid.NewGuid();
+    public TId Id { get; set; } = default!;
 
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
-    protected void Raise(IDomainEvent domainEvent)
+    public void Raise(IDomainEvent domainEvent)
     {
         _domainEvents.Add(domainEvent);
     }
@@ -16,5 +16,18 @@ public abstract class Entity
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();
+    }
+}
+
+public abstract class Entity : Entity<Guid>
+{
+    protected Entity()
+    {
+        Id = Guid.NewGuid();
+    }
+
+    protected Entity(Guid id)
+    {
+        Id = id;
     }
 }

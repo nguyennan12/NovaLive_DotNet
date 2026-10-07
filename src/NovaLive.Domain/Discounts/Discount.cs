@@ -6,8 +6,6 @@ public sealed class Discount : AuditableEntity
 {
     public Guid? ShopId { get; set; }
 
-    public Guid CreatedBy { get; set; }
-
     public string Code { get; set; } = string.Empty;
 
     public string Name { get; set; } = string.Empty;

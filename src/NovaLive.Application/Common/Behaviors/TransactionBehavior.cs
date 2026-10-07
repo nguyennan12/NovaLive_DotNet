@@ -1,5 +1,7 @@
 using MediatR;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Common.Messaging;
+using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.Common.Behaviors;
 
@@ -12,8 +14,20 @@ public sealed class TransactionBehavior<TRequest, TResponse>(IUnitOfWork unitOfW
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
+        if (request is not IBaseCommand)
+        {
+            return await next(cancellationToken);
+        }
+
         var response = await next(cancellationToken);
+
+        if (response is Result { IsFailure: true })
+        {
+            return response;
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
         return response;
     }
 }

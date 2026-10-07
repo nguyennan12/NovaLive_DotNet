@@ -13,6 +13,4 @@ public sealed class FlashSaleCampaign : AuditableEntity
     public FlashSaleCampaignStatus Status { get; set; } = FlashSaleCampaignStatus.Scheduled;
 
     public string? BannerUrl { get; set; }
-
-    public Guid CreatedBy { get; set; }
 }

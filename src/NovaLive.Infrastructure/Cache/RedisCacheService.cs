@@ -7,6 +7,7 @@ namespace NovaLive.Infrastructure.Cache;
 public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheService
 {
     private readonly IDatabase _database = redis.GetDatabase();
+    private readonly IConnectionMultiplexer _redis = redis;
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
@@ -20,8 +21,43 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheServ
         return _database.StringSetAsync(key, payload, expiry: ttl.HasValue ? (Expiration)ttl.Value : default);
     }
 
+    public async Task<T> GetOrSetAsync<T>(
+        string key,
+        Func<CancellationToken, Task<T>> factory,
+        TimeSpan? ttl = null,
+        CancellationToken cancellationToken = default)
+    {
+        var cached = await GetAsync<T>(key, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        var value = await factory(cancellationToken);
+        if (value is not null)
+        {
+            await SetAsync(key, value, ttl, cancellationToken);
+        }
+
+        return value;
+    }
+
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         return _database.KeyDeleteAsync(key);
+    }
+
+    public async Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
+    {
+        var endpoints = _redis.GetEndPoints();
+        foreach (var endpoint in endpoints)
+        {
+            var server = _redis.GetServer(endpoint);
+            var keys = server.Keys(pattern: $"{prefixKey}*").ToArray();
+            if (keys.Length > 0)
+            {
+                await _database.KeyDeleteAsync(keys);
+            }
+        }
     }
 }
