@@ -1,7 +1,7 @@
 # 🛒 KIẾN TRÚC HỆ THỐNG NOVALIVE ECOMMERCE & LIVESTREAM PLATFORM
 
 > **Mô hình**: Multi-vendor Marketplace + Livestream Commerce  
-> **Tech Stack**: .NET 10, ASP.NET Core Web API, PostgreSQL 17, Redis 7, MassTransit + RabbitMQ, Elasticsearch 8, MinIO, SignalR, Agora RTC  
+> **Tech Stack**: .NET 10, ASP.NET Core Web API, PostgreSQL 17, Redis 7, MassTransit + RabbitMQ, MinIO, SignalR, Agora RTC
 > **Kiến trúc**: Clean Architecture (Domain $\rightarrow$ Application $\rightarrow$ Infrastructure $\rightarrow$ Api) + CQRS (MediatR) + Event-Driven Architecture (Outbox Pattern)  
 > **Auth**: JWT Bearer (HMAC-SHA256 / HS256) + Redis JTI Blacklist + Refresh Token Rotation  
 > **Triển khai**: Docker & Docker Compose + Nginx Reverse Proxy SSL  
@@ -29,11 +29,11 @@
  │                 │                                        │                              │
  │  ┌──────────────┴────────────────────────────────────────┴───────────────────────────┐  │
  │  │                               INFRASTRUCTURE SERVICES                             │  │
- │  │  ┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐  ┌──────────────┐          │  │
- │  │  │ PG 17 │  │ Redis │  │  RMQ  │  │  ES 8 │  │ MinIO │  │  Agora RTC   │          │  │
- │  │  │ (ACID)│  │(Cache/│  │(Queue)│  │(Search│  │(Media)│  │ (Livestream  │          │  │
- │  │  │       │  │Backpl)│  │       │  │       │  │       │  │  P2P/Cloud)  │          │  │
- │  │  └───────┘  └───────┘  └───────┘  └───────┘  └───────┘  └──────────────┘          │  │
+ │  │  ┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐  ┌──────────────┐                    │  │
+ │  │  │ PG 17 │  │ Redis │  │  RMQ  │  │ MinIO │  │  Agora RTC   │                    │  │
+ │  │  │ (ACID/│  │(Cache/│  │(Queue)│  │(Media)│  │ (Livestream  │                    │  │
+ │  │  │ Search)│ │Backpl)│  │       │  │       │  │  P2P/Cloud)  │                    │  │
+ │  │  └───────┘  └───────┘  └───────┘  └───────┘  └──────────────┘                    │  │
  │  └───────────────────────────────────────────────────────────────────────────────────┘  │
  └─────────────────────────────────────────────────────────────────────────────────────────┘
               ▲                                           ▲
@@ -80,9 +80,9 @@
 │   • Persistence: EF Core 10 + Npgsql ──► PostgreSQL 17 (Migrations & Configs) │
 │   • Caching & Backplane: StackExchange.Redis ──► Redis 7 (Cache, JTI, PubSub) │
 │   • Messaging: MassTransit ──► RabbitMQ (Outbox Pattern + Background Workers) │
-│   • Search: Elastic.Clients.Elasticsearch ──► Elasticsearch 8                 │
+│   • Search: PostgreSQL Full-Text Search + pg_trgm indexes                     │
 │   • Storage: Minio C# SDK ──► MinIO S3                                        │
-│   • External APIs: Refit Clients ──► GHN, GHTK, MoMo, VietQR, Agora RTC       │
+│   • External APIs: Refit Clients ──► GHN, GHTK, ViettelPost, MoMo, VietQR, Agora │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,7 +98,7 @@ NovaLive.sln
 │   │   ├── AuthController.cs               ← Register, VerifyOtp, Login, Refresh, Logout
 │   │   ├── UsersController.cs              ← Profile, Addresses
 │   │   ├── ShopsController.cs              ← Register shop, KYC, Shop addresses
-│   │   ├── ProductsController.cs           ← Public Search & Seller SPU/SKU CRUD
+│   │   ├── ProductsController.cs           ← Public product search & Seller SPU/SKU CRUD
 │   │   ├── CartController.cs               ← Add/Update/Remove, Clear selected items
 │   │   ├── OrdersController.cs             ← CalculateCheckout, Submit Checkout, Cancel Order
 │   │   ├── PaymentsController.cs           ← Create payment QR, Webhooks (MoMo/VietQR)
@@ -128,13 +128,13 @@ NovaLive.sln
 │   │   ├── Persistence/ (IUserRepository, IParentOrderRepository, ISubOrderRepository, IShopWalletRepository, IUnitOfWork...)
 │   │   ├── Cache/ (ICacheService)
 │   │   ├── Messaging/ (IMessageBus)
-│   │   ├── Search/ (IProductSearchService)
+│   │   ├── Search/ (IProductQueryService - PostgreSQL full-text/trigram)
 │   │   ├── Storage/ (IFileStorageService)
 │   │   └── ThirdParty/ (IPaymentGateway, IShippingProvider, IAgoraTokenService)
 │   ├── UseCases/
 │   │   ├── Auth/Commands/ (Register, Login, RefreshToken, Logout, VerifyOtp)
 │   │   ├── Shops/Commands/ (RegisterShop, UpdateKyc, AddWarehouseAddress)
-│   │   ├── Products/Commands/ (CreateProduct, UpdateProduct, SyncToElasticsearch)
+│   │   ├── Products/Commands/ (CreateProduct, UpdateProduct, RebuildProductSearchVector)
 │   │   ├── Cart/Commands/ (AddToCart, UpdateCartItem, RemoveCartItem)
 │   │   ├── Orders/
 │   │   │   ├── Queries/ (CalculateCheckoutDraftQuery, GetOrderDetailQuery)
@@ -173,13 +173,13 @@ NovaLive.sln
 │   │   ├── Configurations/ (EF Core Fluent API 1 file / 1 Entity)
 │   │   └── Repositories/ (Implement các Repository Interfaces từ Application)
 │   ├── Cache/ (RedisCacheService)
-│   ├── Search/ (ElasticsearchProductSearchService)
+│   ├── Search/ (PostgresProductQueryService)
 │   ├── Storage/ (MinioFileStorageService)
 │   ├── Messaging/
 │   │   ├── MassTransitBusAdapter.cs
 │   │   └── Consumers/
 │   │       ├── OrderPlacedConsumer.cs          ← Gửi Email/SMS xác nhận + Push Notification
-│   │       ├── ProductSyncConsumer.cs          ← Cập nhật chỉ mục Elasticsearch
+│   │       ├── ProductSearchVectorConsumer.cs  ← Cập nhật search_vector PostgreSQL
 │   │       ├── InventorySyncConsumer.cs        ← Trừ kho thực tế sau khi thanh toán
 │   │       ├── EscrowReleaseConsumer.cs        ← Tự động cộng tiền ví Shop khi hết T+7
 │   │       ├── TimeoutOrderRollbackWorker.cs   ← Hủy đơn quá hạn 15p & Hoàn trả tồn kho (Reserved Qty)
@@ -189,6 +189,7 @@ NovaLive.sln
 │   │   ├── VietQRPaymentAdapter.cs
 │   │   ├── GhnShippingAdapter.cs
 │   │   ├── GhtkShippingAdapter.cs
+│   │   ├── ViettelPostShippingAdapter.cs
 │   │   └── AgoraTokenService.cs
 │   └── DependencyInjection.cs
 │
@@ -221,7 +222,7 @@ NovaLive.sln
     │       ├── 3. Tạo 2 Sub-Orders (SubOrder A cho Shop A, SubOrder B cho Shop B)
     │       ├── 4. Tạo OrderItems kèm snapshot: sku_snapshot_json, unit_price, discount_amount
     │       ├── 5. Tạo Payment record (Pending)
-    │       ├── 6. Tạo 2 PaymentEscrows (Holding) tương ứng SubOrder A và B
+    │       ├── 6. Tạo 2 PaymentEscrows (PendingCapture; chuyển Holding khi thanh toán thành công)
     │       ├── 7. Xóa 3 món đã chọn khỏi giỏ hàng (giữ lại các món chưa chọn)
     │       └── 8. Ghi OutboxMessage(OrderPlacedEvent) trong cùng DB transaction
     │
@@ -282,7 +283,6 @@ services:
       - postgres
       - redis
       - rabbitmq
-      - elasticsearch
       - minio
 
   realtime-api:
@@ -321,14 +321,6 @@ services:
     volumes:
       - rmqdata:/var/lib/rabbitmq
 
-  elasticsearch:
-    image: elasticsearch:8.13.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -342,6 +334,5 @@ volumes:
   pgdata:
   redisdata:
   rmqdata:
-  esdata:
   miniodata:
 ```

@@ -4,6 +4,12 @@
 >
 > Chuẩn hóa 3NF, tích hợp Ký quỹ Escrow, Flash Sale Atomic UPDATE, Quản lý ví Shop và Agora RTC.
 > Kiểu định danh (PK): `UUID` toàn bộ. Tiền tệ: `DECIMAL(18,2)`. Thời gian: `TIMESTAMPTZ` (UTC).
+> Tìm kiếm sản phẩm dùng PostgreSQL Full-Text Search (`tsvector`) và `pg_trgm`.
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
 
 ---
 
@@ -11,8 +17,8 @@
 
 ```
 1.  CORE          : Users, UserAddresses, UserOtps, RefreshTokens       (4 bảng)
-2.  SHOP & WALLET : Shops, ShopVerifications, ShopAddresses,            (5 bảng)
-                    ShopWallets, ShopWalletTransactions
+2.  SHOP & WALLET : Shops, ShopVerifications, ShopAddresses,            (6 bảng)
+                    ShopWallets, ShopWalletTransactions, ShopFollowers
 3.  RBAC          : Roles, Resources, Permissions,                      (5 bảng)
                     RolePermissions, UserRoles
 4.  PRODUCT       : Categories, Spus, Skus, SkuImages, ProductAttributes(5 bảng)
@@ -30,7 +36,7 @@
 14. NOTIFICATION  : Notifications                                       (1 bảng)
 15. SYSTEM & EDA  : AuditLogs, OutboxMessages                           (2 bảng)
 ───────────────────────────────────────────────────────────────────────────────
-TỔNG CỘNG: 45 BẢNG
+TỔNG CỘNG: 46 BẢNG
 ```
 
 ---
@@ -47,10 +53,11 @@ CREATE TABLE Users (
     phone             VARCHAR(20) NULL,
     password_hash     VARCHAR(255) NOT NULL,
     full_name         VARCHAR(200) NOT NULL,
+    birthday          DATE NULL,
+    gender            VARCHAR(20) NULL CHECK (gender IN ('Male','Female','Other','Unspecified')),
     avatar_url        VARCHAR(500) NULL,
     is_seller         BOOLEAN NOT NULL DEFAULT FALSE,
-    is_verified       BOOLEAN NOT NULL DEFAULT FALSE,
-    is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+    account_status    VARCHAR(20) NOT NULL DEFAULT 'Unverified' CHECK (account_status IN ('Unverified','Active','Locked','Suspended','Deleted')),
     deleted_at        TIMESTAMPTZ NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
@@ -77,7 +84,7 @@ CREATE TABLE UserAddresses (
 );
 CREATE INDEX idx_useraddresses_user ON UserAddresses(user_id);
 
--- 3. UserOtps: Mã OTP xác thực email, số điện thoại, quên mật khẩu
+-- 4. UserOtps: Mã OTP xác thực email, số điện thoại, quên mật khẩu
 CREATE TABLE UserOtps (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
@@ -89,7 +96,7 @@ CREATE TABLE UserOtps (
 );
 CREATE INDEX idx_userotps_user_type ON UserOtps(user_id, otp_type, expires_at);
 
--- 4. RefreshTokens: Quản lý Refresh Token theo thiết bị, hỗ trợ Token Rotation & Reuse Detection
+-- 5. RefreshTokens: Quản lý Refresh Token theo thiết bị, hỗ trợ Token Rotation & Reuse Detection
 CREATE TABLE RefreshTokens (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
@@ -122,7 +129,7 @@ CREATE TABLE Shops (
     email           VARCHAR(255) NULL,
     rating_avg      DECIMAL(3,2) NOT NULL DEFAULT 0.00,
     rating_count    INT NOT NULL DEFAULT 0,
-    status          VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending','Active','Suspended','Closed')),
+    status          VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending','Active','Suspended','Banned','Closed')),
     deleted_at      TIMESTAMPTZ NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
@@ -169,21 +176,36 @@ CREATE TABLE ShopAddresses (
 );
 CREATE INDEX idx_shopaddresses_shop ON ShopAddresses(shop_id);
 
--- 7. ShopWallets: Quản lý số dư tài chính của Seller (Số dư khả dụng + Số dư giữ chân Escrow)
+-- 7. ShopFollowers: Buyer theo dõi gian hàng
+CREATE TABLE ShopFollowers (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shop_id    UUID NOT NULL REFERENCES Shops(id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+    UNIQUE (shop_id, user_id)
+);
+CREATE INDEX idx_shopfollowers_shop ON ShopFollowers(shop_id, created_at);
+CREATE INDEX idx_shopfollowers_user ON ShopFollowers(user_id, created_at);
+
+-- 8. ShopWallets: Quản lý số dư tài chính của Seller
 CREATE TABLE ShopWallets (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shop_id         UUID NOT NULL UNIQUE REFERENCES Shops(id) ON DELETE RESTRICT,
     balance         DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Số dư có thể rút
     holding_balance DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Đang giữ ở Escrow
+    locked_balance  DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Đã khóa cho lệnh rút tiền đang xử lý
     currency        VARCHAR(3) NOT NULL DEFAULT 'VND',
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+    CHECK (balance >= 0),
+    CHECK (holding_balance >= 0),
+    CHECK (locked_balance >= 0)
 );
 
--- 8. ShopWalletTransactions: Sổ cái biến động số dư ví Shop (Append-only)
+-- 9. ShopWalletTransactions: Sổ cái biến động số dư ví Shop (Append-only)
 CREATE TABLE ShopWalletTransactions (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id       UUID NOT NULL REFERENCES ShopWallets(id) ON DELETE RESTRICT,
-    type            VARCHAR(30) NOT NULL CHECK (type IN ('EscrowRelease','CodCommissionDeduct','PayoutWithdrawal','PenaltyDeduct','ManualAdjustment')),
+    type            VARCHAR(30) NOT NULL CHECK (type IN ('EscrowHold','EscrowRelease','EscrowRefund','CodCommissionDeduct','PayoutLock','PayoutWithdrawal','PayoutFailedUnlock','PenaltyDeduct','ManualAdjustment')),
     amount          DECIMAL(18,2) NOT NULL, -- Âm nếu trừ, Dương nếu cộng
     balance_before  DECIMAL(18,2) NOT NULL,
     balance_after   DECIMAL(18,2) NOT NULL,
@@ -275,6 +297,7 @@ CREATE TABLE Spus (
     brand             VARCHAR(150) NULL,
     thumbnail_url     VARCHAR(500) NULL,
     attributes_config JSONB NULL, -- Cấu hình trục biến thể: [{"name":"Màu","values":["Đỏ","Xanh"]},{"name":"Size","values":["S","M"]}]
+    search_vector     TSVECTOR NULL, -- Dùng cho PostgreSQL Full-Text Search, cập nhật khi SPU/SKU thay đổi
     status            VARCHAR(20) NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft','Active','Inactive','Banned')),
     deleted_at        TIMESTAMPTZ NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
@@ -282,6 +305,8 @@ CREATE TABLE Spus (
 );
 CREATE INDEX idx_spus_shop_status ON Spus(shop_id, status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_spus_category ON Spus(category_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_spus_search_vector ON Spus USING GIN(search_vector);
+CREATE INDEX idx_spus_name_trgm ON Spus USING GIN(name gin_trgm_ops);
 
 -- 16. Skus: Biến thể cụ thể bán ra (Stock Keeping Unit)
 CREATE TABLE Skus (
@@ -616,7 +641,7 @@ CREATE TABLE PaymentEscrows (
     shop_id      UUID NOT NULL REFERENCES Shops(id) ON DELETE RESTRICT,
     held_amount  DECIMAL(18,2) NOT NULL CHECK (held_amount > 0),
     platform_fee DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
-    status       VARCHAR(20) NOT NULL DEFAULT 'Holding' CHECK (status IN ('Holding','Released','Disputed','Refunded','PartialRefund')),
+    status       VARCHAR(20) NOT NULL DEFAULT 'PendingCapture' CHECK (status IN ('PendingCapture','Holding','Released','Disputed','Refunded','PartialRefund')),
     hold_until   TIMESTAMPTZ NULL, -- T+7 sau khi Delivered
     released_at  TIMESTAMPTZ NULL,
     refunded_at  TIMESTAMPTZ NULL,

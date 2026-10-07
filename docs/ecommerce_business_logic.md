@@ -15,12 +15,12 @@
 | `Admin` | Quản trị toàn sàn: Phê duyệt/Khóa shop, gỡ sản phẩm vi phạm, tạo chiến dịch Flash Sale toàn sàn, tạo Voucher sàn, phân xử tranh chấp hoàn tiền (Dispute), duyệt lệnh chi trả (Payout), xem Dashboard toàn sàn. |
 | `Seller` | Quản trị gian hàng: Tạo/sửa sản phẩm (SPU/SKU), quản lý kho, xác nhận đơn hàng, tạo Voucher shop, đăng ký Flash Sale, phát Livestream & ghim sản phẩm, duyệt/từ chối yêu cầu hoàn hàng, phản hồi đánh giá. |
 | `Buyer` | Mua sắm: Tìm kiếm/lọc sản phẩm, quản lý giỏ hàng, áp dụng Voucher 3 cấp, đặt đơn & thanh toán (MoMo, VietQR, COD), xem Livestream & mua trực tiếp, theo dõi vận đơn, đánh giá sản phẩm, khiếu nại/hoàn hàng. |
-| `System` | Tác nhân tự động: Xử lý Webhook thanh toán/vận chuyển, tự động giải phóng tiền ký quỹ (Escrow Release T+7), chạy job hoàn kho timeout, đồng bộ tìm kiếm Elasticsearch, tính toán xếp hạng sao. |
+| `System` | Tác nhân tự động: Xử lý Webhook thanh toán/vận chuyển, tự động giải phóng tiền ký quỹ (Escrow Release T+7), chạy job hoàn kho timeout, cập nhật `search_vector` PostgreSQL cho sản phẩm, tính toán xếp hạng sao. |
 
 ### 1.2 Điều kiện & Ràng buộc cốt lõi
 
 1. **Bảo mật & Token**: Sử dụng **JWT Bearer với thuật toán HMAC-SHA256 (HS256)**. Access Token có TTL 15 phút. Refresh Token có TTL 30 ngày (sử dụng cơ chế Rotation & Token Reuse Detection).
-2. **Ký quỹ bảo vệ giao dịch (Escrow Model)**: Toàn bộ tiền thanh toán online được sàn giữ trong `PaymentEscrows`. Tiền chỉ được giải phóng (`Released`) và cộng vào ví Seller sau khi đơn hàng chuyển sang `Delivered` + hết thời hạn khiếu nại (7 ngày) mà không có tranh chấp.
+2. **Ký quỹ bảo vệ giao dịch (Escrow Model)**: Toàn bộ tiền Buyer thanh toán thành công, bao gồm Online/VietQR và COD sau đối soát ĐVVC, được sàn giữ trong `PaymentEscrows`. Tiền chỉ được giải phóng (`Released`) và cộng vào ví Seller sau khi đơn hàng chuyển sang `Delivered` + hết thời hạn khiếu nại (7 ngày) mà không có tranh chấp.
 3. **Checkout theo sản phẩm được chọn**: Buyer chỉ checkout những sản phẩm được tick chọn (`cartItemIds`) trong giỏ hàng. Các sản phẩm không được chọn vẫn giữ nguyên trong giỏ.
 4. **Tách đơn đa Shop (Order Splitting)**: Một phiên checkout tạo ra 1 **Parent Order** (gom nhóm thanh toán) và N **Sub-Orders** tương ứng với N Shop có sản phẩm được chọn.
 5. **Đơn vị tiền tệ**: Lưu trữ dạng số thực độ chính xác cao `DECIMAL(18,2)` hoặc số nguyên VNĐ, không dùng kiểu số thực dấu phẩy động (`FLOAT/REAL`) để tránh sai số làm tròn.
@@ -32,9 +32,9 @@
 ## 2. MODULE AUTH & IDENTITY (XÁC THỰC & PHÂN QUYỀN)
 
 ### 2.1 Đăng ký & Kích hoạt tài khoản
-- Người dùng đăng ký bằng `email` hoặc `phone` + `password` $\rightarrow$ Tài khoản ở trạng thái `Unverified`.
-- Hệ thống gửi mã OTP 6 chữ số (TTL 5 phút, lưu hash trong Redis `otp:{email}`).
-- Nhập đúng OTP $\rightarrow$ Tài khoản chuyển sang `Active`.
+- Người dùng đăng ký bằng `email` hoặc `phone` + `password` $\rightarrow$ `Users.account_status = Unverified`.
+- Hệ thống gửi mã OTP 6 chữ số (TTL 5 phút), lưu hash trong bảng `UserOtps`; Redis chỉ dùng cho rate limit/resend lock như `otp:rate:{email}`.
+- Nhập đúng OTP $\rightarrow$ `Users.account_status = Active`.
 - Giới hạn: Sau 5 lần nhập sai mật khẩu liên tiếp, tài khoản bị tạm khóa theo backoff: 5 phút $\rightarrow$ 15 phút $\rightarrow$ 1 giờ $\rightarrow$ 24 giờ.
 
 ### 2.2 Đăng nhập, Token Rotation & Thu hồi (Revocation)
@@ -49,7 +49,7 @@
 ## 3. MODULE SHOP & VÍ NHÀ BÁN HÀNG (SHOP & WALLET)
 
 ### 3.1 Vòng đời Shop
-- Buyer có tài khoản `Active` được gửi yêu cầu đăng ký mở Shop $\rightarrow$ Tạo `Shops` (status `Pending`) và `ShopVerifications` (CCCD, GPKD, STK ngân hàng).
+- Buyer có `Users.account_status = Active` được gửi yêu cầu đăng ký mở Shop $\rightarrow$ Tạo `Shops` (status `Pending`) và `ShopVerifications` (CCCD, GPKD, STK ngân hàng).
 - Admin phê duyệt $\rightarrow$ `Shops.status = Active`, User được cấp Role `Seller`, khởi tạo `ShopWallets` với số dư 0.
 - Nếu Shop vi phạm chính sách $\rightarrow$ Admin chuyển `Suspended` hoặc `Banned` $\rightarrow$ Toàn bộ sản phẩm của Shop bị ẩn khỏi tìm kiếm, chặn tạo đơn hàng mới.
 - Một User chỉ được sở hữu tối đa 1 Shop (quan hệ 1-1).
@@ -57,9 +57,10 @@
 ### 3.2 Ví Shop & Tuần hoàn tài chính (`ShopWallets`)
 - **Số dư khả dụng (`balance`)**: Tiền Seller có thể rút về tài khoản ngân hàng.
 - **Số dư đóng băng (`holding_balance`)**: Tiền từ các đơn hàng online đang trong thời gian Escrow chờ giải phóng.
-- **Luồng cộng tiền Escrow**: Khi đơn online hết thời hạn 7 ngày $\rightarrow$ Escrow giải phóng $\rightarrow$ `balance += (held_amount - platform_commission)`.
-- **Luồng trừ phí sàn đơn COD**: Đơn COD giao thành công $\rightarrow$ Tiền mặt do shipper thu, hệ thống tự động trừ phí hoa hồng sàn (`platform_commission`) trực tiếp vào `ShopWallets.balance`. Nếu số dư âm vượt hạn mức, Shop bị tạm ngừng nhận đơn mới.
-- **Lệnh rút tiền (`SellerPayouts`)**: Seller tạo yêu cầu rút tiền $\rightarrow$ Admin duyệt/Hệ thống tự động chuyển khoản qua cổng liên ngân hàng $\rightarrow$ Trừ `balance`.
+- **Số dư khóa rút tiền (`locked_balance`)**: Tiền đã trừ khỏi `balance` để xử lý lệnh rút, chưa chuyển khoản xong.
+- **Luồng cộng tiền Escrow**: Khi đơn online hoặc COD đã đối soát hết thời hạn 7 ngày $\rightarrow$ Escrow giải phóng $\rightarrow$ `balance += (held_amount - platform_fee)`.
+- **Luồng COD**: COD không trừ âm ví ngay khi giao hàng. Sau khi ĐVVC chuyển tiền về tài khoản sàn, hệ thống đánh dấu `Payments.status = Success`, tạo/ghi nhận `PaymentEscrows.Holding`, rồi release theo T+7 như đơn online.
+- **Lệnh rút tiền (`SellerPayouts`)**: Seller tạo yêu cầu rút tiền $\rightarrow$ `balance -= amount`, `locked_balance += amount` $\rightarrow$ Admin duyệt/Hệ thống chuyển khoản. Nếu payout thất bại thì hoàn ngược `locked_balance` về `balance`.
 
 ---
 
@@ -101,9 +102,9 @@
 3. **Sinh đơn hàng phân cấp**:
    * Tạo 1 bản ghi vào bảng **`ParentOrders`** quản lý tổng tiền `grand_total`, thanh toán và địa chỉ nhận hàng snapshot.
    * Tạo N bản ghi vào bảng **`SubOrders`** (mỗi SubOrder tương ứng 1 Shop) quản lý sản phẩm, vận chuyển, hoa hồng và voucher riêng của từng Shop.
-4. **Khởi tạo Thanh toán & Ký quỹ**: Tạo `Payments` (trỏ tới `parent_order_id`) ở trạng thái `Pending` và tạo `PaymentEscrows` (trỏ tới từng `sub_order_id`) ở trạng thái `Holding`.
+4. **Khởi tạo Thanh toán & Ký quỹ**: Tạo `Payments` (trỏ tới `parent_order_id`) ở trạng thái `Pending` và tạo `PaymentEscrows` (trỏ tới từng `sub_order_id`) ở trạng thái `PendingCapture`; khi thanh toán/đối soát COD thành công mới chuyển escrow sang `Holding`.
 5. **Xóa giỏ hàng**: Xóa đúng các `cartItemIds` đã được đặt hàng, giữ lại các món chưa chọn.
-6. **Publish Event**: Bắn sự kiện `OrderPlacedEvent` lên RabbitMQ để gửi thông báo cho Buyer và các Seller liên quan.
+6. **Ghi Outbox Event**: Ghi `OutboxMessage(OrderPlacedEvent)` trong cùng transaction. Background publisher đọc outbox rồi mới bắn event lên RabbitMQ để gửi thông báo cho Buyer và các Seller liên quan.
 
 ---
 
@@ -176,7 +177,7 @@ Khi Buyer đặt đơn hàng, dòng tiền đầu vào được nạp vào hệ 
    - Hệ thống đối soát biến động số dư qua Webhook/OpenBanking $\rightarrow$ Ghi nhận thanh toán tức thì.
 3. **Tiền mặt COD (Cash On Delivery - Thanh toán khi nhận hàng)**:
    - Khi chọn COD, đơn hàng được tạo và tự động chuyển ngay sang trạng thái **`Confirmed`** để Seller đóng gói giao hàng (không bắt buộc nhập OTP, tối ưu trải nghiệm checkout 1 chạm).
-   - `ParentOrders.payment_status` được khởi tạo là `Pending` (chờ thu tiền khi giao).
+   - `ParentOrders.payment_status` và `Payments.status` được khởi tạo là `Pending` (chờ ĐVVC đối soát COD).
    - **Đường đi của dòng tiền COD**: Buyer giao tiền mặt cho Shipper (GHN/GHTK) khi nhận hàng (`Delivered`) $\rightarrow$ Shipper nộp về bưu cục ĐVVC $\rightarrow$ ĐVVC định kỳ (T+3 hoặc hàng tuần) làm lệnh **Đối soát COD** và chuyển khoản tiền tổng về Tài khoản Ngân hàng của Sàn NovaLive $\rightarrow$ `ParentOrders.payment_status` chuyển thành `Paid`.
 
 ---
@@ -184,7 +185,7 @@ Khi Buyer đặt đơn hàng, dòng tiền đầu vào được nạp vào hệ 
 ### 8.2 Mô hình Két sắt Ký quỹ Trung gian (Escrow Custodian Model)
 > ⚠️ **Nguyên tắc cốt lõi**: Toàn bộ tiền Buyer thanh toán (Online, VietQR, hoặc COD do ĐVVC chuyển về) đều do **Sàn NovaLive đứng tên nắm giữ trung gian** tại tài khoản ngân hàng của Sàn. **Tuyệt đối KHÔNG chuyển thẳng tiền cho Seller ngay khi thanh toán**.
 
-- Khi thanh toán thành công, hệ thống tạo bản ghi **`PaymentEscrows`** tương ứng cho từng Sub-Order ở trạng thái **`Holding` (Tạm giữ)**.
+- Với Online/VietQR, hệ thống tạo bản ghi **`PaymentEscrows`** cho từng Sub-Order ngay lúc checkout ở trạng thái **`PendingCapture`**; chỉ chuyển sang `Holding` khi webhook thanh toán thành công. Với COD, escrow chỉ chuyển sang `Holding` sau khi ĐVVC đối soát và chuyển tiền về sàn.
 - **Mục đích bảo vệ 2 chiều**:
   - *Bảo vệ Buyer*: Nếu hàng giả, hư hỏng hoặc Shop không giao $\rightarrow$ Sàn chủ động hoàn tiền ngay từ quỹ Escrow mà không phụ thuộc vào việc Shop có đồng ý hay không.
   - *Bảo vệ Seller*: Đảm bảo Seller chắc chắn nhận được tiền sau khi giao hàng thành công và hết hạn khiếu nại.
@@ -200,7 +201,7 @@ Khi đơn hàng kết thúc thành công (sau T+7 ngày không phát sinh khiế
 
 | Dòng tiền phân bổ | Công thức tính | Nguồn chi trả / Thụ hưởng |
 | :--- | :--- | :--- |
-| 🚚 **Cước vận chuyển** | $=\text{Phí ship thực tế}$ | Trả cho ĐVVC (GHN / GHTK). |
+| 🚚 **Cước vận chuyển** | $=\text{Phí ship thực tế}$ | Trả cho ĐVVC (GHN / GHTK / ViettelPost). |
 | 🏦 **Doanh thu phí Sàn** | $=\text{Tiền hàng} \times \text{Commission Rate (vd: 5\%)}$ | Thu về tài khoản doanh thu của Sàn NovaLive. |
 | 💳 **Phí cổng thanh toán** | $=\text{Tổng giá trị thanh toán} \times 1.5\%$ | Trả cho Cổng thanh toán (MoMo/Ngân hàng). |
 | 🎁 **Trợ giá khuyến mại Sàn** | $=\text{Giá trị Voucher do Sàn phát hành}$ | Sàn NovaLive tự bù tiền túi vào đơn hàng cho Seller. |

@@ -42,10 +42,6 @@ Roles & Ký hiệu:
 | `PUT`  | `/users/me/addresses/{id}` | `{ recipientName, phone, provinceName, districtName, wardName, detailAddress, isDefault }` | Sửa địa chỉ nhận hàng | `[Buyer]` |
 | `DELETE` | `/users/me/addresses/{id}` | — | Xóa địa chỉ (không xóa địa chỉ mặc định) | `[Buyer]` |
 | `PUT`  | `/users/me/addresses/{id}/default` | — | Đặt làm địa chỉ giao hàng mặc định | `[Buyer]` |
-| `GET`  | `/users/me/wishlist` | — | Danh sách sản phẩm yêu thích | `[Buyer]` |
-| `POST` | `/users/me/wishlist` | `{ spuId }` | Thêm sản phẩm vào yêu thích | `[Buyer]` |
-| `DELETE` | `/users/me/wishlist/{spuId}` | — | Xóa sản phẩm khỏi yêu thích | `[Buyer]` |
-
 ---
 
 ## 3. 🏬 SHOP & QUẢN TRỊ GIAN HÀNG
@@ -83,9 +79,9 @@ Roles & Ký hiệu:
 
 | Method | Endpoint | Payload / Params | Mô tả chức năng | Quyền |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET`  | `/products` | `?shopId=&categoryId=&keyword=&minPrice=&maxPrice=&sort=&page=&size=` | Tìm kiếm & lọc danh sách sản phẩm (Elasticsearch) | `[Public]` |
+| `GET`  | `/products` | `?shopId=&categoryId=&keyword=&minPrice=&maxPrice=&sort=&page=&size=` | Tìm kiếm & lọc danh sách sản phẩm bằng PostgreSQL full-text/trigram | `[Public]` |
 | `GET`  | `/products/{spuId}` | — | Chi tiết sản phẩm SPU kèm toàn bộ SKU biến thể | `[Public]` |
-| `GET`  | `/products/search` | `?keyword=&page=&size=` | Full-text search sản phẩm với gợi ý tự động | `[Public]` |
+| `GET`  | `/products/search` | `?keyword=&page=&size=` | Full-text search sản phẩm, xếp hạng bằng `ts_rank` và trigram similarity | `[Public]` |
 | `GET`  | `/seller/products` | `?status=&categoryId=&page=&size=` | Danh sách sản phẩm của Shop | `[Seller]` |
 | `POST` | `/seller/products` | `{ name, description, categoryId, brand, thumbnail_url, attributesConfig: [], skus: [{ skuCode, attributesJson, originalPrice, sellPrice, weightGram, initialStock, images: [] }], attributes: [] }` | Tạo SPU kèm danh sách SKU biến thể | `[Seller]` |
 | `PUT`  | `/seller/products/{spuId}` | `{ name, description, categoryId, brand, thumbnail_url, attributesConfig, attributes }` | Sửa thông tin SPU | `[Seller]` |
@@ -169,11 +165,12 @@ Roles & Ký hiệu:
 | Method | Endpoint | Payload / Params | Mô tả chức năng | Quyền |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/shipping/calculate-fee` | `{ shopId, warehouseAddressId, shippingAddressId, items: [{ skuId, quantity, weightGram }] }` | Tra cứu cước vận chuyển thời gian thực từ ĐVVC | `[Buyer/Seller]` |
-| `POST` | `/seller/shipping/create-order` | `{ subOrderId, provider: GHN\|GHTK, serviceCode, pickupAddressId }` | Tạo đơn vận chuyển sang ĐVVC, nhận tracking code | `[Seller]` |
+| `POST` | `/seller/shipping/create-order` | `{ subOrderId, provider: GHN\|GHTK\|ViettelPost, serviceCode, pickupAddressId }` | Tạo đơn vận chuyển sang ĐVVC, nhận tracking code | `[Seller]` |
 | `GET`  | `/seller/shipping/{subOrderId}/label` | — | Tải file PDF phiếu giao hàng (Shipping Label) | `[Seller]` |
 | `GET`  | `/orders/{orderId}/tracking` | — | Lấy lộ trình vận đơn từ ĐVVC | `[Buyer/Seller]` |
 | `POST` | `/shipping/webhook/ghn` | `(Payload webhook GHN)` | Nhận cập nhật trạng thái vận đơn từ GHN | `[Public - HMAC Signature]` |
 | `POST` | `/shipping/webhook/ghtk` | `(Payload webhook GHTK)` | Nhận cập nhật trạng thái vận đơn từ GHTK | `[Public - Signature]` |
+| `POST` | `/shipping/webhook/viettelpost` | `(Payload webhook ViettelPost)` | Nhận cập nhật trạng thái vận đơn từ ViettelPost | `[Public - Signature]` |
 
 ---
 

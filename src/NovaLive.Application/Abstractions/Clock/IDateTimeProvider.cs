@@ -1,0 +1,6 @@
+namespace NovaLive.Application.Abstractions.Clock;
+
+public interface IDateTimeProvider
+{
+    DateTimeOffset UtcNow { get; }
+}

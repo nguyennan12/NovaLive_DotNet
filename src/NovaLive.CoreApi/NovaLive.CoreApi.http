@@ -1,0 +1,6 @@
+@NovaLive.CoreApi_HostAddress = http://localhost:5133
+
+GET {{NovaLive.CoreApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
