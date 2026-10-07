@@ -4,7 +4,15 @@ namespace NovaLive.Domain.Rbac;
 
 public sealed class Resource : Entity
 {
-    public string Code { get; set; } = string.Empty;
+    private Resource() { }
 
-    public string? Description { get; set; }
+    public Resource(string code, string? description = null)
+    {
+        Code = code;
+        Description = description;
+    }
+
+    public string Code { get; private set; } = string.Empty;
+
+    public string? Description { get; private set; }
 }

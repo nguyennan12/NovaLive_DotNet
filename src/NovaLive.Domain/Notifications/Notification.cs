@@ -4,21 +4,21 @@ namespace NovaLive.Domain.Notifications;
 
 public sealed class Notification : Entity
 {
-    public Guid UserId { get; set; }
+    public Guid UserId { get; private set; }
 
-    public string Type { get; set; } = string.Empty;
+    public string Type { get; private set; } = string.Empty;
 
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; private set; } = string.Empty;
 
-    public string Body { get; set; } = string.Empty;
+    public string Body { get; private set; } = string.Empty;
 
-    public string? RefType { get; set; }
+    public string? RefType { get; private set; }
 
-    public Guid? RefId { get; set; }
+    public Guid? RefId { get; private set; }
 
-    public bool IsRead { get; set; }
+    public bool IsRead { get; private set; }
 
-    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset? ReadAt { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

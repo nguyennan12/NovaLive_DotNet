@@ -16,25 +16,25 @@ public sealed class User : AuditableEntity
         Phone = phone;
     }
 
-    public string Email { get; set; } = string.Empty;
+    public string Email { get; private set; } = string.Empty;
 
-    public string? Phone { get; set; }
+    public string? Phone { get; private set; }
 
-    public string PasswordHash { get; set; } = string.Empty;
+    public string PasswordHash { get; private set; } = string.Empty;
 
-    public string FullName { get; set; } = string.Empty;
+    public string FullName { get; private set; } = string.Empty;
 
-    public DateOnly? Birthday { get; set; }
+    public DateOnly? Birthday { get; private set; }
 
-    public UserGender? Gender { get; set; }
+    public UserGender? Gender { get; private set; }
 
-    public string? AvatarUrl { get; set; }
+    public string? AvatarUrl { get; private set; }
 
-    public bool IsSeller { get; set; }
+    public bool IsSeller { get; private set; }
 
-    public AccountStatus AccountStatus { get; set; } = AccountStatus.Unverified;
+    public AccountStatus AccountStatus { get; private set; } = AccountStatus.Unverified;
 
-    public DateTimeOffset? DeletedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
 
     public void Activate()
     {

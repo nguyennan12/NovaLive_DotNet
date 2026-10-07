@@ -4,21 +4,21 @@ namespace NovaLive.Domain.Livestreams;
 
 public sealed class LivestreamProduct : Entity
 {
-    public Guid SessionId { get; set; }
+    public Guid SessionId { get; private set; }
 
-    public Guid SkuId { get; set; }
+    public Guid SkuId { get; private set; }
 
-    public decimal? FlashPrice { get; set; }
+    public decimal? FlashPrice { get; private set; }
 
-    public int? QuantityLimit { get; set; }
+    public int? QuantityLimit { get; private set; }
 
-    public int SoldInLive { get; set; }
+    public int SoldInLive { get; private set; }
 
-    public int DisplayOrder { get; set; }
+    public int DisplayOrder { get; private set; }
 
-    public bool IsPinned { get; set; }
+    public bool IsPinned { get; private set; }
 
-    public DateTimeOffset? PinnedAt { get; set; }
+    public DateTimeOffset? PinnedAt { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

@@ -4,17 +4,17 @@ namespace NovaLive.Domain.Carts;
 
 public sealed class CartItem : Entity
 {
-    public Guid CartId { get; set; }
+    public Guid CartId { get; private set; }
 
-    public Guid SkuId { get; set; }
+    public Guid SkuId { get; private set; }
 
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public int Quantity { get; set; }
+    public int Quantity { get; private set; }
 
-    public decimal UnitPrice { get; set; }
+    public decimal UnitPrice { get; private set; }
 
-    public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset AddedAt { get; private set; } = DateTimeOffset.UtcNow;
 
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

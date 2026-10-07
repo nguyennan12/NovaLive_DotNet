@@ -4,11 +4,11 @@ namespace NovaLive.Domain.Products;
 
 public sealed class ProductAttribute : Entity
 {
-    public Guid SpuId { get; set; }
+    public Guid SpuId { get; private set; }
 
-    public string AttrName { get; set; } = string.Empty;
+    public string AttrName { get; private set; } = string.Empty;
 
-    public string AttrValue { get; set; } = string.Empty;
+    public string AttrValue { get; private set; } = string.Empty;
 
-    public int DisplayOrder { get; set; }
+    public int DisplayOrder { get; private set; }
 }

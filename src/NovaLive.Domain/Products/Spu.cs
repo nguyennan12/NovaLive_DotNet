@@ -4,21 +4,21 @@ namespace NovaLive.Domain.Products;
 
 public sealed class Spu : AuditableEntity
 {
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public Guid CategoryId { get; set; }
+    public Guid CategoryId { get; private set; }
 
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
-    public string? Description { get; set; }
+    public string? Description { get; private set; }
 
-    public string? Brand { get; set; }
+    public string? Brand { get; private set; }
 
-    public string? ThumbnailUrl { get; set; }
+    public string? ThumbnailUrl { get; private set; }
 
-    public string? AttributesConfigJson { get; set; }
+    public string? AttributesConfigJson { get; private set; }
 
-    public ProductStatus Status { get; set; } = ProductStatus.Draft;
+    public ProductStatus Status { get; private set; } = ProductStatus.Draft;
 
-    public DateTimeOffset? DeletedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
 }

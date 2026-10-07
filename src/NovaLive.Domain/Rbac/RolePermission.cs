@@ -4,9 +4,9 @@ namespace NovaLive.Domain.Rbac;
 
 public sealed class RolePermission : Entity
 {
-    public Guid RoleId { get; set; }
+    public Guid RoleId { get; private set; }
 
-    public Guid PermissionId { get; set; }
+    public Guid PermissionId { get; private set; }
 
-    public DateTimeOffset GrantedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset GrantedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

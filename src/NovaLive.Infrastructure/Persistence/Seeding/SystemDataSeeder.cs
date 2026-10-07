@@ -30,10 +30,10 @@ public sealed class SystemDataSeeder(
     {
         var defaultRoles = new List<Role>
         {
-            new() { Name = "SuperAdmin", Description = "Toàn quyền quản trị hệ sinh thái NovaLive", IsSystem = true },
-            new() { Name = "Admin", Description = "Quản trị viên vận hành sàn", IsSystem = true },
-            new() { Name = "Seller", Description = "Nhà bán hàng đa kênh & Livestream", IsSystem = true },
-            new() { Name = "Buyer", Description = "Người mua hàng trên nền tảng", IsSystem = true }
+            new("SuperAdmin", "Toàn quyền quản trị hệ sinh thái NovaLive", true),
+            new("Admin", "Quản trị viên vận hành sàn", true),
+            new("Seller", "Nhà bán hàng đa kênh & Livestream", true),
+            new("Buyer", "Người mua hàng trên nền tảng", true)
         };
 
         foreach (var role in defaultRoles)
@@ -66,7 +66,7 @@ public sealed class SystemDataSeeder(
             var resource = await dbContext.Resources.FirstOrDefaultAsync(r => r.Code == code, cancellationToken);
             if (resource is null)
             {
-                resource = new Resource { Code = code, Description = description };
+                resource = new Resource(code, description);
                 await dbContext.Resources.AddAsync(resource, cancellationToken);
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
@@ -76,13 +76,12 @@ public sealed class SystemDataSeeder(
                 var permCode = $"{code}:{action.ToString().ToLowerInvariant()}";
                 if (!await dbContext.Permissions.AnyAsync(p => p.Code == permCode, cancellationToken))
                 {
-                    var permission = new Permission
-                    {
-                        ResourceId = resource.Id,
-                        Action = action,
-                        Code = permCode,
-                        Description = $"Quyền {action} đối với tài nguyên {code}"
-                    };
+                    var permission = new Permission(
+                        resourceId: resource.Id,
+                        action: action,
+                        code: permCode,
+                        description: $"Quyền {action} đối với tài nguyên {code}");
+
                     await dbContext.Permissions.AddAsync(permission, cancellationToken);
                 }
             }
@@ -109,7 +108,7 @@ public sealed class SystemDataSeeder(
             if (superAdminRole is not null)
             {
                 await dbContext.UserRoles.AddAsync(
-                    new UserRole { UserId = adminUser.Id, RoleId = superAdminRole.Id },
+                    new UserRole(adminUser.Id, superAdminRole.Id),
                     cancellationToken);
             }
         }

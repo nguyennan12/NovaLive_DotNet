@@ -4,25 +4,25 @@ namespace NovaLive.Domain.Users;
 
 public sealed class UserAddress : AuditableEntity
 {
-    public Guid UserId { get; set; }
+    public Guid UserId { get; private set; }
 
-    public string RecipientName { get; set; } = string.Empty;
+    public string RecipientName { get; private set; } = string.Empty;
 
-    public string Phone { get; set; } = string.Empty;
+    public string Phone { get; private set; } = string.Empty;
 
-    public int? ProvinceId { get; set; }
+    public int? ProvinceId { get; private set; }
 
-    public string ProvinceName { get; set; } = string.Empty;
+    public string ProvinceName { get; private set; } = string.Empty;
 
-    public int? DistrictId { get; set; }
+    public int? DistrictId { get; private set; }
 
-    public string DistrictName { get; set; } = string.Empty;
+    public string DistrictName { get; private set; } = string.Empty;
 
-    public string? WardCode { get; set; }
+    public string? WardCode { get; private set; }
 
-    public string WardName { get; set; } = string.Empty;
+    public string WardName { get; private set; } = string.Empty;
 
-    public string DetailAddress { get; set; } = string.Empty;
+    public string DetailAddress { get; private set; } = string.Empty;
 
-    public bool IsDefault { get; set; }
+    public bool IsDefault { get; private set; }
 }

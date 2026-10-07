@@ -60,12 +60,11 @@ public sealed class OutboxBackgroundWorker(
             try
             {
                 // In production, deserialize message.Payload by message.EventType and publish via MassTransit
-                message.ProcessedAt = DateTimeOffset.UtcNow;
+                message.MarkAsProcessed();
             }
             catch (Exception ex)
             {
-                message.RetryCount++;
-                message.ErrorMessage = ex.Message;
+                message.MarkAsFailed(ex.Message);
                 logger.LogError(ex, "Failed to process outbox message {MessageId}", message.Id);
             }
         }

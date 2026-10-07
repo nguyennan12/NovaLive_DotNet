@@ -4,11 +4,21 @@ namespace NovaLive.Domain.Rbac;
 
 public sealed class Role : Entity
 {
-    public string Name { get; set; } = string.Empty;
+    private Role() { }
 
-    public string? Description { get; set; }
+    public Role(string name, string? description = null, bool isSystem = false)
+    {
+        Name = name;
+        Description = description;
+        IsSystem = isSystem;
+        CreatedAt = DateTimeOffset.UtcNow;
+    }
 
-    public bool IsSystem { get; set; }
+    public string Name { get; private set; } = string.Empty;
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string? Description { get; private set; }
+
+    public bool IsSystem { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

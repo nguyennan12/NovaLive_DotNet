@@ -4,27 +4,27 @@ namespace NovaLive.Domain.Livestreams;
 
 public sealed class LivestreamSession : AuditableEntity
 {
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public Guid HostId { get; set; }
+    public Guid HostId { get; private set; }
 
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; private set; } = string.Empty;
 
-    public string? ThumbnailUrl { get; set; }
+    public string? ThumbnailUrl { get; private set; }
 
-    public string AgoraChannelName { get; set; } = string.Empty;
+    public string AgoraChannelName { get; private set; } = string.Empty;
 
-    public LivestreamStatus Status { get; set; } = LivestreamStatus.Scheduled;
+    public LivestreamStatus Status { get; private set; } = LivestreamStatus.Scheduled;
 
-    public int ViewerCount { get; set; }
+    public int ViewerCount { get; private set; }
 
-    public int PeakViewerCount { get; set; }
+    public int PeakViewerCount { get; private set; }
 
-    public DateTimeOffset? ScheduledAt { get; set; }
+    public DateTimeOffset? ScheduledAt { get; private set; }
 
-    public DateTimeOffset? StartedAt { get; set; }
+    public DateTimeOffset? StartedAt { get; private set; }
 
-    public DateTimeOffset? EndedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; private set; }
 
-    public string? PlaybackUrl { get; set; }
+    public string? PlaybackUrl { get; private set; }
 }

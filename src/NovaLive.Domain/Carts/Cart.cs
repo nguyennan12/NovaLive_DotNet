@@ -4,5 +4,5 @@ namespace NovaLive.Domain.Carts;
 
 public sealed class Cart : AuditableEntity
 {
-    public Guid UserId { get; set; }
+    public Guid UserId { get; private set; }
 }

@@ -4,17 +4,17 @@ namespace NovaLive.Domain.Users;
 
 public sealed class RefreshToken : Entity
 {
-    public Guid UserId { get; set; }
+    public Guid UserId { get; private set; }
 
-    public string TokenHash { get; set; } = string.Empty;
+    public string TokenHash { get; private set; } = string.Empty;
 
-    public string? DeviceInfo { get; set; }
+    public string? DeviceInfo { get; private set; }
 
-    public string? IpAddress { get; set; }
+    public string? IpAddress { get; private set; }
 
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; private set; }
 
-    public DateTimeOffset? RevokedAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

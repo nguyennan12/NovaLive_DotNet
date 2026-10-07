@@ -4,11 +4,21 @@ namespace NovaLive.Domain.Rbac;
 
 public sealed class Permission : Entity
 {
-    public Guid ResourceId { get; set; }
+    private Permission() { }
 
-    public RbacAction Action { get; set; }
+    public Permission(Guid resourceId, RbacAction action, string code, string? description = null)
+    {
+        ResourceId = resourceId;
+        Action = action;
+        Code = code;
+        Description = description;
+    }
 
-    public string Code { get; set; } = string.Empty;
+    public Guid ResourceId { get; private set; }
 
-    public string? Description { get; set; }
+    public RbacAction Action { get; private set; }
+
+    public string Code { get; private set; } = string.Empty;
+
+    public string? Description { get; private set; }
 }

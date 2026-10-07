@@ -13,15 +13,15 @@ public sealed class ShopWallet : Entity
         ShopId = shopId;
     }
 
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public decimal Balance { get; set; }
+    public decimal Balance { get; private set; }
 
-    public decimal HoldingBalance { get; set; }
+    public decimal HoldingBalance { get; private set; }
 
-    public decimal LockedBalance { get; set; }
+    public decimal LockedBalance { get; private set; }
 
-    public string Currency { get; set; } = "VND";
+    public string Currency { get; private set; } = "VND";
 
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

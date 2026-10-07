@@ -4,23 +4,23 @@ namespace NovaLive.Domain.FlashSales;
 
 public sealed class FlashSaleItem : Entity
 {
-    public Guid CampaignId { get; set; }
+    public Guid CampaignId { get; private set; }
 
-    public Guid SkuId { get; set; }
+    public Guid SkuId { get; private set; }
 
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public decimal FlashPrice { get; set; }
+    public decimal FlashPrice { get; private set; }
 
-    public int Quantity { get; set; }
+    public int Quantity { get; private set; }
 
-    public int PerUserLimit { get; set; } = 1;
+    public int PerUserLimit { get; private set; } = 1;
 
-    public int ReservedQty { get; set; }
+    public int ReservedQty { get; private set; }
 
-    public int SoldQty { get; set; }
+    public int SoldQty { get; private set; }
 
-    public FlashSaleItemStatus Status { get; set; } = FlashSaleItemStatus.Pending;
+    public FlashSaleItemStatus Status { get; private set; } = FlashSaleItemStatus.Pending;
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

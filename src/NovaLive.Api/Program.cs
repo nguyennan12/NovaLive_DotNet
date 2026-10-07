@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MediatR;
 using NovaLive.Api.Auth;
 using NovaLive.Api.Extensions;
@@ -6,11 +7,9 @@ using NovaLive.Api.Middleware;
 using NovaLive.Application;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Search;
-using NovaLive.Application.System.Queries;
 using NovaLive.Contracts.Common;
 using NovaLive.Contracts.Products;
 using NovaLive.Infrastructure;
-using NovaLive.Infrastructure.Persistence.Seeding;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,7 +66,13 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// 7. API Documentation (OpenAPI)
+// 7. Controllers & OpenAPI
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -91,18 +96,11 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ---- REST API Endpoints ----
+// ---- Controllers ----
+app.MapControllers();
+
+// ---- Fast Minimal APIs ----
 var api = app.MapGroup("/api/v1");
-
-api.MapGet("/health/live", () => Results.Ok(ApiResponse<object>.Ok(new { status = "Live", timestamp = DateTimeOffset.UtcNow })))
-    .WithName("HealthLive");
-
-api.MapGet("/health/ready", async (ISender sender, CancellationToken cancellationToken) =>
-{
-    var status = await sender.Send(new GetSystemStatusQuery(), cancellationToken);
-    return Results.Ok(ApiResponse<SystemStatusDto>.Ok(status));
-})
-.WithName("HealthReady");
 
 api.MapGet("/products", async (
     string? keyword,

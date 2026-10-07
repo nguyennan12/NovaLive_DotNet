@@ -4,33 +4,33 @@ namespace NovaLive.Domain.Shipping;
 
 public sealed class ShippingOrder : AuditableEntity
 {
-    public Guid SubOrderId { get; set; }
+    public Guid SubOrderId { get; private set; }
 
-    public ShippingProvider Provider { get; set; }
+    public ShippingProvider Provider { get; private set; }
 
-    public string ServiceCode { get; set; } = string.Empty;
+    public string ServiceCode { get; private set; } = string.Empty;
 
-    public string? TrackingCode { get; set; }
+    public string? TrackingCode { get; private set; }
 
-    public string? ProviderOrderId { get; set; }
+    public string? ProviderOrderId { get; private set; }
 
-    public string PickupAddressJson { get; set; } = "{}";
+    public string PickupAddressJson { get; private set; } = "{}";
 
-    public string DeliveryAddressJson { get; set; } = "{}";
+    public string DeliveryAddressJson { get; private set; } = "{}";
 
-    public decimal CodAmount { get; set; }
+    public decimal CodAmount { get; private set; }
 
-    public decimal ShippingFee { get; set; }
+    public decimal ShippingFee { get; private set; }
 
-    public int WeightGram { get; set; }
+    public int WeightGram { get; private set; }
 
-    public ShippingStatus Status { get; set; } = ShippingStatus.ReadyToPick;
+    public ShippingStatus Status { get; private set; } = ShippingStatus.ReadyToPick;
 
-    public string? WebhookPayload { get; set; }
+    public string? WebhookPayload { get; private set; }
 
-    public DateTimeOffset? EstimatedAt { get; set; }
+    public DateTimeOffset? EstimatedAt { get; private set; }
 
-    public DateTimeOffset? PickedAt { get; set; }
+    public DateTimeOffset? PickedAt { get; private set; }
 
-    public DateTimeOffset? DeliveredAt { get; set; }
+    public DateTimeOffset? DeliveredAt { get; private set; }
 }

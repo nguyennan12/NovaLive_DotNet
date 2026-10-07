@@ -15,31 +15,31 @@ public sealed class Shop : AuditableEntity
         Slug = slug;
     }
 
-    public Guid OwnerId { get; set; }
+    public Guid OwnerId { get; private set; }
 
-    public string ShopName { get; set; } = string.Empty;
+    public string ShopName { get; private set; } = string.Empty;
 
-    public string Slug { get; set; } = string.Empty;
+    public string Slug { get; private set; } = string.Empty;
 
-    public string? Description { get; set; }
+    public string? Description { get; private set; }
 
-    public string? LogoUrl { get; set; }
+    public string? LogoUrl { get; private set; }
 
-    public string? BannerUrl { get; set; }
+    public string? BannerUrl { get; private set; }
 
-    public string? TaxCode { get; set; }
+    public string? TaxCode { get; private set; }
 
-    public string? Phone { get; set; }
+    public string? Phone { get; private set; }
 
-    public string? Email { get; set; }
+    public string? Email { get; private set; }
 
-    public decimal RatingAvg { get; set; } = 0.00m;
+    public decimal RatingAvg { get; private set; } = 0.00m;
 
-    public int RatingCount { get; set; } = 0;
+    public int RatingCount { get; private set; } = 0;
 
-    public ShopStatus Status { get; set; } = ShopStatus.Pending;
+    public ShopStatus Status { get; private set; } = ShopStatus.Pending;
 
-    public DateTimeOffset? DeletedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
 
     public void Approve()
     {

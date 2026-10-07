@@ -4,13 +4,13 @@ namespace NovaLive.Domain.Discounts;
 
 public sealed class DiscountUsage : Entity
 {
-    public Guid DiscountId { get; set; }
+    public Guid DiscountId { get; private set; }
 
-    public Guid UserId { get; set; }
+    public Guid UserId { get; private set; }
 
-    public Guid ParentOrderId { get; set; }
+    public Guid ParentOrderId { get; private set; }
 
-    public decimal DiscountAmount { get; set; }
+    public decimal DiscountAmount { get; private set; }
 
-    public DateTimeOffset UsedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UsedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

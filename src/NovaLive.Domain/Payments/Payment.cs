@@ -4,19 +4,19 @@ namespace NovaLive.Domain.Payments;
 
 public sealed class Payment : AuditableEntity
 {
-    public Guid ParentOrderId { get; set; }
+    public Guid ParentOrderId { get; private set; }
 
-    public PaymentMethod Method { get; set; }
+    public PaymentMethod Method { get; private set; }
 
-    public decimal Amount { get; set; }
+    public decimal Amount { get; private set; }
 
-    public string? TransactionRef { get; set; }
+    public string? TransactionRef { get; private set; }
 
-    public string? GatewayResponse { get; set; }
+    public string? GatewayResponse { get; private set; }
 
-    public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
+    public PaymentStatus Status { get; private set; } = PaymentStatus.Pending;
 
-    public DateTimeOffset? PaidAt { get; set; }
+    public DateTimeOffset? PaidAt { get; private set; }
 
-    public DateTimeOffset? ExpiredAt { get; set; }
+    public DateTimeOffset? ExpiredAt { get; private set; }
 }

@@ -4,23 +4,23 @@ namespace NovaLive.Domain.Payments;
 
 public sealed class SellerPayout : AuditableEntity
 {
-    public Guid ShopId { get; set; }
+    public Guid ShopId { get; private set; }
 
-    public decimal Amount { get; set; }
+    public decimal Amount { get; private set; }
 
-    public string BankAccount { get; set; } = string.Empty;
+    public string BankAccount { get; private set; } = string.Empty;
 
-    public string BankName { get; set; } = string.Empty;
+    public string BankName { get; private set; } = string.Empty;
 
-    public string? TransferRef { get; set; }
+    public string? TransferRef { get; private set; }
 
-    public PayoutStatus Status { get; set; } = PayoutStatus.Pending;
+    public PayoutStatus Status { get; private set; } = PayoutStatus.Pending;
 
-    public Guid? ProcessedBy { get; set; }
+    public Guid? ProcessedBy { get; private set; }
 
-    public string? Note { get; set; }
+    public string? Note { get; private set; }
 
-    public DateTimeOffset ScheduledAt { get; set; }
+    public DateTimeOffset ScheduledAt { get; private set; }
 
-    public DateTimeOffset? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; private set; }
 }
