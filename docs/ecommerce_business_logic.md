@@ -17,6 +17,68 @@
 | `Buyer` | Mua sắm: Tìm kiếm/lọc sản phẩm, quản lý giỏ hàng, áp dụng Voucher 3 cấp, đặt đơn & thanh toán (MoMo, VietQR, COD), xem Livestream & mua trực tiếp, theo dõi vận đơn, đánh giá sản phẩm, khiếu nại/hoàn hàng. |
 | `System` | Tác nhân tự động: Xử lý Webhook thanh toán/vận chuyển, tự động giải phóng tiền ký quỹ (Escrow Release T+7), chạy job hoàn kho timeout, cập nhật `search_vector` PostgreSQL cho sản phẩm, tính toán xếp hạng sao. |
 
+#### Bảng Ma Trận Phân Quyền Chi Tiết (57 Permissions Matrix)
+
+| STT | Mã Permission (`{resource}:{action}`) | Nghiệp vụ chi tiết | Guest | Buyer | Seller | Admin |
+| :-: | :--- | :--- | :-: | :-: | :-: | :-: |
+| **1** | `auth:register` | Đăng ký tài khoản mới trên hệ thống | ✅ | ❌ | ❌ | ❌ |
+| **2** | `auth:login` | Đăng nhập hệ thống & nhận JWT Token | ✅ | ✅ | ✅ | ✅ |
+| **3** | `auth:logout` | Đăng xuất & hủy phiên làm việc Token | ❌ | ✅ | ✅ | ✅ |
+| **4** | `users:view_own_profile` | Xem thông tin hồ sơ cá nhân của mình | ❌ | ✅ | ✅ | ✅ |
+| **5** | `users:update_own_profile` | Cập nhật thông tin hồ sơ cá nhân của mình | ❌ | ✅ | ✅ | ✅ |
+| **6** | `users:manage_own_addresses` | Thêm, sửa, xóa sổ địa chỉ nhận hàng của mình | ❌ | ✅ | ✅ | ❌ |
+| **7** | `users:manage_all` | Quản lý, khóa/mở khóa tài khoản người dùng toàn sàn | ❌ | ❌ | ❌ | ✅ |
+| **8** | `shops:register` | Gửi hồ sơ đăng ký mở gian hàng mới (KYC) | ❌ | ✅ | ❌ | ❌ |
+| **9** | `shops:view_public` | Xem thông tin công khai của gian hàng | ✅ | ✅ | ✅ | ✅ |
+| **10** | `shops:manage_own` | Cập nhật thông tin shop & quản lý địa chỉ kho của mình | ❌ | ❌ | ✅ | ❌ |
+| **11** | `shops:follow` | Bấm theo dõi / Bỏ theo dõi gian hàng | ❌ | ✅ | ✅ | ❌ |
+| **12** | `shops:approve_kyc` | Phê duyệt hoặc từ chối hồ sơ đăng ký mở Shop | ❌ | ❌ | ❌ | ✅ |
+| **13** | `shops:ban_unban` | Khóa tạm thời hoặc cấm vĩnh viễn gian hàng vi phạm | ❌ | ❌ | ❌ | ✅ |
+| **14** | `wallets:view_own` | Xem số dư khả dụng, tiền Escrow và sổ cái ví Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **15** | `wallets:request_payout` | Tạo yêu cầu rút tiền từ ví Shop về tài khoản ngân hàng | ❌ | ❌ | ✅ | ❌ |
+| **16** | `wallets:approve_payout` | Phê duyệt & thực hiện lệnh chuyển khoản rút tiền cho Seller | ❌ | ❌ | ❌ | ✅ |
+| **17** | `categories:view_public` | Xem cây danh mục sản phẩm công khai | ✅ | ✅ | ✅ | ✅ |
+| **18** | `categories:manage_all` | Thêm, sửa, xóa danh mục sản phẩm toàn sàn | ❌ | ❌ | ❌ | ✅ |
+| **19** | `products:view_public` | Tìm kiếm và xem chi tiết sản phẩm đang mở bán | ✅ | ✅ | ✅ | ✅ |
+| **20** | `products:create_own` | Đăng sản phẩm mới (SPU/SKU) vào gian hàng của mình | ❌ | ❌ | ✅ | ❌ |
+| **21** | `products:update_own` | Chỉnh sửa thông tin, giá bán sản phẩm của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **22** | `products:delete_own` | Xóa / Ẩn sản phẩm thuộc gian hàng của mình | ❌ | ❌ | ✅ | ❌ |
+| **23** | `products:moderate_all` | Kiểm duyệt, cưỡng chế gỡ bỏ sản phẩm vi phạm toàn sàn | ❌ | ❌ | ❌ | ✅ |
+| **24** | `inventory:manage_own` | Điều chỉnh kho thủ công & xem sổ cái kho Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **25** | `carts:manage_own` | Thêm, sửa số lượng, xóa sản phẩm trong giỏ hàng của mình | ❌ | ✅ | ✅ | ❌ |
+| **26** | `orders:checkout` | Tính nháp cước ship/voucher & đặt đơn hàng đa shop | ❌ | ✅ | ✅ | ❌ |
+| **27** | `orders:view_own_buy` | Xem danh sách & chi tiết các đơn hàng do chính mình mua | ❌ | ✅ | ✅ | ❌ |
+| **28** | `orders:cancel_own_buy` | Hủy đơn hàng đã mua (khi Shop chưa bấm xác nhận) | ❌ | ✅ | ✅ | ❌ |
+| **29** | `orders:view_own_sell` | Xem danh sách đơn hàng khách đặt tại Shop của mình | ❌ | ❌ | ✅ | ❌ |
+| **30** | `orders:fulfillment_own` | Xác nhận đơn, đóng gói & đẩy vận đơn sang ĐVVC | ❌ | ❌ | ✅ | ❌ |
+| **31** | `orders:cancel_own_sell` | Hủy đơn hàng của shop (khi hết hàng/gặp sự cố kho) | ❌ | ❌ | ✅ | ❌ |
+| **32** | `orders:view_all_platform` | Xem và tra cứu tất cả đơn hàng trên toàn hệ thống | ❌ | ❌ | ❌ | ✅ |
+| **33** | `payments:initiate` | Khởi tạo giao dịch thanh toán MoMo / VietQR | ❌ | ✅ | ✅ | ❌ |
+| **34** | `payments:view_status` | Tra cứu trạng thái thanh toán của đơn hàng | ❌ | ✅ | ✅ | ✅ |
+| **35** | `discounts:view_public` | Xem và sưu tầm các mã giảm giá công khai | ✅ | ✅ | ✅ | ✅ |
+| **36** | `discounts:create_own_shop` | Tạo và quản lý Voucher giảm giá riêng của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **37** | `discounts:create_platform` | Tạo Voucher toàn sàn do Sàn NovaLive tài trợ | ❌ | ❌ | ❌ | ✅ |
+| **38** | `flashsales:view_public` | Xem danh sách sản phẩm và khung giờ Flash Sale | ✅ | ✅ | ✅ | ✅ |
+| **39** | `flashsales:register_own` | Đăng ký sản phẩm của Shop tham gia Flash Sale của sàn | ❌ | ❌ | ✅ | ❌ |
+| **40** | `flashsales:manage_all` | Tạo chiến dịch Flash Sale toàn sàn & duyệt SKU đăng ký | ❌ | ❌ | ❌ | ✅ |
+| **41** | `shipping:calculate_fee` | Xem trước cước phí vận chuyển realtime từ ĐVVC | ✅ | ✅ | ✅ | ✅ |
+| **42** | `shipping:print_own_label` | In phiếu giao hàng PDF khổ A6 cho đơn hàng của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **43** | `shipping:track_order` | Tra cứu lộ trình vận đơn thời gian thực | ❌ | ✅ | ✅ | ✅ |
+| **44** | `returns:request_own` | Tạo yêu cầu Trả hàng / Hoàn tiền cho đơn mình đã mua (≤ 7 ngày) | ❌ | ✅ | ❌ | ❌ |
+| **45** | `returns:respond_own` | Duyệt / Từ chối / Xác nhận nhận hàng hoàn của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **46** | `disputes:arbitrate_all` | Phán quyết tranh chấp Escrow (`BuyerWins` / `SellerWins`) | ❌ | ❌ | ❌ | ✅ |
+| **47** | `livestreams:view_public` | Xem video Livestream và tương tác chat/thả tim | ✅ | ✅ | ✅ | ✅ |
+| **48** | `livestreams:start_own` | Mở phòng phát sóng Livestream của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **49** | `livestreams:pin_own_product`| Ghim / Gỡ sản phẩm kèm giá Flash trong phòng Live của mình | ❌ | ❌ | ✅ | ❌ |
+| **50** | `livestreams:terminate_all` | Cưỡng chế ngắt phòng Livestream vi phạm chính sách | ❌ | ❌ | ❌ | ✅ |
+| **51** | `reviews:create_own` | Viết đánh giá cho sản phẩm thuộc đơn hàng mình đã mua | ❌ | ✅ | ❌ | ❌ |
+| **52** | `reviews:update_own` | Chỉnh sửa đánh giá cá nhân (1 lần duy nhất trong 30 ngày) | ❌ | ✅ | ❌ | ❌ |
+| **53** | `reviews:reply_own_shop` | Phản hồi đánh giá của khách trên sản phẩm Shop mình (1 lần) | ❌ | ❌ | ✅ | ❌ |
+| **54** | `reviews:hide_all` | Ẩn các đánh giá vi phạm từ cấm, spam toàn sàn | ❌ | ❌ | ❌ | ✅ |
+| **55** | `reports:view_own_shop` | Xem Dashboard doanh thu, ví và hiệu quả Live của Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **56** | `reports:view_all_platform` | Xem Executive Dashboard tài chính, GMV và hoa hồng toàn sàn | ❌ | ❌ | ❌ | ✅ |
+| **57** | `roles:manage_all` | Quản lý vai trò (Roles) & gán ma trận Permissions nhân sự | ❌ | ❌ | ❌ | ✅ |
+
 ### 1.2 Điều kiện & Ràng buộc cốt lõi
 
 1. **Bảo mật & Token**: Sử dụng **JWT Bearer với thuật toán HMAC-SHA256 (HS256)**. Access Token có TTL 15 phút. Refresh Token có TTL 30 ngày (sử dụng cơ chế Rotation & Token Reuse Detection).
