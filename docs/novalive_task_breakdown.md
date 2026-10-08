@@ -5,7 +5,7 @@
 > **Tech Stack**: .NET 10 Web API + PostgreSQL 17 + Redis 7 + RabbitMQ + MinIO + SignalR + Agora RTC  
 > **Kiến trúc**: Clean Architecture + DDD + CQRS (MediatR) + Outbox Pattern  
 > **Team**: 3 thành viên — **Dev A** (Auth/Orders/Payment), **Dev B** (Product/Shop/Discount), **Dev C** (Realtime/Infra/Workers)  
-> **Quy chuẩn mã Task**: Đánh số tuần tự từ **T01** đến **T55** (T01–T07: Đã hoàn thành; T08–T55: Cần triển khai)  
+> **Quy chuẩn mã Task**: Đánh số tuần tự từ **T01** đến **T61** (T01–T07: Đã hoàn thành; T08–T55: Backend/Infra/DevOps; T56–T61: Frontend Applications)  
 > **SRS Reference**: [`software_requirements_specification.md`](./software_requirements_specification.md) v1.0  
 > **Contracts Reference**: `src/NovaLive.Contracts/V1/*` (Đã hoàn thiện 100% Request/Response DTOs)
 
@@ -107,16 +107,24 @@ NovaLive
 │   ├── T50: [BE/API] Seller Performance Dashboard & Wallet Analytics
 │   └── T51: [BE/API] Admin Platform Executive Dashboard & Financial Reports
 │
-└── EPIC 14: Testing & DevOps Hardening
-    ├── T52: [TEST] Domain & Application Unit Tests
-    ├── T53: [TEST] Integration Tests (Auth, Checkout, Webhooks)
-    ├── T54: [TEST] End-to-End Tests (Full Purchase to Escrow Cycle)
-    └── T55: [DEVOPS] Production Docker Stack (Nginx SSL + Health Checks)
+├── EPIC 14: Testing & DevOps Hardening
+│   ├── T52: [TEST] Domain & Application Unit Tests
+│   ├── T53: [TEST] Integration Tests (Auth, Checkout, Webhooks)
+│   ├── T54: [TEST] End-to-End Tests (Full Purchase to Escrow Cycle)
+│   └── T55: [DEVOPS] Production Docker Stack (Nginx SSL + Health Checks)
+│
+└── EPIC 15: Frontend Web Applications (Next.js / React)
+    ├── T56: [FE] Setup Frontend Boilerplate, Auth Hub & User Profile
+    ├── T57: [FE] Buyer Marketplace & Product Search / Details Portal
+    ├── T58: [FE] Cart, Multi-shop Checkout & Payment Flow
+    ├── T59: [FE] Seller Center Portal (Shop, Products, Orders & Shipping)
+    ├── T60: [FE] Livestream Commerce Portal (Agora RTC + SignalR Realtime)
+    └── T61: [FE] Returns, Admin Operations & Executive Dashboard
 ```
 
 ---
 
-# PART 3 — TASK LIST (T01–T55)
+# PART 3 — TASK LIST (T01–T61)
 
 | ID | Task Name | Type | Layer | Status | Priority | Assign | Dependency |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -175,6 +183,12 @@ NovaLive
 | **T53** | Integration Tests (Auth, Checkout, Webhooks) | TEST | TEST | MISSING | P1 | All | T08, T30, T36 |
 | **T54** | End-to-End Tests (Full Purchase to Escrow Cycle) | TEST | TEST | MISSING | P1 | All | T39, T48 |
 | **T55** | Production Docker Stack (Nginx SSL + Health Checks) | DEVOPS | DEVOPS | MISSING | P1 | Dev C | T08, T02 |
+| **T56** | Setup Frontend Boilerplate, Auth Hub & User Profile | FEATURE | FE | MISSING | P0 | Dev FE | T08, T10 |
+| **T57** | Buyer Marketplace & Product Search / Details Portal | FEATURE | FE | MISSING | P1 | Dev FE | T16, T18, T44 |
+| **T58** | Cart, Multi-shop Checkout & Payment Flow | FEATURE | FE | MISSING | P0 | Dev FE | T19, T23, T30, T31 |
+| **T59** | Seller Center Portal (Shop, Products, Orders & Shipping) | FEATURE | FE | MISSING | P1 | Dev FE | T11, T13, T16, T35 |
+| **T60** | Livestream Commerce Portal (Agora RTC + SignalR Realtime) | FEATURE | FE | MISSING | P2 | Dev FE | T41, T42 |
+| **T61** | Returns, Admin Operations & Executive Dashboard | FEATURE | FE | MISSING | P1 | Dev FE | T14, T37, T39, T51 |
 
 ---
 
@@ -1001,6 +1015,125 @@ NovaLive
 
 ---
 
+## 🔵 EPIC 15 — FRONTEND WEB APPLICATIONS (NEXT.JS / REACT)
+
+### T56 — [FE] Setup Frontend Boilerplate, Auth Hub & User Profile
+- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-AUTH-001` đến `FR-AUTH-011`, `FR-USER-001` đến `FR-USER-004`
+- **Detailed Technical Implementation**:
+  1. **Boilerplate & Core Architecture**:
+     - Khởi tạo Next.js 15 (App Router), TypeScript 5, Tailwind CSS v4, Lucide Icons, Shadcn UI / Radix UI components.
+     - Cấu hình Axios / Fetch Client Interceptors: tự động gắn `Bearer {accessToken}` vào HTTP Request. Lắng nghe HTTP 401: Gọi API `/auth/refresh-token` xoay vòng Refresh Token tự động. Nếu thất bại -> Xóa token state và chuyển hướng về `/login`.
+     - Zustand / Redux Toolkit Store: Quản lý Auth state (`currentUser`, `accessToken`, `roles`, `permissions`, `isLoggedIn`).
+  2. **Auth Pages & Modals**:
+     - Page `/login`: Form đăng nhập Email/Password với validation Zod.
+     - Page `/register`: Form đăng ký Buyer/Seller. Modal nhập mã OTP 6 chữ số kèm đếm ngược 60s để resend OTP.
+     - Page `/forgot-password` & `/reset-password`.
+  3. **User Profile & Address Book**:
+     - Page `/user/profile`: Xem và cập nhật thông tin cá nhân (Full name, Avatar preview upload, Phone, Birthday, Gender).
+     - Page `/user/addresses`: Sổ địa chỉ giao hàng. Modal Thêm mới / Cập nhật địa chỉ với Cascading Dropdowns (Tỉnh/Thành -> Quận/Huyện -> Phường/Xã). Đặt địa chỉ mặc định, Xóa địa chỉ với popup xác nhận.
+  4. **Route Protection**: Next.js Middleware (`middleware.ts`) bảo vệ các tuyến đường riêng tư (`/user/*`, `/seller/*`, `/admin/*`).
+- **Dependencies**: T08, T10
+- **Estimated Size**: L
+
+---
+
+### T57 — [FE] Buyer Marketplace & Product Search / Details Portal
+- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-CAT-001` đến `FR-CAT-009`, `FR-SEARCH-001` đến `FR-SEARCH-004`, `FR-REVIEW-001` đến `FR-REVIEW-006`
+- **Detailed Technical Implementation**:
+  - **Marketplace Homepage**: Top Navigation Bar (Logo, Category Mega Menu, Dynamic Search bar, Cart badge with item count, User Profile Avatar). Banner Carousel, Khối Flash Sale với đồng hồ đếm ngược thời gian thực, Top Sản phẩm bán chạy & Shop nổi bật.
+  - **Product Search & Catalog Filtering Page (`/search`, `/category/[id]`)**:
+    - Input tìm kiếm với Debounce (300ms).
+    - Bộ lọc bên sidebar: Cây danh mục đa cấp, Khoảng giá (Price Slider), Chấm sao Đánh giá (1-5 sao), Lọc theo Shop, Lọc hàng có sẵn.
+    - Sắp xếp (Giá tăng/giảm, Bán chạy nhất, Mới nhất) và Phân trang Pagination / Infinite Scrolling.
+  - **Product Detail Page (PDP - `/products/[spuId]`)**:
+    - Image Gallery (Thumbnail selector, Image Zoom).
+    - Ma trận chọn biến thể SKU (Variant Matrix: Màu sắc, Size...): Tự động khớp SKU khi Buyer bấm chọn, cập nhật giá tương ứng và hiển thị tồn kho vật lý (`qty_on_hand`).
+    - Khối thông tin Shop snapshot (Rating shop, button "Ghé Shop" / "Chat ngay").
+    - Tab Mô tả chi tiết & Thông số kỹ thuật.
+    - Tab Reviews: Danh sách đánh giá phân loại theo số sao, hình ảnh/video từ Buyer. Form gửi Đánh giá & Phản hồi (chấm sao, upload media, cho phép sửa 1 lần duy nhất).
+- **Dependencies**: T16, T18, T44
+- **Estimated Size**: XL
+
+---
+
+### T58 — [FE] Cart, Multi-shop Checkout & Payment Flow
+- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-CART-001` đến `FR-CART-005`, `FR-ORD-001` đến `FR-ORD-008`, `FR-PAY-001` đến `FR-PAY-006`
+- **Detailed Technical Implementation**:
+  - **Cart Page (`/cart`)**:
+    - Giao diện giỏ hàng gom nhóm sản phẩm theo từng Shop riêng biệt.
+    - Checkbox chọn sản phẩm thanh toán toàn bộ hoặc chọn từng shop. Tăng/giảm số lượng (kiểm tra max stock), nút Xóa sản phẩm.
+    - Modal áp dụng Voucher: Voucher Gian hàng (Shop Voucher) và Voucher Sàn (Platform Voucher) với thông báo mức giảm tối đa.
+  - **Checkout Page (`/checkout`)**:
+    - Bộ chọn địa chỉ nhận hàng từ Address Book.
+    - Bảng tổng quan đơn hàng phân rã theo SubOrder từng Shop: Preview phí vận chuyển thời gian thực từ ĐVVC, mức giảm giá Voucher 3 cấp proration.
+    - Bộ chọn Đơn vị vận chuyển (GHN / GHTK / ViettelPost) và Phương thức thanh toán (MoMo / VietQR / COD).
+  - **Payment Gateways & Realtime QR Integration**:
+    - Bấm "Đặt hàng": Submit checkout command API.
+    - Nếu chọn MoMo hoặc VietQR: Hiển thị Modal quét mã QR Code thanh toán thời gian thực kèm đếm ngược 15 phút.
+    - Tích hợp **SignalR Client (`PaymentNotificationHub`)**: Kết nối WSS lắng nghe event `PaymentSuccess`. Ngay khi quét mã xong -> Tự động ẩn QR Modal, phát hiệu ứng thành công và chuyển hướng tới `/orders/[id]/success`.
+- **Dependencies**: T19, T23, T30, T31
+- **Estimated Size**: XL
+
+---
+
+### T59 — [FE] Seller Center Portal (Shop, Products, Orders & Shipping)
+- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-SHOP-001` đến `FR-SHOP-007`, `FR-SHIP-001` đến `FR-SHIP-008`
+- **Detailed Technical Implementation**:
+  - **Seller Onboarding & Settings (`/seller/setup`, `/seller/settings`)**: Form đăng ký gian hàng, Upload tài liệu KYC (CCCD/ĐKKD) lên MinIO, Quản lý địa chỉ kho gửi hàng & kho trả hàng.
+  - **Product Management (`/seller/products`)**:
+    - Form tạo mới / chỉnh sửa SPU: Upload nhiều ảnh vào MinIO S3 bucket `products`, nhập tên, danh mục, mô tả chi tiết.
+    - Bảng khởi tạo biến thể SKU: Tạo ma trận biến thể (Color, Size...), nhập giá gốc, giá bán, mã SKU, số lượng tồn kho.
+    - Bật/Tắt trạng thái kinh doanh (`is_active`), Xóa/Ẩn sản phẩm.
+  - **Order Fulfillment & Shipping (`/seller/orders`)**:
+    - Bảng danh sách đơn hàng SubOrders phân theo Tab trạng thái (Chờ xác nhận, Đang chuẩn bị, Đang giao, Đã giao, Trả hàng, Đã hủy).
+    - Thao tác "Giao hàng": Chọn ĐVVC, kích hoạt tạo mã vận đơn (`tracking_code`).
+    - Nút "In phiếu giao hàng": Mở cửa sổ in file PDF phiếu giao khổ A6 chuẩn nhà vận chuyển. Xem hành trình vận đơn realtime.
+  - **Ví Gian Hàng & Analytics (`/seller/wallet`, `/seller/reports`)**: Xem số dư khả dụng (`balance`), số dư Escrow (`holding_balance`), lịch sử giao dịch sổ cái. Form tạo lệnh rút tiền về tài khoản ngân hàng.
+- **Dependencies**: T11, T13, T16, T35
+- **Estimated Size**: XL
+
+---
+
+### T60 — [FE] Livestream Commerce Portal (Agora RTC + SignalR Realtime)
+- **Status**: MISSING | **Priority**: P2 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-LIVE-001` đến `FR-LIVE-008`, `FR-NOTI-003`
+- **Detailed Technical Implementation**:
+  - **Seller Live Studio (`/seller/livestream/studio`)**:
+    - Tích hợp **Agora Web RTC SDK (Publisher Mode)**: Preview camera video, mic selector, kiểm tra bitrate/fps. Nút "Bắt đầu Live" xin Agora RTC token từ API và phát sóng.
+    - Khối quản lý Sản phẩm Ghim: Chọn sản phẩm trong gian hàng để ghim (`Pin Product`) kèm giá Flash price trong live. Nút gỡ ghim (`Unpin Product`).
+    - Frame Chat realtime & Thống kê lượt xem (Peak viewers, current viewers). Nút "Kết thúc Live" hiển thị popup tổng kết doanh số buổi live.
+  - **Buyer Livestream Viewer (`/livestreams/[id]`)**:
+    - Giao diện xem Live dạng dọc chuẩn Mobile / Responsive Desktop. Player **Agora Web RTC SDK (Subscriber Mode)** độ trễ siêu thấp (< 1s).
+    - Floating Heart Reaction (hiệu ứng tim bay Canvas/CSS animation), Khung chat tự động cuộn.
+    - Dynamic Pinned Product Banner: Hiển thị sản phẩm đang ghim góc màn hình. Bấm Banner -> Mở Quick-Buy Drawer cho phép chọn biến thể SKU, chọn Voucher và Đặt hàng ngay mà không làm gián đoạn video livestream.
+  - **SignalR Client (`LivestreamHub`)**: Lắng nghe & gửi sự kiện chat, thả tim, cập nhật banner ghim sản phẩm, đếm số người xem thời gian thực.
+- **Dependencies**: T41, T42
+- **Estimated Size**: XL
+
+---
+
+### T61 — [FE] Returns, Admin Operations & Executive Dashboard
+- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev FE
+- **SRS Requirement**: `FR-RETURN-001` đến `FR-RETURN-008`, `FR-ADMIN-001` đến `FR-ADMIN-006`, `FR-REPORT-001`
+- **Detailed Technical Implementation**:
+  - **Returns & Refunds Portal (`/user/returns`, `/seller/returns`)**:
+    - Buyer UI: Form gửi yêu cầu Trả hàng / Hoàn tiền (lựa chọn lý do, upload hình ảnh/video bằng chứng), hiển thị trạng thái đếm ngược 7 ngày & trạng thái đóng băng tiền Escrow (`Disputed`).
+    - Seller UI: Danh sách yêu cầu trả hàng. Thao tác Đồng ý (hiển thị địa chỉ kho nhận hàng trả) / Từ chối (tải ảnh/video đối chứng) / Xác nhận đã nhận hàng hoàn.
+  - **Admin Operations Portal (`/admin/shops`, `/admin/disputes`)**:
+    - Duyệt Shop Onboarding: Xem hồ sơ KYC, chấp thuận / từ chối gian hàng. Danh sách gian hàng, Khóa / Mở khóa Shop.
+    - Admin Dispute Arbitration (Phân xử Tranh chấp): Màn hình xem bằng chứng đối sánh giữa Buyer & Seller, timeline vận chuyển. Nút phán quyết: `Buyer Wins` (hoàn tiền) hoặc `Seller Wins` (giải phóng tiền ký quỹ).
+  - **Admin Executive Dashboard (`/admin/dashboard`)**:
+    - Biểu đồ tổng quan GMV toàn sàn, Doanh thu hoa hồng thực nhận (Platform Net Revenue).
+    - Thống kê tỷ lệ hoàn hàng, tranh chấp, số người dùng/gian hàng mới. Duyệt lệnh rút tiền Seller Payouts.
+- **Dependencies**: T14, T37, T39, T51
+- **Estimated Size**: L
+
+---
+
 # PART 5 — SPRINT PLAN (3 THÀNH VIÊN)
 
 > **Quy ước**: Sprint 2 tuần | **Dev A**: Auth/Orders/Payment/Returns | **Dev B**: Product/Shop/Discount/Reports | **Dev C**: Realtime/Infra/Workers/DevOps
@@ -1107,6 +1240,21 @@ NovaLive
 
 ---
 
+## 🏁 SPRINT 7 — Frontend Web Applications (Tuần 13–14)
+
+| Task | Mô tả ngắn | Assign | Size |
+| :--- | :--- | :---: | :---: |
+| **T56** | Frontend Boilerplate, Auth Hub & User Profile | Dev FE | L |
+| **T57** | Buyer Marketplace & Product Search / Details | Dev FE | XL |
+| **T58** | Cart, Multi-shop Checkout & Payment QR Flow | Dev FE | XL |
+| **T59** | Seller Center Portal (Products, Orders, Shipping) | Dev FE | XL |
+| **T60** | Livestream Commerce Portal (Agora RTC + SignalR) | Dev FE | XL |
+| **T61** | Returns, Admin Operations & Executive Dashboard | Dev FE | L |
+
+**Goal Sprint 7**: Hoàn thiện toàn bộ giao diện Web App cho Buyer, Seller và Admin kết nối đồng bộ 100% REST API và Realtime SignalR/Agora SDK.
+
+---
+
 # PART 6 — PHÂN CÔNG THEO THÀNH VIÊN
 
 ## 👨‍💻 Dev A — Auth / Orders / Payment / Returns
@@ -1169,3 +1317,15 @@ NovaLive
 | **T48** | EscrowReleaseConsumer (Auto-release T+7 + Wallet Credit) | M |
 | **T49** | TimeoutOrderRollbackWorker & ProductSearchVectorConsumer | M |
 | **T55** | Production Docker Stack (Nginx SSL + Health Checks) | M |
+
+## 🎨 Dev FE — Frontend Portal & Web Applications
+
+| Task | Tên Task kĩ thuật | Size |
+| :--- | :--- | :---: |
+| **T56** | Setup Frontend Boilerplate, Auth Hub & User Profile | L |
+| **T57** | Buyer Marketplace & Product Search / Details Portal | XL |
+| **T58** | Cart, Multi-shop Checkout & Payment Flow | XL |
+| **T59** | Seller Center Portal (Shop, Products, Orders & Shipping) | XL |
+| **T60** | Livestream Commerce Portal (Agora RTC + SignalR Realtime) | XL |
+| **T61** | Returns, Admin Operations & Executive Dashboard | L |
+
