@@ -2,7 +2,7 @@
 
 > Tài liệu thiết kế cơ sở dữ liệu quan hệ cho hệ thống E-commerce Multi-vendor Marketplace & Livestream Shopping.
 >
-> Chuẩn hóa 3NF, tích hợp Ký quỹ Escrow, Flash Sale Atomic UPDATE, Quản lý ví Shop và Agora RTC.
+> Chuẩn hóa 3NF, tích hợp Thanh toán trực tiếp (VietQR, MoMo), Flash Sale Atomic UPDATE, Quản lý ví Shop và Agora RTC.
 > Kiểu định danh (PK): `UUID` toàn bộ. Tiền tệ: `DECIMAL(18,2)`. Thời gian: `TIMESTAMPTZ` (UTC).
 > Tìm kiếm sản phẩm dùng PostgreSQL Full-Text Search (`tsvector`) và `pg_trgm`.
 
@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
                     OrderStatusHistories, OrderReturns, OrderReturnItems
 8.  DISCOUNT      : Discounts, DiscountUsages                           (2 bảng)
 9.  FLASH_SALE    : FlashSaleCampaigns, FlashSaleItems                  (2 bảng)
-10. PAYMENT       : Payments, PaymentEscrows, SellerPayouts             (3 bảng)
+10. PAYMENT       : Payments, SellerPayouts                             (2 bảng)
 11. SHIPPING      : ShippingOrders                                      (1 bảng)
 12. LIVESTREAM    : LivestreamSessions, LivestreamProducts,             (3 bảng)
                     LivestreamComments
@@ -36,7 +36,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 14. NOTIFICATION  : Notifications                                       (1 bảng)
 15. SYSTEM & EDA  : AuditLogs, OutboxMessages                           (2 bảng)
 ───────────────────────────────────────────────────────────────────────────────
-TỔNG CỘNG: 46 BẢNG
+TỔNG CỘNG: 45 BẢNG
 ```
 
 ---
@@ -191,13 +191,11 @@ CREATE INDEX idx_shopfollowers_user ON ShopFollowers(user_id, created_at);
 CREATE TABLE ShopWallets (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shop_id         UUID NOT NULL UNIQUE REFERENCES Shops(id) ON DELETE RESTRICT,
-    balance         DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Số dư có thể rút
-    holding_balance DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Đang giữ ở Escrow
+    balance         DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Số dư khả dụng của Shop
     locked_balance  DECIMAL(18,2) NOT NULL DEFAULT 0.00,        -- Đã khóa cho lệnh rút tiền đang xử lý
     currency        VARCHAR(3) NOT NULL DEFAULT 'VND',
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
     CHECK (balance >= 0),
-    CHECK (holding_balance >= 0),
     CHECK (locked_balance >= 0)
 );
 
@@ -205,11 +203,11 @@ CREATE TABLE ShopWallets (
 CREATE TABLE ShopWalletTransactions (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id       UUID NOT NULL REFERENCES ShopWallets(id) ON DELETE RESTRICT,
-    type            VARCHAR(30) NOT NULL CHECK (type IN ('EscrowHold','EscrowRelease','EscrowRefund','CodCommissionDeduct','PayoutLock','PayoutWithdrawal','PayoutFailedUnlock','PenaltyDeduct','ManualAdjustment')),
+    type            VARCHAR(30) NOT NULL CHECK (type IN ('OrderRevenue','OrderRefund','CodCommissionDeduct','PayoutLock','PayoutWithdrawal','PayoutFailedUnlock','PenaltyDeduct','ManualAdjustment')),
     amount          DECIMAL(18,2) NOT NULL, -- Âm nếu trừ, Dương nếu cộng
     balance_before  DECIMAL(18,2) NOT NULL,
     balance_after   DECIMAL(18,2) NOT NULL,
-    ref_type        VARCHAR(30) NULL,       -- 'Order', 'PaymentEscrow', 'SellerPayout'
+    ref_type        VARCHAR(30) NULL,       -- 'Order', 'SellerPayout'
     ref_id          UUID NULL,
     description     TEXT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
@@ -614,7 +612,7 @@ CREATE INDEX idx_flashsaleitems_sku ON FlashSaleItems(sku_id);
 
 ---
 
-### 2.10 Nhóm PAYMENT & ESCROW KÝ QUỸ
+### 2.10 Nhóm PAYMENT & PAYOUT
 
 ```sql
 -- 34. Payments: Giao dịch thanh toán của Buyer (1 Payment cho 1 ParentOrder)
@@ -633,25 +631,7 @@ CREATE TABLE Payments (
 );
 CREATE INDEX idx_payments_parent_order ON Payments(parent_order_id);
 
--- 35. PaymentEscrows: Ký quỹ giữ tiền từng Sub-Order
-CREATE TABLE PaymentEscrows (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sub_order_id UUID NOT NULL UNIQUE REFERENCES SubOrders(id) ON DELETE RESTRICT,
-    payment_id   UUID NOT NULL REFERENCES Payments(id) ON DELETE RESTRICT,
-    shop_id      UUID NOT NULL REFERENCES Shops(id) ON DELETE RESTRICT,
-    held_amount  DECIMAL(18,2) NOT NULL CHECK (held_amount > 0),
-    platform_fee DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
-    status       VARCHAR(20) NOT NULL DEFAULT 'PendingCapture' CHECK (status IN ('PendingCapture','Holding','Released','Disputed','Refunded','PartialRefund')),
-    hold_until   TIMESTAMPTZ NULL, -- T+7 sau khi Delivered
-    released_at  TIMESTAMPTZ NULL,
-    refunded_at  TIMESTAMPTZ NULL,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
-);
-CREATE INDEX idx_escrow_shop_status ON PaymentEscrows(shop_id, status);
-CREATE INDEX idx_escrow_hold_until ON PaymentEscrows(hold_until) WHERE status = 'Holding';
-
--- 36. SellerPayouts: Lệnh chuyển tiền về tài khoản ngân hàng của Seller
+-- 35. SellerPayouts: Lệnh chuyển tiền về tài khoản ngân hàng của Seller
 CREATE TABLE SellerPayouts (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shop_id      UUID NOT NULL REFERENCES Shops(id) ON DELETE RESTRICT,

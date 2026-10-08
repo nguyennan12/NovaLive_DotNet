@@ -134,7 +134,7 @@ NovaLive.sln
 │   │   ├── Livestreams/                     (LivestreamSession, LivestreamProduct, LivestreamComment)
 │   │   ├── Notifications/                   (Notification)
 │   │   ├── Orders/                          (ParentOrder, SubOrder, OrderItem, OrderStatusHistory, OrderReturn, OrderReturnItem)
-│   │   ├── Payments/                        (Payment, PaymentEscrow, SellerPayout)
+│   │   ├── Payments/                        (Payment, SellerPayout)
 │   │   ├── Products/                        (Category, Spu, Sku, SkuImage, ProductAttribute)
 │   │   ├── Rbac/                            (Permission, Resource, Role, RolePermission, UserRole)
 │   │   ├── Reviews/                         (Review, ReviewImage)
@@ -174,7 +174,7 @@ NovaLive.sln
 
 ## 4. ⚡ CÁC LUỒNG XỬ LÝ NGHIỆP VỤ THEN CHỐT
 
-### 4.1 Luồng Mua hàng Đa Shop: Giỏ hàng $\rightarrow$ Tính nháp $\rightarrow$ Đặt đơn $\rightarrow$ Ký quỹ Escrow
+### 4.1 Luồng Mua hàng Đa Shop: Giỏ hàng $\rightarrow$ Tính nháp $\rightarrow$ Đặt đơn $\rightarrow$ Thanh toán trực tiếp cho Shop
 
 ```text
 [Buyer: Màn hình Giỏ hàng]
@@ -194,19 +194,18 @@ NovaLive.sln
     │       ├── 2. Tạo Parent Order (quản lý grand_total toàn giỏ)
     │       ├── 3. Tạo 2 Sub-Orders (SubOrder A cho Shop A, SubOrder B cho Shop B)
     │       ├── 4. Tạo OrderItems kèm snapshot: sku_snapshot_json, unit_price, discount_amount
-    │       ├── 5. Tạo Payment record (Pending)
-    │       ├── 6. Tạo 2 PaymentEscrows (PendingCapture; chuyển Holding khi thanh toán thành công)
-    │       ├── 7. Xóa 3 món đã chọn khỏi giỏ hàng (giữ lại các món chưa chọn)
-    │       └── 8. Ghi OutboxMessage(OrderPlacedEvent) trong cùng DB transaction
+    │       ├── 5. Tạo Payment record (Pending) cho ParentOrder
+    │       ├── 6. Xóa 3 món đã chọn khỏi giỏ hàng (giữ lại các món chưa chọn)
+    │       └── 7. Ghi OutboxMessage(OrderPlacedEvent) trong cùng DB transaction
     │
-    ├─ 4. Thanh toán:
-    │   ├─ MoMo / VietQR: Buyer quét mã QR ──► Webhook IPN ──► Payment.Status = Success ──► SubOrders = Confirmed
-    │   └─ COD: Đơn tạo thành công ──► SubOrders = Confirmed (Seller đóng gói ngay, thu tiền khi giao)
+    ├─ 4. Thanh toán & Ghi nhận Doanh thu:
+    │   ├─ MoMo / VietQR: Buyer quét mã QR ──► Webhook IPN ──► Payment.Status = Success
+    │   │   └── Cộng tiền trực tiếp vào ShopWallets.balance của Shop A & Shop B ──► SubOrders = Confirmed
+    │   └─ COD: Đơn tạo thành công ──► SubOrders = Confirmed (Seller đóng gói ngay, đối soát tiền sau khi giao)
     │
-    ├─ 5. Giao hàng & Escrow Release:
+    ├─ 5. Giao hàng & Hoàn tất:
     │       Seller đóng gói ──► Gọi ĐVVC lấy hàng (Shipping) ──► ĐVVC giao xong (Delivered)
-    │       ──► Đếm ngược 7 ngày khiếu nại (T+7)
-    │       ──► Sau 7 ngày không có khiếu nại: Escrow chuyển Released ──► Cộng tiền vào ShopWallets.balance của Seller
+    │       ──► SubOrder hoàn thành (Completed) & Buyer có thể viết Đánh giá (Review)
 ```
 
 ### 4.2 Luồng Livestream: Agora RTC $\rightarrow$ Pin SP $\rightarrow$ Mua Ngay (Instant Buy)

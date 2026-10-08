@@ -69,23 +69,23 @@ NovaLive
 │   ├── T26: [BE/API] Flash Sale Campaign & Registration Management
 │   └── T27: [BE] Atomic Flash Sale Reserve (PG Condition UPDATE)
 │
-├── EPIC 07: Payment & Escrow
+├── EPIC 07: Payment & Direct Settlement
 │   ├── T28: [INFRA] MoMo Payment Gateway Adapter & IPN Handler
 │   ├── T29: [INFRA] VietQR Payment Gateway Adapter & Webhook Handler
 │   ├── T30: [BE/API] Payment Initiator & Realtime Status Query
 │   ├── T31: [REALTIME] SignalR PaymentNotificationHub Integration
-│   └── T32: [BE] Escrow Custodian Lifecycle (Capture → Hold → Release)
+│   └── T32: [BE] Direct Payment Settlement & Shop Wallet Credit
 │
 ├── EPIC 08: Shipping & Fulfillment
 │   ├── T33: [INFRA] GHN Shipping Adapter & Webhook Integrator
 │   ├── T34: [INFRA] GHTK & ViettelPost Shipping Adapters
 │   ├── T35: [BE/API] Seller Shipping Fulfillment & Label PDF Generator
-│   └── T36: [BE] Shipping Webhook Handler & Escrow Countdown Trigger
+│   └── T36: [BE] Shipping Webhook Handler & Delivery Status Sync
 │
 ├── EPIC 09: Returns & Disputes
 │   ├── T37: [BE/API] Return Request Lifecycle (Buyer Claim ≤ 7 Days)
 │   ├── T38: [BE/API] Seller Return Response & Inspection Confirmation
-│   └── T39: [BE/API] Admin Dispute Arbitration & Escrow Resolution
+│   └── T39: [BE/API] Admin Dispute Arbitration & Refund Resolution
 │
 ├── EPIC 10: Livestream Commerce (Agora RTC + SignalR)
 │   ├── T40: [INFRA] Agora RTC Token Generation Service
@@ -100,7 +100,7 @@ NovaLive
 ├── EPIC 12: Background Workers & Event-Driven
 │   ├── T46: [WORKER] OrderPlacedConsumer (Email/SMS + Push Noti)
 │   ├── T47: [WORKER] InventorySyncConsumer (Deduct Stock After Paid)
-│   ├── T48: [WORKER] EscrowReleaseConsumer (Auto-release T+7 + Wallet Credit)
+│   ├── T48: [WORKER] CODReconciliationConsumer (COD Settlement & Wallet Credit)
 │   └── T49: [WORKER] TimeoutOrderRollbackWorker & ProductSearchVectorConsumer
 │
 ├── EPIC 13: Reports & Admin Dashboard
@@ -110,7 +110,7 @@ NovaLive
 ├── EPIC 14: Testing & DevOps Hardening
 │   ├── T52: [TEST] Domain & Application Unit Tests
 │   ├── T53: [TEST] Integration Tests (Auth, Checkout, Webhooks)
-│   ├── T54: [TEST] End-to-End Tests (Full Purchase to Escrow Cycle)
+│   ├── T54: [TEST] End-to-End Tests (Full Purchase to Direct Settlement Cycle)
 │   └── T55: [DEVOPS] Production Docker Stack (Nginx SSL + Health Checks)
 │
 └── EPIC 15: Frontend Web Applications (Next.js / React)
@@ -159,14 +159,14 @@ NovaLive
 | **T29** | VietQR Payment Gateway Adapter & Webhook Handler | FEATURE | INFRA | MISSING | P0 | Dev C | T07 |
 | **T30** | Payment Initiator & Realtime Status Query | FEATURE | BE/API | MISSING | P0 | Dev A | T23, T28, T29 |
 | **T31** | SignalR PaymentNotificationHub Integration | FEATURE | REALTIME | MISSING | P0 | Dev C | T30 |
-| **T32** | Escrow Custodian Lifecycle (Capture → Hold → Release) | FEATURE | BE | MISSING | P0 | Dev A | T23 |
+| **T32** | Direct Payment Settlement & Shop Wallet Credit | FEATURE | BE | MISSING | P0 | Dev A | T23 |
 | **T33** | GHN Shipping Adapter & Webhook Integrator | FEATURE | INFRA | MISSING | P1 | Dev C | T07 |
 | **T34** | GHTK & ViettelPost Shipping Adapters | FEATURE | INFRA | MISSING | P1 | Dev C | T07 |
 | **T35** | Seller Shipping Fulfillment & Label PDF Generator | FEATURE | BE/API | MISSING | P1 | Dev C | T33, T34, T23 |
-| **T36** | Shipping Webhook Handler & Escrow Countdown Trigger | FEATURE | BE | MISSING | P1 | Dev C | T35, T32 |
+| **T36** | Shipping Webhook Handler & Delivery Status Sync | FEATURE | BE | MISSING | P1 | Dev C | T35, T32 |
 | **T37** | Return Request Lifecycle (Buyer Claim ≤ 7 Days) | FEATURE | BE/API | MISSING | P1 | Dev A | T36 |
 | **T38** | Seller Return Response & Inspection Confirmation | FEATURE | BE/API | MISSING | P1 | Dev A | T37 |
-| **T39** | Admin Dispute Arbitration & Escrow Resolution | FEATURE | BE/API | MISSING | P1 | Dev A | T38 |
+| **T39** | Admin Dispute Arbitration & Refund Resolution | FEATURE | BE/API | MISSING | P1 | Dev A | T38 |
 | **T40** | Agora RTC Token Generation Service | FEATURE | INFRA | MISSING | P2 | Dev C | T07 |
 | **T41** | Livestream Session Lifecycle & Product Pinning | FEATURE | BE/API | MISSING | P2 | Dev C | T40, T16, T08 |
 | **T42** | SignalR LivestreamHub (Chat, Reaction, Pin, Viewers) | FEATURE | REALTIME | MISSING | P2 | Dev C | T41 |
@@ -175,13 +175,13 @@ NovaLive
 | **T45** | Rating Calculation Background Worker | WORKER | WORKER | MISSING | P2 | Dev C | T44 |
 | **T46** | OrderPlacedConsumer (Email/SMS + Push Noti) | WORKER | WORKER | MISSING | P1 | Dev C | T22 |
 | **T47** | InventorySyncConsumer (Deduct Stock After Paid) | WORKER | WORKER | MISSING | P0 | Dev C | T30, T22 |
-| **T48** | EscrowReleaseConsumer (Auto-release T+7 + Wallet Credit) | WORKER | WORKER | MISSING | P0 | Dev C | T32, T36 |
+| **T48** | CODReconciliationConsumer (COD Settlement & Wallet Credit) | WORKER | WORKER | MISSING | P0 | Dev C | T32, T36 |
 | **T49** | TimeoutOrderRollbackWorker & ProductSearchVectorConsumer | WORKER | WORKER | MISSING | P1 | Dev C | T22, T16 |
 | **T50** | Seller Performance Dashboard & Wallet Analytics | FEATURE | BE/API | MISSING | P2 | Dev B | T32, T36 |
 | **T51** | Admin Platform Executive Dashboard & Financial Reports | FEATURE | BE/API | MISSING | P2 | Dev B | T39, T48 |
 | **T52** | Domain & Application Unit Tests | TEST | TEST | MISSING | P1 | All | T20, T22, T27 |
 | **T53** | Integration Tests (Auth, Checkout, Webhooks) | TEST | TEST | MISSING | P1 | All | T08, T30, T36 |
-| **T54** | End-to-End Tests (Full Purchase to Escrow Cycle) | TEST | TEST | MISSING | P1 | All | T39, T48 |
+| **T54** | End-to-End Tests (Full Purchase to Direct Settlement Cycle) | TEST | TEST | MISSING | P1 | All | T39, T48 |
 | **T55** | Production Docker Stack (Nginx SSL + Health Checks) | DEVOPS | DEVOPS | MISSING | P1 | Dev C | T08, T02 |
 | **T56** | Setup Frontend Boilerplate, Auth Hub & User Profile | FEATURE | FE | MISSING | P0 | Dev FE | T08, T10 |
 | **T57** | Buyer Marketplace & Product Search / Details Portal | FEATURE | FE | MISSING | P1 | Dev FE | T16, T18, T44 |
@@ -299,7 +299,7 @@ NovaLive
 - **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-WALLET-001`, `FR-WALLET-002`, `FR-WALLET-003`, `FR-WALLET-004`
 - **Detailed Technical Implementation**:
-  - `GetShopWalletQuery`: Trả về `ShopWallets` của shop seller (`balance`, `holding_balance`, `locked_balance`).
+  - `GetShopWalletQuery`: Trả về `ShopWallets` của shop seller (`balance`, `locked_balance`).
   - `GetWalletTransactionsQuery`: Truy vấn bảng sổ cái `ShopWalletTransactions` có phân trang, lọc theo loại giao dịch (`type`) và khoảng thời gian (`from`, `to`).
   - `CreatePayoutRequestCommand`:
     1. Kiểm tra số tiền rút `amount`: Phải `>= 50.000 VNĐ` và `<= ShopWallets.balance`.
@@ -318,7 +318,7 @@ NovaLive
 - **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-SHOP-004`, `FR-SHOP-005`, `FR-SHOP-006`, `FR-SHOP-007`, `FR-WALLET-005`, `FR-ADMIN-001`, `FR-ADMIN-002`, `FR-ADMIN-006`
 - **Detailed Technical Implementation**:
-  - `ApproveShopCommand` (Admin): Chuyển `Shops.status = Active`, `ShopVerifications.status = Approved`. Gán `Role` `Seller` cho owner. Khởi tạo `ShopWallets` ban đầu với `balance = 0, holding_balance = 0, locked_balance = 0`.
+  - `ApproveShopCommand` (Admin): Chuyển `Shops.status = Active`, `ShopVerifications.status = Approved`. Gán `Role` `Seller` cho owner. Khởi tạo `ShopWallets` ban đầu với `balance = 0, locked_balance = 0`.
   - `BanShopCommand` (Admin): Chuyển `Shops.status = Banned` (hoặc `Suspended`). Tự động cập nhật toàn bộ `Spus.status = Inactive` của shop để ẩn sản phẩm khỏi tìm kiếm công khai, ngăn chặn tạo đơn mới.
   - `ApprovePayoutCommand` (Admin): Nhập `transfer_ref` ngân hàng. Thực thi transaction: Trừ `ShopWallets.locked_balance -= amount`, chuyển `SellerPayouts.status = Completed`, ghi sổ cái `ShopWalletTransactions` loại `PayoutWithdrawal`.
   - `RejectPayoutCommand` (Admin): Nếu từ chối lệnh rút tiền → Hoàn trả `locked_balance -= amount`, `balance += amount`, chuyển `SellerPayouts.status = Failed`, ghi sổ cái loại `PayoutFailedUnlock`.
@@ -463,9 +463,9 @@ NovaLive
 
 ---
 
-### T22 — [BE] Checkout Command Handler (Atomic UoW 8-Step Transaction)
+### T22 — [BE] Checkout Command Handler (Atomic UoW 7-Step Transaction)
 - **Status**: MISSING | **Priority**: P0 | **Assign**: Dev A
-- **SRS Requirement**: `FR-CAT-009`, `FR-CHECKOUT-004`, `FR-CHECKOUT-005`, `FR-CHECKOUT-006`, `FR-CHECKOUT-007`, `FR-CHECKOUT-008`, `FR-ESCROW-001`, `NFR-REL-001`, `NFR-PERF-002`
+- **SRS Requirement**: `FR-CAT-009`, `FR-CHECKOUT-004`, `FR-CHECKOUT-005`, `FR-CHECKOUT-006`, `FR-CHECKOUT-007`, `FR-CHECKOUT-008`, `NFR-REL-001`, `NFR-PERF-002`
 - **Detailed Technical Implementation**:
   - `CheckoutCommand` thực thi trong một Database Transaction duy nhất (`IUnitOfWork`):
     1. **Khóa & Kiểm tra tồn kho**: Tra cứu `Inventories WHERE sku_id IN (...) FOR UPDATE`. Kiểm tra lượng khả dụng (`qty_on_hand - reserved_qty >= quantity`). Nếu không đủ → Rollback và báo lỗi hết hàng.
@@ -473,9 +473,8 @@ NovaLive
     3. **Tạo ParentOrder**: Sinh `order_code = "NOVA-{YYYYMMDD}-{RANDOM4}"`, snapshot thông tin địa chỉ nhận vào `shipping_address_json`, lưu `grand_total`, `payment_status = Pending`.
     4. **Tạo SubOrders & OrderItems**: Với N shop có sản phẩm được chọn, sinh N bản ghi `SubOrders` (`sub_order_code = "{order_code}-S{i}"`). Tạo `OrderItems` cho từng sản phẩm kèm snapshot DTO bất biến `sku_snapshot_json` ({skuCode, spuName, attributes, thumbnailUrl}) và phân bổ tiền giảm `discount_amount`.
     5. **Khởi tạo Payment**: Tạo bản ghi `Payments` (trỏ tới `parent_order_id`, method = MoMo/VietQR/COD, status = Pending).
-    6. **Khởi tạo Escrow**: Tạo N bản ghi `PaymentEscrows` tương ứng N Sub-orders với `status = PendingCapture`, `held_amount = sub_total`.
-    7. **Dọn giỏ hàng**: Xóa đúng các `cartItemIds` đã checkout khỏi `CartItems` (giữ lại các món khác chưa được tick chọn).
-    8. **Outbox Event**: Ghi `OutboxMessage(OrderPlacedEvent)` trong cùng Transaction.
+    6. **Dọn giỏ hàng**: Xóa đúng các `cartItemIds` đã checkout khỏi `CartItems` (giữ lại các món khác chưa được tick chọn).
+    7. **Outbox Event**: Ghi `OutboxMessage(OrderPlacedEvent)` trong cùng Transaction.
   - **Xử lý đặc thù đơn COD**: Nếu `paymentMethod == COD` → `ParentOrder.payment_status = Pending`, nhưng các `SubOrders.status` lập tức chuyển thành `Confirmed` để Seller có thể đóng gói hàng ngay lập tức.
 - **Dependencies**: T21, T32
 - **API Contracts**: `CheckoutRequest`, `CheckoutResponse` (`NovaLive.Contracts.V1.Orders`)
@@ -580,7 +579,7 @@ NovaLive
 
 ---
 
-## 🟡 EPIC 07 — PAYMENT & ESCROW
+## 🟡 EPIC 07 — PAYMENT & DIRECT SETTLEMENT
 
 ### T28 — [INFRA] MoMo Payment Gateway Adapter & IPN Handler
 - **Status**: MISSING | **Priority**: P0 | **Assign**: Dev C
@@ -601,7 +600,7 @@ NovaLive
 - **SRS Requirement**: `FR-PAY-001`, `FR-PAY-002`, `FR-PAY-003`, `2.4 Phụ thuộc ngoài`, `7.3 Webhook`
 - **Detailed Technical Implementation**:
   - Implement class `VietQRPaymentAdapter : IPaymentGateway`.
-  - Method `InitiateAsync`: Sinh chuỗi VietQR chuẩn EMVCo Động chứa số tài khoản doanh nghiệp Sàn NovaLive, ngân hàng thụ hưởng, số tiền, và nội dung chuyển khoản bắt buộc `NOVA_{orderCode}`.
+  - Method `InitiateAsync`: Sinh chuỗi VietQR chuẩn EMVCo Động chứa số tài khoản ngân hàng, số tiền, và nội dung chuyển khoản bắt buộc `NOVA_{orderCode}`.
   - Endpoint `POST /api/v1/payments/webhook/vietqr` (Callback đối soát biến động số dư ngân hàng/OpenBanking):
     1. Xác thực HMAC Secret của Webhook.
     2. Trích xuất nội dung chuyển khoản `NOVA_{orderCode}`.
@@ -620,7 +619,7 @@ NovaLive
   - `InitiatePaymentCommand`: Nhận `orderId`, `method` (MoMo / VietQR). Tra cứu `Payments` của order. Gọi `IPaymentGateway.InitiateAsync`, cập nhật `transaction_ref`, đặt thời hạn thanh toán `expired_at = NOW() + 15 phút`. Trả về `payUrl` / `qrCode`.
   - `GetPaymentStatusQuery`: Query trạng thái `Payments.status` từ DB/Redis cache cho frontend polling.
   - Endpoints `PaymentsController`: `POST /payments/initiate`, `GET /payments/{paymentId}/status`.
-  - **Xử lý COD**: Đơn COD không cần gọi Initiate payment online. `Payments.status` giữ `Pending` cho đến khi đơn giao xong và ĐVVC đối soát COD thành công về tài khoản sàn.
+  - **Xử lý COD**: Đơn COD không cần gọi Initiate payment online. `Payments.status` giữ `Pending` cho đến khi đơn giao xong và ĐVVC đối soát COD thành công.
 - **Dependencies**: T23, T28, T29
 - **API Contracts**: `InitiatePaymentRequest`, `PaymentInitResponse`, `PaymentStatusResponse` (`NovaLive.Contracts.V1.Payments`)
 - **Estimated Size**: M
@@ -640,22 +639,21 @@ NovaLive
 
 ---
 
-### T32 — [BE] Escrow Custodian Lifecycle (Capture → Hold → Release)
+### T32 — [BE] Direct Payment Settlement & Shop Wallet Credit
 - **Status**: MISSING | **Priority**: P0 | **Assign**: Dev A
-- **SRS Requirement**: `FR-ESCROW-001`, `FR-ESCROW-002`, `FR-ESCROW-003`, `FR-ESCROW-004`, `FR-ESCROW-005`
+- **SRS Requirement**: `FR-PAY-005`, `FR-WALLET-001`, `FR-WALLET-002`
 - **Detailed Technical Implementation**:
-  - `CaptureEscrowCommand` (chạy khi Payment online Success hoặc COD đã đối soát):
-    Chuyển `PaymentEscrows.status` từ `PendingCapture` sang `Holding`. Cập nhật ví seller: `ShopWallets.holding_balance += held_amount`. Ghi log sổ cái `ShopWalletTransactions` loại `EscrowHold`.
-  - `ReleaseEscrowCommand` (chạy sau T+7 ngày từ lúc Delivered khống có khiếu nại):
-    Chuyển `PaymentEscrows.status = Released`, `released_at = NOW()`. Thực thi trong transaction:
-    - `ShopWallets.holding_balance -= held_amount`
-    - `ShopWallets.balance += (held_amount - platform_fee)`
-    - Ghi log sổ cái `ShopWalletTransactions` loại `EscrowRelease`.
-  - `RefundEscrowCommand` (chạy khi Buyer thắng tranh chấp hoàn hàng):
-    Chuyển `PaymentEscrows.status = Refunded`. Hoàn tiền từ tài khoản sàn về tài khoản Buyer, giảm `ShopWallets.holding_balance -= held_amount`. Ghi sổ cái loại `EscrowRefund`.
+  - `SettleOrderPaymentCommand` (chạy khi Payment online Success hoặc COD đã đối soát):
+    1. Tra cứu các `SubOrders` thuộc `ParentOrder`.
+    2. Với mỗi SubOrder của từng Shop:
+       - Tính số tiền thực nhận của Shop: $\text{shop\_net} = \text{sub\_order\_total} - \text{platform\_fee}$.
+       - Cộng trực tiếp vào ví Shop: `ShopWallets.balance += shop_net`.
+       - Ghi log sổ cái `ShopWalletTransactions` loại `OrderRevenue` với `ref_type = 'Order'`, `ref_id = subOrderId`.
+    3. Cập nhật `SubOrders.status = Confirmed` (chuyển sang bước đóng gói giao hàng).
+    4. Gửi SignalR notification thông báo đơn hàng mới và doanh thu đã cộng cho Seller.
 - **Dependencies**: T23
-- **Acceptance Criteria** (`AC-007`, `AC-008`): Tiền Escrow giải phóng chuẩn xác tới từng đồng sau T+7. `balance`, `holding_balance`, `locked_balance` luôn `>= 0`.
-- **Estimated Size**: L
+- **Acceptance Criteria** (`AC-007`): Tiền thanh toán thành công được cộng ngay lập tức vào `balance` của từng Shop tương ứng, sổ cái `ShopWalletTransactions` ghi nhận đầy đủ.
+- **Estimated Size**: M
 
 ---
 
@@ -708,16 +706,15 @@ NovaLive
 
 ---
 
-### T36 — [BE] Shipping Webhook Handler & Escrow Countdown Trigger
+### T36 — [BE] Shipping Webhook Handler & Delivery Status Sync
 - **Status**: MISSING | **Priority**: P1 | **Assign**: Dev C
-- **SRS Requirement**: `FR-SHIP-006`, `FR-SHIP-007`, `FR-SHIP-008`, `FR-ESCROW-003`, `NFR-REL-004`
+- **SRS Requirement**: `FR-SHIP-006`, `FR-SHIP-007`, `FR-SHIP-008`, `NFR-REL-004`
 - **Detailed Technical Implementation**:
   - `HandleShippingWebhookCommand`:
     1. Tra cứu `ShippingOrders` theo `tracking_code`.
     2. Cập nhật `ShippingOrders.status`. Cập nhật `SubOrders.status` tương ứng (`Picking` -> `Shipping` -> `Delivered`).
-    3. **Kích hoạt đếm ngược Escrow**: Khi Webhook báo trạng thái `Delivered`:
+    3. Khi Webhook báo trạng thái `Delivered`:
        - Cập nhật `SubOrders.delivered_at = NOW()`, `status = Delivered`.
-       - Đặt thời hạn giải phóng ký quỹ: `PaymentEscrows.hold_until = NOW() + 7 ngày`.
        - Mở quyền tạo Đánh giá (Review) cho Buyer đối với các sản phẩm trong SubOrder.
        - Ghi `OutboxMessage(ShipmentDeliveredEvent)`.
   - **Polling Fallback Background Job**: Job chạy 6 tiếng/lần quét các `ShippingOrders` đang ở trạng thái `Delivering` quá 3 ngày không nhận được webhook → Chủ động gọi API tra cứu trạng thái của ĐVVC để tự động cập nhật `Delivered`.
@@ -736,11 +733,10 @@ NovaLive
     1. Kiểm tra `SubOrder.status == Delivered`.
     2. **Kiểm tra thời hạn 7 ngày**: `NOW() <= SubOrder.delivered_at + 7 days`. Nếu quá 7 ngày → Báo lỗi `400 Bad Request` ("Đã hết thời hạn khiếu nại trả hàng").
     3. Tạo bản ghi `OrderReturns` (`reason`, `evidence_urls`, `status = Pending`). Tạo `OrderReturnItems` cho từng món cần trả.
-    4. **Đóng băng Escrow**: Chuyển `PaymentEscrows.status = Disputed` để ngắt đếm ngược T+7 tự động giải phóng tiền.
   - Endpoints: `POST /returns`, `GET /returns`, `GET /returns/{id}`.
 - **Dependencies**: T36
 - **API Contracts**: `CreateReturnRequest`, `ReturnDetailResponse` (`NovaLive.Contracts.V1.Returns`)
-- **Acceptance Criteria** (`AC-009`): Tạo yêu cầu trả hàng lập tức đóng băng Escrow `Disputed`, không cho tiền chảy về ví Seller.
+- **Acceptance Criteria** (`AC-009`): Tạo yêu cầu trả hàng thành công trong vòng 7 ngày kể từ khi nhận hàng.
 - **Estimated Size**: M
 
 ---
@@ -753,7 +749,7 @@ NovaLive
   - `RejectReturnCommand` (Seller từ chối): Nhập lý do từ chối + ảnh/video đối chứng. Chuyển `OrderReturns.status = SellerRejected`.
   - `ConfirmReturnReceivedCommand` (Seller xác nhận đã nhận lại hàng hoàn):
     - Chuyển `OrderReturns.status = Completed`, `SubOrders.status = Returned`.
-    - Gọi `RefundEscrowCommand` hoàn tiền cho Buyer.
+    - Thực hiện hoàn tiền từ tài khoản Shop cho Buyer: trừ `ShopWallets.balance -= refundAmount`, ghi sổ cái `ShopWalletTransactions` loại `OrderRefund`.
     - Cộng lại tồn kho vật lý cho các sản phẩm còn nguyên vẹn: `Inventories.qty_on_hand += qty`, ghi `InventoryHistories(ReturnIn)`.
   - Endpoints `SellerReturnsController`: `GET /seller/returns`, `PUT /seller/returns/{id}/approve`, `PUT /seller/returns/{id}/reject`, `PUT /seller/returns/{id}/received`.
 - **Dependencies**: T37
@@ -761,14 +757,14 @@ NovaLive
 
 ---
 
-### T39 — [BE/API] Admin Dispute Arbitration & Escrow Resolution
+### T39 — [BE/API] Admin Dispute Arbitration & Refund Resolution
 - **Status**: MISSING | **Priority**: P1 | **Assign**: Dev A
 - **SRS Requirement**: `FR-RETURN-006`, `FR-RETURN-007`, `FR-RETURN-008`, `FR-ADMIN-005`
 - **Detailed Technical Implementation**:
   - **Tự động leo thang Tranh chấp**: Background Job quét các `OrderReturns WHERE status IN ('Pending', 'SellerRejected')` quá 3 ngày không thỏa thuận xong → Tự động chuyển `status = AdminDispute` lên Admin phân xử.
   - `ResolveDisputeCommand` (Admin đưa ra phán quyết cuối cùng):
-    - **Nếu `decision == BuyerWins`**: Chuyển `OrderReturns.status = AdminApproved`. Gọi `RefundEscrowCommand` hoàn tiền từ Escrow cho Buyer. Ghi nhận lỗi vi phạm vào điểm uy tín của Shop.
-    - **Nếu `decision == SellerWins`**: Chuyển `OrderReturns.status = AdminRejected`. Gọi `ReleaseEscrowCommand` giải phóng tiền ký quỹ Escrow cộng vào `ShopWallets.balance` của Seller.
+    - **Nếu `decision == BuyerWins`**: Chuyển `OrderReturns.status = AdminApproved`. Trừ tiền từ tài khoản Shop để hoàn tiền cho Buyer (ghi `ShopWalletTransactions` loại `OrderRefund`). Ghi nhận lỗi vi phạm vào điểm uy tín của Shop.
+    - **Nếu `decision == SellerWins`**: Chuyển `OrderReturns.status = AdminRejected`. Giữ nguyên đơn hàng hoàn thành cho Seller.
   - Endpoints `AdminDisputesController`: `GET /admin/disputes`, `PUT /admin/disputes/{returnId}/resolve`.
 - **Dependencies**: T38, T32
 - **API Contracts**: `ResolveDisputeRequest`, `DisputeResponse` (`NovaLive.Contracts.V1.Returns`)
@@ -904,14 +900,14 @@ NovaLive
 
 ---
 
-### T48 — [WORKER] EscrowReleaseConsumer (Auto-release T+7 + Wallet Credit)
+### T48 — [WORKER] CODReconciliationConsumer (COD Order Settlement & Wallet Credit)
 - **Status**: MISSING | **Priority**: P0 | **Assign**: Dev C
-- **SRS Requirement**: `FR-ESCROW-004`, `AC-008`
+- **SRS Requirement**: `FR-PAY-003`, `AC-008`
 - **Detailed Technical Implementation**:
-  - Implement Background Job `EscrowReleaseWorker` chạy định kỳ 1 giờ/lần.
-  - Query database: `SELECT * FROM PaymentEscrows WHERE status = 'Holding' AND hold_until <= NOW()`.
-  - Với mỗi escrow tìm thấy: Gọi `ReleaseEscrowCommand` thực thi giải phóng tiền Escrow, trừ `holding_balance`, cộng `balance` cho ví Seller và ghi log sổ cái `ShopWalletTransactions`.
-- **Dependencies**: T32, T36
+  - Implement Background Job `CODReconciliationWorker` / Consumer xử lý khi nhận webhook xác nhận giao hàng thu tiền COD thành công từ ĐVVC.
+  - Khi đơn hàng COD chuyển trạng thái `Delivered`:
+  - Thực thi ghi nhận doanh thu: cộng tiền `ShopWallets.balance += shop_net_amount` cho ví Seller và ghi log sổ cái `ShopWalletTransactions` loại `OrderRevenue`.
+- **Dependencies**: T30, T36
 - **Estimated Size**: M
 
 ---
@@ -934,14 +930,14 @@ NovaLive
 - **SRS Requirement**: `FR-REPORT-002`
 - **Detailed Technical Implementation**:
   - `GetSellerDashboardQuery`:
-    - Tổng doanh thu thuần từ các đơn hàng `Completed` (Escrow đã Released).
+    - Tổng doanh thu thuần từ các đơn hàng (doanh thu đã ghi nhận trực tiếp vào ví Shop).
     - Biểu đồ doanh thu theo ngày/tuần/tháng trong khoảng `from` - `to`.
     - Phân rã số đơn theo trạng thái (Pending, Shipping, Delivered, Returned, Cancelled).
     - Top 10 sản phẩm bán chạy nhất của shop (theo số lượng và doanh thu).
-    - Tổng quan ví Shop: Số dư khả dụng (`balance`) và số dư đang giữ Escrow (`holding_balance`).
+    - Tổng quan ví Shop: Số dư khả dụng (`balance`) và lịch sử biến động số dư.
     - Thống kê hiệu quả doanh số phát sinh từ các buổi phát Livestream.
   - Endpoint `ReportsController`: `GET /seller/reports/dashboard`.
-- **Dependencies**: T32, T36
+- **Dependencies**: T30, T36
 - **API Contracts**: `SellerDashboardResponse` (`NovaLive.Contracts.V1.Dashboards`)
 - **Estimated Size**: M
 
@@ -953,12 +949,12 @@ NovaLive
 - **Detailed Technical Implementation**:
   - `GetAdminDashboardQuery`:
     - GMV (Gross Merchandise Value) toàn sàn theo thời gian.
-    - Doanh thu hoa hồng thực nhận của Sàn (Net Platform Revenue = $\sum \text{platform\_fee}$ từ Escrow Released).
+    - Doanh thu hoa hồng thực nhận của Sàn (Net Platform Revenue = $\sum \text{platform\_fee}$ từ các đơn hàng hoàn tất).
     - Tổng số người dùng mới (Buyers, Sellers), tổng số gian hàng `Active`.
     - Tỷ lệ hoàn hàng & Tỷ lệ tranh chấp toàn sàn.
     - Danh sách các lệnh rút tiền `SellerPayouts` đang chờ duyệt.
   - Endpoint `AdminReportsController`: `GET /admin/reports/dashboard`.
-- **Dependencies**: T39, T48
+- **Dependencies**: T30, T39
 - **API Contracts**: `AdminDashboardResponse` (`NovaLive.Contracts.V1.Dashboards`)
 - **Estimated Size**: M
 
@@ -973,7 +969,7 @@ NovaLive
   - Viết Unit Tests với xUnit + FluentAssertions + Moq trong project `NovaLive.Application.Tests` và `NovaLive.Domain.Tests`:
   - Test `PriceCalculator`: Bao phủ 100% các case proration phân bổ Voucher Sàn, voucher hết lượt, voucher chưa đến hạn, đơn dưới min_order_amount.
   - Test `CheckoutCommand`: Mock repository test đúng 8 bước transaction rollback khi có lỗi.
-  - Test `AtomicFlashSaleReserve`, `EscrowLifecycle`, `TokenReuseDetection`. Target test coverage >= 80%.
+  - Test `AtomicFlashSaleReserve`, `DirectPaymentSettlement`, `TokenReuseDetection`. Target test coverage >= 80%.
 - **Dependencies**: T20, T22, T27
 - **Estimated Size**: L
 
@@ -985,19 +981,19 @@ NovaLive
 - **Detailed Technical Implementation**:
   - Viết Integration Tests trong `NovaLive.Api.Tests` sử dụng `WebApplicationFactory` + TestContainers (PostgreSQL 17 & Redis containers):
   - Test Auth flow: Đăng ký -> Verify OTP -> Đăng nhập -> Refresh Token -> Reuse Token Detection.
-  - Test Checkout flow: Add Cart -> Calculate -> Submit Checkout -> MoMo Webhook -> Inventory Sync.
-  - Test Shipping Webhook -> Delivered -> Escrow countdown set.
+  - Test Checkout flow: Add Cart -> Calculate -> Submit Checkout -> MoMo Webhook -> Direct Shop Wallet Settlement & Inventory Sync.
+  - Test Shipping Webhook -> Delivered -> Review eligibility enabled.
 - **Dependencies**: T08, T30, T36
 - **Estimated Size**: L
 
 ---
 
-### T54 — [TEST] End-to-End Tests (Full Purchase to Escrow Cycle)
+### T54 — [TEST] End-to-End Tests (Full Purchase to Direct Settlement & Dispute Cycle)
 - **Status**: MISSING | **Priority**: P1 | **Assign**: All
 - **SRS Requirement**: `8. Tiêu chí chấp nhận cấp hệ thống` (`AC-001` đến `AC-012`)
 - **Detailed Technical Implementation**:
-  - Giả lập kịch bản E2E toàn vẹn: Buyer đăng ký -> Mua hàng đa shop -> Thanh toán MoMo -> Seller đóng gói & giao hàng -> GHN Webhook Delivered -> Buyer gửi khiếu nại Trả hàng -> Admin phân xử BuyerWins -> Refund Escrow về Buyer.
-- **Dependencies**: T39, T48
+  - Giả lập kịch bản E2E toàn vẹn: Buyer đăng ký -> Mua hàng đa shop -> Thanh toán MoMo / VietQR -> Tiền vào ví Shop ngay -> Seller đóng gói & giao hàng -> GHN Webhook Delivered -> Buyer gửi khiếu nại Trả hàng -> Admin phân xử BuyerWins -> Thu hồi tiền hoàn về Buyer.
+- **Dependencies**: T30, T39
 - **Estimated Size**: M
 
 ---
@@ -1092,7 +1088,7 @@ NovaLive
     - Bảng danh sách đơn hàng SubOrders phân theo Tab trạng thái (Chờ xác nhận, Đang chuẩn bị, Đang giao, Đã giao, Trả hàng, Đã hủy).
     - Thao tác "Giao hàng": Chọn ĐVVC, kích hoạt tạo mã vận đơn (`tracking_code`).
     - Nút "In phiếu giao hàng": Mở cửa sổ in file PDF phiếu giao khổ A6 chuẩn nhà vận chuyển. Xem hành trình vận đơn realtime.
-  - **Ví Gian Hàng & Analytics (`/seller/wallet`, `/seller/reports`)**: Xem số dư khả dụng (`balance`), số dư Escrow (`holding_balance`), lịch sử giao dịch sổ cái. Form tạo lệnh rút tiền về tài khoản ngân hàng.
+  - **Ví Gian Hàng & Analytics (`/seller/wallet`, `/seller/reports`)**: Xem số dư khả dụng (`balance`), lịch sử giao dịch sổ cái. Form tạo lệnh rút tiền về tài khoản ngân hàng.
 - **Dependencies**: T11, T13, T16, T35
 - **Estimated Size**: XL
 
@@ -1121,11 +1117,11 @@ NovaLive
 - **SRS Requirement**: `FR-RETURN-001` đến `FR-RETURN-008`, `FR-ADMIN-001` đến `FR-ADMIN-006`, `FR-REPORT-001`
 - **Detailed Technical Implementation**:
   - **Returns & Refunds Portal (`/user/returns`, `/seller/returns`)**:
-    - Buyer UI: Form gửi yêu cầu Trả hàng / Hoàn tiền (lựa chọn lý do, upload hình ảnh/video bằng chứng), hiển thị trạng thái đếm ngược 7 ngày & trạng thái đóng băng tiền Escrow (`Disputed`).
+    - Buyer UI: Form gửi yêu cầu Trả hàng / Hoàn tiền (lựa chọn lý do, upload hình ảnh/video bằng chứng), hiển thị trạng thái đếm ngược 7 ngày khiếu nại sau khi nhận hàng.
     - Seller UI: Danh sách yêu cầu trả hàng. Thao tác Đồng ý (hiển thị địa chỉ kho nhận hàng trả) / Từ chối (tải ảnh/video đối chứng) / Xác nhận đã nhận hàng hoàn.
   - **Admin Operations Portal (`/admin/shops`, `/admin/disputes`)**:
     - Duyệt Shop Onboarding: Xem hồ sơ KYC, chấp thuận / từ chối gian hàng. Danh sách gian hàng, Khóa / Mở khóa Shop.
-    - Admin Dispute Arbitration (Phân xử Tranh chấp): Màn hình xem bằng chứng đối sánh giữa Buyer & Seller, timeline vận chuyển. Nút phán quyết: `Buyer Wins` (hoàn tiền) hoặc `Seller Wins` (giải phóng tiền ký quỹ).
+    - Admin Dispute Arbitration (Phân xử Tranh chấp): Màn hình xem bằng chứng đối sánh giữa Buyer & Seller, timeline vận chuyển. Nút phán quyết: `Buyer Wins` (hoàn tiền cho Buyer, trừ tiền Shop) hoặc `Seller Wins` (giữ nguyên doanh thu cho Shop).
   - **Admin Executive Dashboard (`/admin/dashboard`)**:
     - Biểu đồ tổng quan GMV toàn sàn, Doanh thu hoa hồng thực nhận (Platform Net Revenue).
     - Thống kê tỷ lệ hoàn hàng, tranh chấp, số người dùng/gian hàng mới. Duyệt lệnh rút tiền Seller Payouts.
@@ -1188,21 +1184,20 @@ NovaLive
 
 ---
 
-## 🏁 SPRINT 4 — Payment Flow + Escrow + Shipping (Tuần 7–8)
+## 🏁 SPRINT 4 — Payment Flow + Direct Settlement + Shipping (Tuần 7–8)
 
 | Task | Mô tả ngắn | Assign | Size |
 | :--- | :--- | :---: | :---: |
-| **T30** | Payment Initiate & Status (incl. COD) | Dev A | M |
-| **T32** | Escrow Lifecycle (PendingCapture→Holding→Released) | Dev A | L |
+| **T30** | Payment Initiate & Status (Direct Settlement) | Dev A | M |
 | **T31** | SignalR PaymentNotificationHub | Dev C | M |
 | **T35** | Seller Shipping (Confirm + Shipment + Label PDF) | Dev C | M |
-| **T36** | Shipping Webhook Handler + Escrow T+7 trigger | Dev C | M |
+| **T36** | Shipping Webhook Handler & Delivery Status Sync | Dev C | M |
 | **T47** | InventorySyncConsumer (Deduct stock) | Dev C | M |
-| **T48** | EscrowReleaseConsumer (T+7 auto-release) | Dev C | M |
+| **T48** | CODReconciliationConsumer (COD Settlement) | Dev C | M |
 | **T26** | Flash Sale Campaign Management | Dev B | M |
 | **T27** | Atomic Flash Sale Reserve (PG Condition UPDATE) | Dev B | L |
 
-**Goal Sprint 4**: Escrow custody flow & COD đối soát thành công, Flash sale atomic hoạt động.
+**Goal Sprint 4**: Direct payment settlement flow & COD đối soát thành công, Flash sale atomic hoạt động.
 
 ---
 
@@ -1221,7 +1216,7 @@ NovaLive
 | **T45** | Rating Calculation Background Worker | Dev C | S |
 | **T49** | TimeoutOrderRollbackWorker + SearchVectorConsumer | Dev C | M |
 
-**Goal Sprint 5**: Tranh chấp hoàn hàng & Escrow disputed, Livestream video & pin SP realtime.
+**Goal Sprint 5**: Tranh chấp hoàn hàng & xử lý bồi hoàn, Livestream video & pin SP realtime.
 
 ---
 
@@ -1233,7 +1228,7 @@ NovaLive
 | **T51** | Admin Platform Dashboard (GMV + Disputes) | Dev B | M |
 | **T52** | Unit Tests (Domain + Application layer) | All | L |
 | **T53** | Integration Tests (Auth + Checkout + Webhooks) | All | L |
-| **T54** | End-to-End Tests (Full purchase + Escrow cycle) | All | M |
+| **T54** | End-to-End Tests (Full purchase + Direct settlement cycle) | All | M |
 | **T55** | Production Docker Stack (Nginx SSL + Health) | Dev C | M |
 
 **Goal Sprint 6**: Dashboards hoàn tất, 100% test suite pass, deploy Production Docker Nginx.
@@ -1268,11 +1263,10 @@ NovaLive
 | **T21** | Calculate Checkout Draft Query | M |
 | **T22** | Checkout Command Handler (Atomic UoW 8-Step Transaction) | XL |
 | **T23** | Order Controller Endpoints & Seller Order Operations | M |
-| **T30** | Payment Initiator & Realtime Status Query | M |
-| **T32** | Escrow Custodian Lifecycle (Capture → Hold → Release) | L |
+| **T30** | Payment Initiator & Direct Settlement Flow | M |
 | **T37** | Return Request Lifecycle (Buyer Claim ≤ 7 Days) | M |
 | **T38** | Seller Return Response & Inspection Confirmation | M |
-| **T39** | Admin Dispute Arbitration & Escrow Resolution | M |
+| **T39** | Admin Dispute Arbitration & Refund Resolution | M |
 | **T52-T54** | Shared Unit, Integration & E2E Tests | L |
 
 ## 👨‍💻 Dev B — Products / Shop / Discount / Flash Sale / Reports
@@ -1306,7 +1300,7 @@ NovaLive
 | **T33** | GHN Shipping Adapter & Webhook Integrator | M |
 | **T34** | GHTK & ViettelPost Shipping Adapters | M |
 | **T35** | Seller Shipping Fulfillment & Label PDF Generator | M |
-| **T36** | Shipping Webhook Handler & Escrow Countdown Trigger | M |
+| **T36** | Shipping Webhook Handler & Delivery Status Sync | M |
 | **T40** | Agora RTC Token Generation Service | S |
 | **T41** | Livestream Session Lifecycle & Product Pinning | L |
 | **T42** | SignalR LivestreamHub (Chat, Reaction, Pin, Viewers) | L |
@@ -1314,7 +1308,7 @@ NovaLive
 | **T45** | Rating Calculation Background Worker | S |
 | **T46** | OrderPlacedConsumer (Email/SMS + Push Noti) | M |
 | **T47** | InventorySyncConsumer (Deduct Stock After Paid) | M |
-| **T48** | EscrowReleaseConsumer (Auto-release T+7 + Wallet Credit) | M |
+| **T48** | CODReconciliationConsumer (COD Order Settlement & Wallet Credit) | M |
 | **T49** | TimeoutOrderRollbackWorker & ProductSearchVectorConsumer | M |
 | **T55** | Production Docker Stack (Nginx SSL + Health Checks) | M |
 

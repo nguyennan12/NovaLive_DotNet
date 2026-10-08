@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NovaLive.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261007111046_InitialCreate")]
+    [Migration("20261008034515_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1268,86 +1268,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.ToTable("payments", "public");
                 });
 
-            modelBuilder.Entity("NovaLive.Domain.Payments.PaymentEscrow", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<decimal>("HeldAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("held_amount");
-
-                    b.Property<DateTimeOffset?>("HoldUntil")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("hold_until");
-
-                    b.Property<Guid>("PaymentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("payment_id");
-
-                    b.Property<decimal>("PlatformFee")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("platform_fee");
-
-                    b.Property<DateTimeOffset?>("RefundedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("refunded_at");
-
-                    b.Property<DateTimeOffset?>("ReleasedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("released_at");
-
-                    b.Property<Guid>("ShopId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shop_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("SubOrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("sub_order_id");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id")
-                        .HasName("pk_payment_escrows");
-
-                    b.HasIndex("HoldUntil")
-                        .HasDatabaseName("ix_payment_escrows_hold_until")
-                        .HasFilter("status = 'Holding'");
-
-                    b.HasIndex("SubOrderId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_payment_escrows_sub_order_id");
-
-                    b.HasIndex("ShopId", "Status")
-                        .HasDatabaseName("ix_payment_escrows_shop_id_status");
-
-                    b.ToTable("payment_escrows", "public");
-                });
-
             modelBuilder.Entity("NovaLive.Domain.Payments.SellerPayout", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2444,11 +2364,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)")
                         .HasColumnName("currency");
-
-                    b.Property<decimal>("HoldingBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("holding_balance");
 
                     b.Property<decimal>("LockedBalance")
                         .HasPrecision(18, 2)

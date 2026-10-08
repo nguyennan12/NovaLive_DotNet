@@ -13,7 +13,6 @@ public record SellerDashboardAnalyticsDto(
     decimal TotalSalesRevenue,
     int TotalOrdersCount,
     decimal WalletAvailableBalance,
-    decimal WalletHoldingBalance,
     List<TopSellingSkuDto> TopSkus,
     List<LivestreamPerformanceSummaryDto> RecentLives);
 

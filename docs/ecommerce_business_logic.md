@@ -15,7 +15,7 @@
 | `Admin` | Quản trị toàn sàn: Phê duyệt/Khóa shop, gỡ sản phẩm vi phạm, tạo chiến dịch Flash Sale toàn sàn, tạo Voucher sàn, phân xử tranh chấp hoàn tiền (Dispute), duyệt lệnh chi trả (Payout), xem Dashboard toàn sàn. |
 | `Seller` | Quản trị gian hàng: Tạo/sửa sản phẩm (SPU/SKU), quản lý kho, xác nhận đơn hàng, tạo Voucher shop, đăng ký Flash Sale, phát Livestream & ghim sản phẩm, duyệt/từ chối yêu cầu hoàn hàng, phản hồi đánh giá. |
 | `Buyer` | Mua sắm: Tìm kiếm/lọc sản phẩm, quản lý giỏ hàng, áp dụng Voucher 3 cấp, đặt đơn & thanh toán (MoMo, VietQR, COD), xem Livestream & mua trực tiếp, theo dõi vận đơn, đánh giá sản phẩm, khiếu nại/hoàn hàng. |
-| `System` | Tác nhân tự động: Xử lý Webhook thanh toán/vận chuyển, tự động giải phóng tiền ký quỹ (Escrow Release T+7), chạy job hoàn kho timeout, cập nhật `search_vector` PostgreSQL cho sản phẩm, tính toán xếp hạng sao. |
+| `System` | Tác nhân tự động: Xử lý Webhook thanh toán/vận chuyển, tự động đối soát và cộng doanh thu cho Shop, chạy job hoàn kho timeout, cập nhật `search_vector` PostgreSQL cho sản phẩm, tính toán xếp hạng sao. |
 
 #### Bảng Ma Trận Phân Quyền Chi Tiết (57 Permissions Matrix)
 
@@ -34,7 +34,7 @@
 | **11** | `shops:follow` | Bấm theo dõi / Bỏ theo dõi gian hàng | ❌ | ✅ | ✅ | ❌ |
 | **12** | `shops:approve_kyc` | Phê duyệt hoặc từ chối hồ sơ đăng ký mở Shop | ❌ | ❌ | ❌ | ✅ |
 | **13** | `shops:ban_unban` | Khóa tạm thời hoặc cấm vĩnh viễn gian hàng vi phạm | ❌ | ❌ | ❌ | ✅ |
-| **14** | `wallets:view_own` | Xem số dư khả dụng, tiền Escrow và sổ cái ví Shop mình | ❌ | ❌ | ✅ | ❌ |
+| **14** | `wallets:view_own` | Xem số dư khả dụng, doanh thu bán hàng và sổ cái ví Shop mình | ❌ | ❌ | ✅ | ❌ |
 | **15** | `wallets:request_payout` | Tạo yêu cầu rút tiền từ ví Shop về tài khoản ngân hàng | ❌ | ❌ | ✅ | ❌ |
 | **16** | `wallets:approve_payout` | Phê duyệt & thực hiện lệnh chuyển khoản rút tiền cho Seller | ❌ | ❌ | ❌ | ✅ |
 | **17** | `categories:view_public` | Xem cây danh mục sản phẩm công khai | ✅ | ✅ | ✅ | ✅ |
@@ -66,7 +66,7 @@
 | **43** | `shipping:track_order` | Tra cứu lộ trình vận đơn thời gian thực | ❌ | ✅ | ✅ | ✅ |
 | **44** | `returns:request_own` | Tạo yêu cầu Trả hàng / Hoàn tiền cho đơn mình đã mua (≤ 7 ngày) | ❌ | ✅ | ❌ | ❌ |
 | **45** | `returns:respond_own` | Duyệt / Từ chối / Xác nhận nhận hàng hoàn của Shop mình | ❌ | ❌ | ✅ | ❌ |
-| **46** | `disputes:arbitrate_all` | Phán quyết tranh chấp Escrow (`BuyerWins` / `SellerWins`) | ❌ | ❌ | ❌ | ✅ |
+| **46** | `disputes:arbitrate_all` | Phán quyết tranh chấp khiếu nại (`BuyerWins` / `SellerWins`) | ❌ | ❌ | ❌ | ✅ |
 | **47** | `livestreams:view_public` | Xem video Livestream và tương tác chat/thả tim | ✅ | ✅ | ✅ | ✅ |
 | **48** | `livestreams:start_own` | Mở phòng phát sóng Livestream của Shop mình | ❌ | ❌ | ✅ | ❌ |
 | **49** | `livestreams:pin_own_product`| Ghim / Gỡ sản phẩm kèm giá Flash trong phòng Live của mình | ❌ | ❌ | ✅ | ❌ |
@@ -82,7 +82,7 @@
 ### 1.2 Điều kiện & Ràng buộc cốt lõi
 
 1. **Bảo mật & Token**: Sử dụng **JWT Bearer với thuật toán HMAC-SHA256 (HS256)**. Access Token có TTL 15 phút. Refresh Token có TTL 30 ngày (sử dụng cơ chế Rotation & Token Reuse Detection).
-2. **Ký quỹ bảo vệ giao dịch (Escrow Model)**: Toàn bộ tiền Buyer thanh toán thành công, bao gồm Online/VietQR và COD sau đối soát ĐVVC, được sàn giữ trong `PaymentEscrows`. Tiền chỉ được giải phóng (`Released`) và cộng vào ví Seller sau khi đơn hàng chuyển sang `Delivered` + hết thời hạn khiếu nại (7 ngày) mà không có tranh chấp.
+2. **Thanh toán trực tiếp & Ghi nhận doanh thu Shop**: Khi Buyer thanh toán thành công (Online / VietQR), tiền được ghi nhận trực tiếp vào số dư khả dụng (`ShopWallets.balance`) của từng Shop mà không qua cơ chế giữ tiền trung gian Escrow. Với đơn COD, doanh thu được ghi nhận sau khi đơn hoàn tất và đối soát tiền.
 3. **Checkout theo sản phẩm được chọn**: Buyer chỉ checkout những sản phẩm được tick chọn (`cartItemIds`) trong giỏ hàng. Các sản phẩm không được chọn vẫn giữ nguyên trong giỏ.
 4. **Tách đơn đa Shop (Order Splitting)**: Một phiên checkout tạo ra 1 **Parent Order** (gom nhóm thanh toán) và N **Sub-Orders** tương ứng với N Shop có sản phẩm được chọn.
 5. **Đơn vị tiền tệ**: Lưu trữ dạng số thực độ chính xác cao `DECIMAL(18,2)` hoặc số nguyên VNĐ, không dùng kiểu số thực dấu phẩy động (`FLOAT/REAL`) để tránh sai số làm tròn.
@@ -117,11 +117,10 @@
 - Một User chỉ được sở hữu tối đa 1 Shop (quan hệ 1-1).
 
 ### 3.2 Ví Shop & Tuần hoàn tài chính (`ShopWallets`)
-- **Số dư khả dụng (`balance`)**: Tiền Seller có thể rút về tài khoản ngân hàng.
-- **Số dư đóng băng (`holding_balance`)**: Tiền từ các đơn hàng online đang trong thời gian Escrow chờ giải phóng.
+- **Số dư khả dụng (`balance`)**: Tiền doanh thu bán hàng của Shop nhận trực tiếp sau khi khách thanh toán thành công, Seller có thể rút về tài khoản ngân hàng.
 - **Số dư khóa rút tiền (`locked_balance`)**: Tiền đã trừ khỏi `balance` để xử lý lệnh rút, chưa chuyển khoản xong.
-- **Luồng cộng tiền Escrow**: Khi đơn online hoặc COD đã đối soát hết thời hạn 7 ngày $\rightarrow$ Escrow giải phóng $\rightarrow$ `balance += (held_amount - platform_fee)`.
-- **Luồng COD**: COD không trừ âm ví ngay khi giao hàng. Sau khi ĐVVC chuyển tiền về tài khoản sàn, hệ thống đánh dấu `Payments.status = Success`, tạo/ghi nhận `PaymentEscrows.Holding`, rồi release theo T+7 như đơn online.
+- **Luồng nhận doanh thu trực tiếp**: Khi đơn hàng Online (MoMo, VietQR) quét/thanh toán thành công $\rightarrow$ Tiền của từng Sub-order được cộng ngay vào `balance` của Shop tương ứng (ghi log `ShopWalletTransactions` loại `OrderRevenue`).
+- **Luồng COD**: Với đơn COD, sau khi ĐVVC giao hàng thành công và chuyển tiền đối soát, hệ thống cập nhật đơn hàng và ghi nhận tiền vào `balance` của Shop.
 - **Lệnh rút tiền (`SellerPayouts`)**: Seller tạo yêu cầu rút tiền $\rightarrow$ `balance -= amount`, `locked_balance += amount` $\rightarrow$ Admin duyệt/Hệ thống chuyển khoản. Nếu payout thất bại thì hoàn ngược `locked_balance` về `balance`.
 
 ---
@@ -164,7 +163,7 @@
 3. **Sinh đơn hàng phân cấp**:
    * Tạo 1 bản ghi vào bảng **`ParentOrders`** quản lý tổng tiền `grand_total`, thanh toán và địa chỉ nhận hàng snapshot.
    * Tạo N bản ghi vào bảng **`SubOrders`** (mỗi SubOrder tương ứng 1 Shop) quản lý sản phẩm, vận chuyển, hoa hồng và voucher riêng của từng Shop.
-4. **Khởi tạo Thanh toán & Ký quỹ**: Tạo `Payments` (trỏ tới `parent_order_id`) ở trạng thái `Pending` và tạo `PaymentEscrows` (trỏ tới từng `sub_order_id`) ở trạng thái `PendingCapture`; khi thanh toán/đối soát COD thành công mới chuyển escrow sang `Holding`.
+4. **Khởi tạo Thanh toán**: Tạo `Payments` (trỏ tới `parent_order_id`) ở trạng thái `Pending`; khi thanh toán/quét mã thành công, hệ thống cập nhật `Payments.status = Success` và ghi nhận doanh thu trực tiếp vào `ShopWallets.balance` của từng Shop.
 5. **Xóa giỏ hàng**: Xóa đúng các `cartItemIds` đã được đặt hàng, giữ lại các món chưa chọn.
 6. **Ghi Outbox Event**: Ghi `OutboxMessage(OrderPlacedEvent)` trong cùng transaction. Background publisher đọc outbox rồi mới bắn event lên RabbitMQ để gửi thông báo cho Buyer và các Seller liên quan.
 
@@ -224,42 +223,39 @@ WHERE id = @flashSaleItemId;
 
 ---
 
-## 8. MODULE NGUỒN TIỀN, THANH TOÁN & ESCROW KÝ QUỸ
+## 8. MODULE NGUỒN TIỀN, THANH TOÁN & DOANH THU GIAN HÀNG
 
 ### 8.1 Nguồn tiền thanh toán đầu vào từ Buyer (Funding Sources Inflow)
 Khi Buyer đặt đơn hàng, dòng tiền đầu vào được nạp vào hệ thống qua 3 kênh chính:
 1. **Thanh toán Online (MoMo / Thẻ ATM / Visa / Mastercard)**:
    - Hệ thống sinh mã thanh toán / Payment URL kèm `idempotency_key`.
-   - Tiền từ tài khoản Buyer được chuyển trực tiếp vào **Tài khoản Merchant của Sàn NovaLive** tại Cổng thanh toán.
-   - Webhook IPN từ cổng thanh toán được xác thực chữ ký số HMAC-SHA256 $\rightarrow$ Cập nhật `Payments.status = Success`.
+   - Buyer quét mã / thanh toán tại Cổng thanh toán.
+   - Webhook IPN từ cổng thanh toán được xác thực chữ ký số HMAC-SHA256 $\rightarrow$ Cập nhật `Payments.status = Success`, đồng thời ghi nhận và cộng doanh thu trực tiếp vào `ShopWallets.balance` của từng Shop.
    - Timeout: Sau 15 phút không nhận được IPN thanh toán $\rightarrow$ Đơn hàng tự động hủy, giải phóng tồn kho `reserved_qty`.
 2. **Chuyển khoản Ngân hàng (VietQR Động)**:
    - Hệ thống sinh mã VietQR động chứa nội dung chuyển khoản duy nhất (`NOVA_{order_id}`).
-   - Buyer dùng app ngân hàng quét mã $\rightarrow$ Tiền chuyển thẳng vào **Tài khoản Ngân hàng Doanh nghiệp của Sàn NovaLive**.
-   - Hệ thống đối soát biến động số dư qua Webhook/OpenBanking $\rightarrow$ Ghi nhận thanh toán tức thì.
+   - Buyer dùng app ngân hàng quét mã $\rightarrow$ Tiền thanh toán thành công.
+   - Hệ thống đối soát biến động số dư qua Webhook/OpenBanking $\rightarrow$ Ghi nhận thanh toán tức thì và chuyển thẳng doanh thu vào ví Shop.
 3. **Tiền mặt COD (Cash On Delivery - Thanh toán khi nhận hàng)**:
-   - Khi chọn COD, đơn hàng được tạo và tự động chuyển ngay sang trạng thái **`Confirmed`** để Seller đóng gói giao hàng (không bắt buộc nhập OTP, tối ưu trải nghiệm checkout 1 chạm).
-   - `ParentOrders.payment_status` và `Payments.status` được khởi tạo là `Pending` (chờ ĐVVC đối soát COD).
-   - **Đường đi của dòng tiền COD**: Buyer giao tiền mặt cho Shipper (GHN/GHTK) khi nhận hàng (`Delivered`) $\rightarrow$ Shipper nộp về bưu cục ĐVVC $\rightarrow$ ĐVVC định kỳ (T+3 hoặc hàng tuần) làm lệnh **Đối soát COD** và chuyển khoản tiền tổng về Tài khoản Ngân hàng của Sàn NovaLive $\rightarrow$ `ParentOrders.payment_status` chuyển thành `Paid`.
+   - Khi chọn COD, đơn hàng được tạo và tự động chuyển ngay sang trạng thái **`Confirmed`** để Seller đóng gói giao hàng.
+   - `ParentOrders.payment_status` và `Payments.status` được khởi tạo là `Pending`.
+   - Khi ĐVVC hoàn tất giao hàng và đối soát tiền, hệ thống cập nhật đơn hàng thành `Paid` và ghi nhận doanh thu vào ví Shop.
 
 ---
 
-### 8.2 Mô hình Két sắt Ký quỹ Trung gian (Escrow Custodian Model)
-> ⚠️ **Nguyên tắc cốt lõi**: Toàn bộ tiền Buyer thanh toán (Online, VietQR, hoặc COD do ĐVVC chuyển về) đều do **Sàn NovaLive đứng tên nắm giữ trung gian** tại tài khoản ngân hàng của Sàn. **Tuyệt đối KHÔNG chuyển thẳng tiền cho Seller ngay khi thanh toán**.
+### 8.2 Mô hình Thanh toán Trực tiếp (Direct Settlement Model)
+> 💡 **Nguyên tắc hoạt động**: Khi Buyer thanh toán thành công qua MoMo / VietQR, hệ thống xác nhận thanh toán và **ghi nhận ngay doanh thu vào số dư khả dụng (`ShopWallets.balance`) của từng Shop**, không qua cơ chế giữ tiền trung gian Escrow của sàn.
 
-- Với Online/VietQR, hệ thống tạo bản ghi **`PaymentEscrows`** cho từng Sub-Order ngay lúc checkout ở trạng thái **`PendingCapture`**; chỉ chuyển sang `Holding` khi webhook thanh toán thành công. Với COD, escrow chỉ chuyển sang `Holding` sau khi ĐVVC đối soát và chuyển tiền về sàn.
-- **Mục đích bảo vệ 2 chiều**:
-  - *Bảo vệ Buyer*: Nếu hàng giả, hư hỏng hoặc Shop không giao $\rightarrow$ Sàn chủ động hoàn tiền ngay từ quỹ Escrow mà không phụ thuộc vào việc Shop có đồng ý hay không.
-  - *Bảo vệ Seller*: Đảm bảo Seller chắc chắn nhận được tiền sau khi giao hàng thành công và hết hạn khiếu nại.
-- **Thời hạn tạm giữ (Hold Duration)**: Bắt đầu từ lúc giao hàng thành công (`Delivered`) và kéo dài **7 ngày (T+7)** để chờ hết thời hạn khiếu nại/đổi trả của Buyer.
+- **Tối ưu trải nghiệm**: Shop nhận và quản lý doanh thu ngay khi có đơn thanh toán thành công, giúp Shop linh hoạt dòng vốn và thúc đẩy kinh doanh.
+- **Xử lý đa Shop**: Trong trường hợp Parent Order chứa nhiều Sub-Orders của nhiều Shop, hệ thống tự động phân tách số tiền chính xác theo từng Sub-Order và cộng vào ví của từng Shop tương ứng trong cùng 1 transaction.
 
 ---
 
-### 8.3 Công thức Bóc tách Dòng tiền & Quyết toán Đơn hàng (Financial Settlement)
+### 8.3 Công thức Bóc tách Dòng tiền & Doanh thu Shop
 Khi Buyer thanh toán một đơn hàng:
 $$\text{Tổng tiền Buyer trả} = \text{Tiền hàng (Subtotal)} + \text{Phí Ship} - \text{Voucher Shop} - \text{Voucher Sàn}$$
 
-Khi đơn hàng kết thúc thành công (sau T+7 ngày không phát sinh khiếu nại), hệ thống tự động bóc tách và phân bổ dòng tiền:
+Hệ thống tự động phân bổ dòng tiền khi thanh toán thành công:
 
 | Dòng tiền phân bổ | Công thức tính | Nguồn chi trả / Thụ hưởng |
 | :--- | :--- | :--- |
@@ -267,21 +263,20 @@ Khi đơn hàng kết thúc thành công (sau T+7 ngày không phát sinh khiế
 | 🏦 **Doanh thu phí Sàn** | $=\text{Tiền hàng} \times \text{Commission Rate (vd: 5\%)}$ | Thu về tài khoản doanh thu của Sàn NovaLive. |
 | 💳 **Phí cổng thanh toán** | $=\text{Tổng giá trị thanh toán} \times 1.5\%$ | Trả cho Cổng thanh toán (MoMo/Ngân hàng). |
 | 🎁 **Trợ giá khuyến mại Sàn** | $=\text{Giá trị Voucher do Sàn phát hành}$ | Sàn NovaLive tự bù tiền túi vào đơn hàng cho Seller. |
-| 💰 **Tiền thực nhận của Seller** | **$=\text{Tiền hàng} - \text{Phí sàn} - \text{Phí cổng TT} - \text{Voucher Shop tự giảm}$** | Cộng vào Số dư khả dụng trong ví **`ShopWallets.balance`**. |
+| 💰 **Doanh thu thực nhận của Shop** | **$=\text{Tiền hàng} - \text{Phí sàn} - \text{Phí cổng TT} - \text{Voucher Shop tự giảm}$** | Cộng trực tiếp vào Số dư khả dụng trong ví **`ShopWallets.balance`**. |
 
 ---
 
-### 8.4 Vòng đời Ký quỹ Escrow & Xử lý Tranh chấp
-$$\text{Pending Payment} \xrightarrow{\text{Buyer trả tiền}} \text{Holding (T+7)} \xrightarrow{\text{Giao xong + Hết T+7}} \text{Released (Cộng ví Seller)}$$
-- Khi Buyer tạo yêu cầu trả hàng / khiếu nại $\rightarrow$ `PaymentEscrows` chuyển sang trạng thái **`Disputed` (Đóng băng tranh chấp)**.
-- **Kết quả phán quyết**:
-  - **Buyer thắng**: `PaymentEscrows.status = Refunded` $\rightarrow$ Hệ thống hoàn tiền từ tài khoản Sàn về phương thức thanh toán gốc / ví của Buyer.
-  - **Seller thắng**: `PaymentEscrows.status = Released` $\rightarrow$ Giải phóng tiền ký quỹ và cộng vào `ShopWallets.balance` của Seller.
+### 8.4 Xử lý Khiếu nại & Hoàn tiền (Refund Flow)
+$$\text{Pending Payment} \xrightarrow{\text{Buyer quét QR / Thanh toán}} \text{Success (Cộng doanh thu Shop)} \xrightarrow{\text{Giao hàng}} \text{Completed}$$
+- Khi Buyer tạo yêu cầu trả hàng / khiếu nại hợp lệ:
+  - **Buyer thắng (Hoàn tiền)**: Hệ thống trích tiền hoàn trả từ tài khoản / doanh thu của Shop về phương thức thanh toán gốc của Buyer, ghi nhận `ShopWalletTransactions` loại `OrderRefund`.
+  - **Seller thắng**: Giữ nguyên đơn hàng đã hoàn tất, không phát sinh hoàn tiền.
 
 ---
 
 ### 8.5 Dòng tiền đầu ra & Rút tiền của Người bán (Seller Payouts Outflow)
-1. Sau khi Escrow chuyển `Released`, tiền được ghi nhận vào `ShopWallets.balance` (Số dư khả dụng) của Shop.
+1. Doanh thu sau khi khách thanh toán thành công được ghi nhận ngay vào `ShopWallets.balance` (Số dư khả dụng) của Shop.
 2. Seller gửi yêu cầu rút tiền (`SellerPayouts`):
    - Nhập số tiền muốn rút (phải $\le \text{ShopWallets.balance}$ và $\ge \text{Rút tối thiểu (vd: 50.000đ)}$).
    - Chọn tài khoản ngân hàng thụ hưởng (đã được KYC xác minh chính chủ ở bảng `ShopVerifications`).
@@ -305,8 +300,7 @@ $$\text{Pending Payment} \xrightarrow{\text{Buyer trả tiền}} \text{Holding (
 - ĐVVC gửi Webhook cập nhật tiến trình: `ReadyToPick` $\rightarrow$ `Picking` $\rightarrow$ `Delivering` $\rightarrow$ `Delivered` $\rightarrow$ `Failed/Returned`.
 - Khi Webhook báo `Delivered`:
   1. Cập nhật `SubOrder.status = Delivered`, `delivered_at = NOW()`.
-  2. Bắt đầu đếm ngược thời hạn khiếu nại 7 ngày (`hold_until = NOW() + 7 days`).
-  3. Mở quyền viết Đánh giá (Review) cho Buyer.
+  2. Mở quyền viết Đánh giá (Review) cho Buyer.
 - **Polling Fallback**: Background Job quét định kỳ 6 tiếng/lần các đơn `Shipping` quá 3 ngày để chủ động tra cứu trạng thái, phòng trường hợp Webhook của ĐVVC bị miss.
 
 ---
@@ -317,15 +311,14 @@ $$\text{Pending Payment} \xrightarrow{\text{Buyer trả tiền}} \text{Holding (
 1. **Bước 1: Buyer gửi yêu cầu hoàn hàng (`OrderReturns`)**:
    - Điều kiện: Sub-Order ở trạng thái `Delivered` và còn trong vòng **7 ngày**.
    - Cung cấp: Lý do (`WrongItem`, `Defective`, `DamagedInShipping`, `ChangeOfMind`), số lượng hoàn từng món trong `OrderReturnItems`, và ảnh/video bằng chứng.
-   - Escrow chuyển trạng thái `Disputed`.
 2. **Bước 2: Seller phản hồi (Thời hạn 3 ngày)**:
-   - **Đồng ý (`SellerApproved`)**: Buyer gửi hàng về địa chỉ Shop $\rightarrow$ Seller nhận được hàng và bấm "Xác nhận nhận hàng hoàn" $\rightarrow$ Hoàn tiền Buyer, cộng lại kho hàng còn tốt.
+   - **Đồng ý (`SellerApproved`)**: Buyer gửi hàng về địa chỉ Shop $\rightarrow$ Seller nhận được hàng và bấm "Xác nhận nhận hàng hoàn" $\rightarrow$ Hoàn tiền Buyer từ doanh thu Shop, cộng lại kho hàng còn tốt.
    - **Từ chối (`SellerRejected`)**: Seller nêu rõ lý do từ chối kèm ảnh/video đối chứng.
 3. **Bước 3: Leo thang Tranh chấp lên Admin (`AdminDispute`)**:
    - Nếu Seller từ chối hoặc quá 3 ngày không phản hồi $\rightarrow$ Đơn tự động chuyển lên Admin phân xử.
    - Admin kiểm tra bằng chứng của 2 bên và ra phán quyết cuối cùng trong 3 ngày làm việc:
-     * **Buyer thắng**: Hoàn tiền từ Escrow cho Buyer, ghi nhận lỗi vào điểm uy tín của Shop.
-     * **Seller thắng**: Hủy khiếu nại, giải phóng Escrow chuyển tiền cho Seller.
+     * **Buyer thắng**: Hoàn tiền từ tài khoản Shop cho Buyer, ghi nhận lỗi vào điểm uy tín của Shop.
+     * **Seller thắng**: Hủy khiếu nại, giữ nguyên đơn hàng hoàn thành cho Seller.
 
 ---
 
@@ -365,12 +358,12 @@ $$\text{Pending Payment} \xrightarrow{\text{Buyer trả tiền}} \text{Holding (
 ### 13.1 Phân cấp Báo cáo
 1. **Admin Platform Dashboard**:
    - GMV (Gross Merchandise Value) toàn sàn theo ngày/tuần/tháng.
-   - Doanh thu hoa hồng thực nhận của sàn (Net Revenue = $\sum \text{platform\_fee}$ từ các Escrow đã `Released`).
+   - Doanh thu hoa hồng thực nhận của sàn (Net Revenue từ các đơn hàng thành công).
    - Tỷ lệ hoàn hàng & Tỷ lệ tranh chấp toàn sàn.
    - Thống kê hiệu quả chuyển đổi từ Livestream và Flash Sale.
 2. **Seller Shop Dashboard**:
-   - Doanh thu đơn hàng đã giao thành công của Shop.
-   - Số dư ví Shop khả dụng và số dư đang chờ Escrow giải phóng.
+   - Doanh thu bán hàng và đơn hàng của Shop.
+   - Số dư ví Shop khả dụng.
    - Top 10 sản phẩm bán chạy nhất.
    - Thống kê doanh thu phát sinh từ các buổi Livestream của Shop.
 

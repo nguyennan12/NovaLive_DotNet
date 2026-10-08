@@ -3,7 +3,6 @@ namespace NovaLive.Contracts.V1.Shops;
 public record ShopWalletResponse(
     Guid ShopId,
     decimal Balance,
-    decimal HoldingBalance,
     decimal LockedBalance,
     DateTime UpdatedAt);
 

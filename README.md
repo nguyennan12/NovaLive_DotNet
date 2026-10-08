@@ -3,8 +3,9 @@
 Hệ thống sàn thương mại điện tử đa người bán (Multi-vendor Marketplace) kết hợp Livestream phát sóng trực tiếp, xây dựng theo kiến trúc **Clean Architecture & CQRS**:
 
 - **Backend:** ASP.NET Core (.NET 10) Web API + SignalR Realtime Hubs + MediatR (CQRS) + FluentValidation + Result Pattern + JWT Bearer
-- **Database & Cache:** PostgreSQL 17 (46 Bảng, JSONB, Composite Indexes) + Redis 7 (Cache Aside, Idempotency, SignalR Backplane)
+- **Database & Cache:** PostgreSQL 17 (45 Bảng, JSONB, Composite Indexes) + Redis 7 (Cache Aside, Idempotency, SignalR Backplane)
 - **Message Broker & Storage:** RabbitMQ (Event-driven Outbox Pattern) + MinIO (S3-compatible Object Storage cho ảnh/video sản phẩm)
+- **Payment & Settlement:** Thanh toán trực tiếp qua QR (VietQR, MoMo), doanh thu ghi nhận trực tiếp vào Shop khi thanh toán thành công (không qua trung gian giữ tiền Escrow)
 - **Testing & CI:** xUnit + FluentAssertions + Moq (Unit & Integration Tests) + GitHub Actions CI
 - **Deployment:** Docker Compose (Hỗ trợ Hot-reload tức thì cho môi trường Development)
 
@@ -43,7 +44,7 @@ docker logs -f novalive_api_dev
 docker compose down
 ```
 
-> **Lưu ý:** Hệ thống đã tích hợp cơ chế **Auto-Migration** khi khởi động API, tự động tạo đủ 46 bảng database và nạp dữ liệu mẫu ban đầu (Roles, Permissions, Super Admin) mà không cần chạy lệnh thủ công.
+> **Lưu ý:** Hệ thống đã tích hợp cơ chế **Auto-Migration** khi khởi động API, tự động tạo đủ 45 bảng database và nạp dữ liệu mẫu ban đầu (Roles, Permissions, Super Admin) mà không cần chạy lệnh thủ công.
 
 ---
 

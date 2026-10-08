@@ -72,7 +72,6 @@ public sealed class ShopConfiguration :
         builder.HasKey(w => w.Id);
 
         builder.Property(w => w.Balance).HasPrecision(18, 2);
-        builder.Property(w => w.HoldingBalance).HasPrecision(18, 2);
         builder.Property(w => w.LockedBalance).HasPrecision(18, 2);
         builder.Property(w => w.Currency).HasMaxLength(3).IsRequired();
 

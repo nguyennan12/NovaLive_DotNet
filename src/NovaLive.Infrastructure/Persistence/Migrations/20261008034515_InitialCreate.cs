@@ -440,31 +440,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "payment_escrows",
-                schema: "public",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    sub_order_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    payment_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    shop_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    held_amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    platform_fee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    hold_until = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    released_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    refunded_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    created_by = table.Column<Guid>(type: "uuid", nullable: true),
-                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    updated_by = table.Column<Guid>(type: "uuid", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_payment_escrows", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "payments",
                 schema: "public",
                 columns: table => new
@@ -779,7 +754,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     shop_id = table.Column<Guid>(type: "uuid", nullable: false),
                     balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    holding_balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     locked_balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
@@ -1213,26 +1187,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_payment_escrows_hold_until",
-                schema: "public",
-                table: "payment_escrows",
-                column: "hold_until",
-                filter: "status = 'Holding'");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_payment_escrows_shop_id_status",
-                schema: "public",
-                table: "payment_escrows",
-                columns: new[] { "shop_id", "status" });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_payment_escrows_sub_order_id",
-                schema: "public",
-                table: "payment_escrows",
-                column: "sub_order_id",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "ix_payments_parent_order_id",
                 schema: "public",
                 table: "payments",
@@ -1613,10 +1567,6 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "parent_orders",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "payment_escrows",
                 schema: "public");
 
             migrationBuilder.DropTable(

@@ -17,8 +17,6 @@ public sealed class ShopWallet : Entity
 
     public decimal Balance { get; private set; }
 
-    public decimal HoldingBalance { get; private set; }
-
     public decimal LockedBalance { get; private set; }
 
     public string Currency { get; private set; } = "VND";

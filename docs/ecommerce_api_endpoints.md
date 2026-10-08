@@ -14,7 +14,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 
 1. **`[Public/Buyer]` (`/api/v1/...`)**: Cổng công khai cho Khách vãng lai và Người mua hàng cá nhân.
 2. **`[Seller]` (`/api/v1/seller/...`)**: Cổng Seller Center cho Nhà bán hàng quản lý Shop, Sản phẩm, Tồn kho, Đơn hàng, Vận chuyển, Ví và Livestream. **Backend tự động áp dụng `WHERE shop_id = _currentUser.ShopId`**.
-3. **`[Admin]` (`/api/v1/admin/...`)**: Cổng Admin Portal cho Quản trị viên điều hành toàn sàn, kiểm duyệt KYC, phân xử tranh chấp Escrow, duyệt Payout và xem báo cáo tài chính.
+3. **`[Admin]` (`/api/v1/admin/...`)**: Cổng Admin Portal cho Quản trị viên điều hành toàn sàn, kiểm duyệt KYC, phân xử tranh chấp khiếu nại, duyệt Payout và xem báo cáo tài chính.
 4. **`[Webhook]` (`/api/v1/.../webhook/...`)**: Inbound Webhooks nhận callback từ bên ngoài (MoMo, VietQR, GHN, GHTK, ViettelPost) xác thực bằng Checksum / HMAC Signature.
 5. **`[Realtime]` (`wss://api.novalive.vn/hubs/...`)**: WebSocket Hubs (SignalR + Redis Backplane) phục vụ thông báo đơn hàng, thanh toán và phòng Livestream.
 
@@ -86,7 +86,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 | `DELETE`| `/cart/items/{cartItemId}` | — | Xóa 1 món khỏi giỏ hàng | `FR-CART-003` | `[Buyer]` |
 | `DELETE`| `/cart/items` | `{ cartItemIds: [] }` | Xóa nhiều món đã chọn cùng lúc | `FR-CART-003` | `[Buyer]` |
 | `POST` | `/orders/calculate-checkout` | `{ cartItemIds: [], shippingAddressId, shopVouchers: [{ shopId, code }], platformProductVoucherCode?, platformFreeshipVoucherCode? }` | **Tính nháp Checkout Realtime** (Preview cước ship ĐVVC, phân rã voucher 3 cấp) | `FR-CHECKOUT-001`, `002`, `003` | `[Buyer]` |
-| `POST` | `/orders/checkout` | `{ cartItemIds: [], shippingAddressId, shippingProviders: [{ shopId, provider, serviceCode }], shopVouchers: [{ shopId, code }], platformProductVoucherCode?, platformFreeshipVoucherCode?, paymentMethod: MoMo\|VietQR\|COD, note? }` | **Đặt hàng chính thức (8-Step Transaction)**: Tách Parent/Sub-orders, reserve tồn kho, tạo Payment & Escrow `PendingCapture` | `FR-CHECKOUT-004`, `005`, `006`, `007` | `[Buyer]` |
+| `POST` | `/orders/checkout` | `{ cartItemIds: [], shippingAddressId, shippingProviders: [{ shopId, provider, serviceCode }], shopVouchers: [{ shopId, code }], platformProductVoucherCode?, platformFreeshipVoucherCode?, paymentMethod: MoMo\|VietQR\|COD, note? }` | **Đặt hàng chính thức (8-Step Transaction)**: Tách Parent/Sub-orders, reserve tồn kho, tạo Payment `Pending` | `FR-CHECKOUT-004`, `005`, `006`, `007` | `[Buyer]` |
 | `GET`  | `/orders` | `?status=&from=&to=&page=&size=` | Xem lịch sử đơn hàng đã mua của Buyer | `FR-ORD-001` | `[Buyer]` |
 | `GET`  | `/orders/{orderId}` | — | Xem chi tiết đơn hàng (Snapshot SKU, Sub-orders, trạng thái, timeline) | `FR-CHECKOUT-005` | `[Buyer]` |
 | `POST` | `/orders/{orderId}/cancel` | `{ reason }` | Buyer hủy đơn (Chỉ được hủy khi SubOrders chưa chuyển sang `Confirmed`) | `FR-CAT-011` | `[Buyer]` |
@@ -110,7 +110,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 ### 1.7 🔄 Module Hoàn hàng, Đánh giá & Xem Livestream (Buyer)
 | Method | Endpoint | Request Body / Query Params | Mô tả nghiệp vụ | SRS Mapping | Quyền |
 | :--- | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/returns` | `{ subOrderId, reason, items: [{ orderItemId, quantity, reasonDetail? }], evidenceUrls: [] }` | Buyer tạo yêu cầu Trả hàng / Hoàn tiền (≤ 7 ngày từ lúc Delivered), đóng băng Escrow sang `Disputed` | `FR-RETURN-001`, `002`, `003` | `[Buyer]` |
+| `POST` | `/returns` | `{ subOrderId, reason, items: [{ orderItemId, quantity, reasonDetail? }], evidenceUrls: [] }` | Buyer tạo yêu cầu Trả hàng / Hoàn tiền (≤ 7 ngày từ lúc Delivered) | `FR-RETURN-001`, `002`, `003` | `[Buyer]` |
 | `GET`  | `/returns` | `?status=&page=&size=` | Xem danh sách yêu cầu hoàn hàng của mình | `FR-RETURN-001` | `[Buyer]` |
 | `GET`  | `/returns/{returnId}` | — | Xem chi tiết tiến trình xử lý khiếu nại trả hàng | `FR-RETURN-002` | `[Buyer]` |
 | `POST` | `/reviews` | `{ orderItemId, rating, title?, content?, mediaUrls: [] }` | Viết đánh giá sao cho sản phẩm thuộc đơn đã giao thành công | `FR-REVIEW-001`, `002`, `004` | `[Buyer]` |
@@ -176,7 +176,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 | `GET`  | `/seller/returns` | `?status=&page=&size=` | Xem danh sách yêu cầu trả hàng cần Shop xử lý | `FR-RETURN-004` | `[Seller]` |
 | `PUT`  | `/seller/returns/{returnId}/approve` | `{ note? }` | Seller chấp thuận hoàn hàng (cung cấp địa chỉ kho nhận trả) | `FR-RETURN-004` | `[Seller]` |
 | `PUT`  | `/seller/returns/{returnId}/reject` | `{ reason, evidenceUrls: [] }` | Seller từ chối yêu cầu hoàn hàng (tải chứng cứ đối chứng) | `FR-RETURN-004` | `[Seller]` |
-| `PUT`  | `/seller/returns/{returnId}/received` | — | Seller xác nhận đã nhận lại hàng hoàn -> Kích hoạt hoàn tiền Escrow | `FR-RETURN-007` | `[Seller]` |
+| `PUT`  | `/seller/returns/{returnId}/received` | — | Seller xác nhận đã nhận lại hàng hoàn -> Kích hoạt hoàn tiền từ tài khoản Shop | `FR-RETURN-007` | `[Seller]` |
 | `GET`  | `/seller/discounts` | `?status=&page=&size=` | Danh sách Voucher do Shop phát hành | `FR-DISCOUNT-007` | `[Seller]` |
 | `POST` | `/seller/discounts` | `{ code, name, discountType: PercentCart\|FixedCart, discountValue, minOrderAmount, maxDiscountAmount?, maxUses?, perUserLimit, validFrom, validTo, isPublic }` | Tạo Voucher giảm giá mới của Shop | `FR-DISCOUNT-001`, `007` | `[Seller]` |
 | `PUT`  | `/seller/discounts/{id}` | `{ name, maxUses?, validTo, isActive }` | Chỉnh sửa hạn mức / thời hạn Voucher | `FR-DISCOUNT-007` | `[Seller]` |
@@ -193,7 +193,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 ### 2.5 💰 Ví Shop, Rút tiền & Dashboard Doanh thu
 | Method | Endpoint | Request Body / Query Params | Mô tả nghiệp vụ | SRS Mapping | Quyền |
 | :--- | :--- | :--- | :--- | :---: | :---: |
-| `GET`  | `/seller/wallet` | — | Xem số dư khả dụng (`balance`), số dư giữ Escrow (`holding_balance`), số dư khóa rút (`locked_balance`) | `FR-WALLET-001` | `[Seller]` |
+| `GET`  | `/seller/wallet` | — | Xem số dư khả dụng (`balance`), số dư khóa rút (`locked_balance`) | `FR-WALLET-001` | `[Seller]` |
 | `GET`  | `/seller/wallet/transactions` | `?type=&from=&to=&page=&size=` | Xem sổ cái lịch sử biến động số dư ví Shop append-only | `FR-WALLET-002` | `[Seller]` |
 | `POST` | `/seller/wallet/payout` | `{ amount, bankAccount, bankName, bankBranch }` | Tạo yêu cầu rút tiền về tài khoản ngân hàng (`balance -= amount`, `locked += amount`) | `FR-WALLET-003`, `004` | `[Seller]` |
 | `GET`  | `/seller/reports/dashboard` | `?from=&to=` | **Dashboard Shop**: Biểu đồ doanh thu thuần, phân rã trạng thái đơn, Top 10 SP bán chạy, hiệu quả Livestream | `FR-REPORT-002` | `[Seller]` |
@@ -222,14 +222,14 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 
 ---
 
-### 3.2 📦 Kiểm duyệt Sản phẩm & Phán quyết Tranh chấp Escrow
+### 3.2 📦 Kiểm duyệt Sản phẩm & Phán quyết Tranh chấp
 | Method | Endpoint | Request Body / Query Params | Mô tả nghiệp vụ | SRS Mapping | Quyền |
 | :--- | :--- | :--- | :--- | :---: | :---: |
 | `GET`  | `/admin/products` | `?shopId=&categoryId=&isViolation=&page=&size=` | Xem danh sách sản phẩm của MỌI shop trên sàn | `FR-ADMIN-001` | `[Admin]` |
 | `PUT`  | `/admin/products/{spuId}/ban` | `{ reason }` | Gỡ / Ẩn sản phẩm vi phạm bản quyền / chính sách toàn sàn | `FR-CAT-005` | `[Admin]` |
 | `GET`  | `/admin/disputes` | `?page=&size=` | Danh sách tranh chấp hoàn hàng leo thang lên Admin | `FR-RETURN-005` | `[Admin]` |
 | `GET`  | `/admin/disputes/{returnId}` | — | Xem chi tiết bằng chứng đối chứng giữa Buyer & Seller | `FR-RETURN-002` | `[Admin]` |
-| `PUT`  | `/admin/disputes/{returnId}/resolve` | `{ decision: BuyerWins\|SellerWins, refundAmount?, note }` | **Phán quyết tranh chấp cuối cùng**: `BuyerWins` (Hoàn tiền Escrow về Buyer) / `SellerWins` (Giải phóng tiền về Ví Seller) | `FR-RETURN-006`, `007`, `008` | `[Admin]` |
+| `PUT`  | `/admin/disputes/{returnId}/resolve` | `{ decision: BuyerWins\|SellerWins, refundAmount?, note }` | **Phán quyết tranh chấp cuối cùng**: `BuyerWins` (Hoàn tiền từ tài khoản Shop về Buyer) / `SellerWins` (Giữ nguyên giao dịch cho Shop) | `FR-RETURN-006`, `007`, `008` | `[Admin]` |
 | `PUT`  | `/admin/reviews/{reviewId}/hide` | `{ reason }` | Ẩn đánh giá vi phạm thuần phong mỹ tục / từ cấm | `FR-REVIEW-006` | `[Admin]` |
 | `PUT`  | `/admin/livestreams/{sessionId}/terminate` | `{ reason }` | Cưỡng chế ngắt phòng Livestream vi phạm | `FR-LIVE-001` | `[Admin]` |
 
@@ -271,9 +271,9 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 ### 4.1 🔔 Inbound Webhooks (Bên thứ ba gọi vào)
 | Method | Endpoint | Xác thực bảo mật | Nghiệp vụ xử lý tự động (Idempotent) | SRS Mapping |
 | :--- | :--- | :--- | :--- | :---: |
-| `POST` | `/payments/webhook/momo` | HMAC SHA256 Signature Header | Cập nhật `Payments.status = Success` -> Kích hoạt Escrow `Holding` & Trừ tồn kho vật lý qua RabbitMQ | `FR-PAY-003`, `FR-ESCROW-002`, `FR-CAT-010` |
-| `POST` | `/payments/webhook/vietqr`| Signature / Secret Header | Cập nhật thanh toán chuyển khoản VietQR thành công | `FR-PAY-003`, `FR-ESCROW-002` |
-| `POST` | `/shipping/webhook/ghn` | Checksum HMAC Header | Cập nhật trạng thái vận đơn GHN. Khi `Delivered` -> Kích hoạt đếm ngược Escrow T+7 và mở quyền Review | `FR-SHIP-006`, `007`, `FR-ESCROW-003` |
+| `POST` | `/payments/webhook/momo` | HMAC SHA256 Signature Header | Cập nhật `Payments.status = Success` -> Ghi nhận doanh thu ví Shop & Trừ tồn kho vật lý qua RabbitMQ | `FR-PAY-003`, `FR-CAT-010` |
+| `POST` | `/payments/webhook/vietqr`| Signature / Secret Header | Cập nhật thanh toán chuyển khoản VietQR thành công -> Ghi nhận doanh thu ví Shop | `FR-PAY-003` |
+| `POST` | `/shipping/webhook/ghn` | Checksum HMAC Header | Cập nhật trạng thái vận đơn GHN. Khi `Delivered` -> Mở quyền Review | `FR-SHIP-006`, `007` |
 | `POST` | `/shipping/webhook/ghtk`| Token Header | Cập nhật hành trình vận đơn GHTK tự động | `FR-SHIP-006`, `007` |
 | `POST` | `/shipping/webhook/viettelpost` | Token Header | Cập nhật hành trình vận đơn ViettelPost tự động | `FR-SHIP-006`, `007` |
 

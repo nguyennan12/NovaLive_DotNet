@@ -43,15 +43,14 @@ public enum VerificationStatus
 
 public enum WalletTxType
 {
-    EscrowHold = 0,
-    EscrowRelease = 1,
-    EscrowRefund = 2,
-    CodCommissionDeduct = 3,
-    PayoutLock = 4,
-    PayoutWithdrawal = 5,
-    PayoutFailedUnlock = 6,
-    PenaltyDeduct = 7,
-    ManualAdjustment = 8
+    OrderRevenue = 0,
+    OrderRefund = 1,
+    CodCommissionDeduct = 2,
+    PayoutLock = 3,
+    PayoutWithdrawal = 4,
+    PayoutFailedUnlock = 5,
+    PenaltyDeduct = 6,
+    ManualAdjustment = 7
 }
 
 public enum RbacAction
@@ -196,15 +195,6 @@ public enum PaymentStatus
     Refunded = 4
 }
 
-public enum EscrowStatus
-{
-    PendingCapture = 0,
-    Holding = 1,
-    Released = 2,
-    Disputed = 3,
-    Refunded = 4,
-    PartialRefund = 5
-}
 
 public enum PayoutStatus
 {

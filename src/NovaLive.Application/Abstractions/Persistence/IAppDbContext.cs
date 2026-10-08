@@ -71,9 +71,8 @@ public interface IAppDbContext
     DbSet<FlashSaleCampaign> FlashSaleCampaigns { get; }
     DbSet<FlashSaleItem> FlashSaleItems { get; }
 
-    // 10. Payment & Escrow
+    // 10. Payment & Payout
     DbSet<Payment> Payments { get; }
-    DbSet<PaymentEscrow> PaymentEscrows { get; }
     DbSet<SellerPayout> SellerPayouts { get; }
 
     // 11. Shipping

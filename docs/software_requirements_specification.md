@@ -3,7 +3,7 @@
 > He thong: NovaLive E-commerce & Livestream Commerce Platform  
 > Phien ban tai lieu: 1.0  
 > Ngay cap nhat: 2026-10-07  
-> Pham vi: Multi-vendor marketplace, livestream shopping, thanh toan, escrow, van chuyen, admin va bao cao.
+> Pham vi: Multi-vendor marketplace, livestream shopping, thanh toan truc tiep, van chuyen, admin va bao cao.
 
 ---
 
@@ -20,9 +20,9 @@ Tai lieu nay khong thay the tai lieu kien truc, database hay API chi tiet. No to
 NovaLive la nen tang thuong mai dien tu da nha ban ket hop livestream commerce. He thong cho phep:
 
 - Buyer tim kiem san pham, them gio hang, checkout da shop, thanh toan va theo doi don hang.
-- Seller mo shop, quan ly san pham, kho, don hang, voucher, flash sale, livestream va vi ban hang.
+- Seller mo shop, quan ly san pham, kho, don hang, voucher, flash sale, livestream va vi/doanh thu ban hang.
 - Admin phe duyet shop, quan ly danh muc, flash sale, tranh chap, payout va bao cao san.
-- System tu dong xu ly webhook, outbox event, ton kho, escrow release, tim kiem PostgreSQL va thong bao realtime.
+- System tu dong xu ly webhook, outbox event, ton kho, ghi nhan doanh thu truc tiep cho shop, tim kiem PostgreSQL va thong bao realtime.
 
 ### 1.3 Tai lieu lien quan
 
@@ -42,7 +42,7 @@ NovaLive la nen tang thuong mai dien tu da nha ban ket hop livestream commerce. 
 | SKU | Bien the ban le cu the cua SPU. |
 | ParentOrder | Don hang tong cua mot lan checkout. |
 | SubOrder | Don hang con theo tung shop trong ParentOrder. |
-| Escrow | Co che san giu tien trung gian den khi het thoi han khieu nai. |
+| Direct Settlement | Co che thanh toan truc tiep ghi nhan doanh thu vao vi shop ngay khi quet/thanh toan thanh cong. |
 | COD | Thanh toan tien mat khi nhan hang. |
 | Outbox | Bang luu event trong cung DB transaction de publish bat dong bo len message bus. |
 | ĐVVC | Don vi van chuyen: GHN, GHTK, ViettelPost. |
@@ -61,9 +61,9 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | :--- | :--- | :--- |
 | Guest | Chua dang nhap | Xem san pham, shop, livestream cong khai. |
 | Buyer | Tai khoan active | Mua hang, thanh toan, theo doi don, review, hoan hang. |
-| Seller | Buyer co shop active | Ban hang, quan ly kho, xu ly don, livestream, rut tien. |
+| Seller | Buyer co shop active | Ban hang, quan ly kho, xu ly don, livestream, rut tien/doanh thu. |
 | Admin | Quan tri vien | Kiem duyet, van hanh, tranh chap, payout, bao cao. |
-| System | Tac vu tu dong | Xu ly webhook, job nen, outbox, release escrow. |
+| System | Tac vu tu dong | Xu ly webhook, job nen, outbox, doi soat doanh thu. |
 
 ### 2.3 Gia dinh va rang buoc
 
@@ -72,7 +72,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 - Tat ca tien te luu bang `DECIMAL(18,2)` voi currency mac dinh `VND`.
 - Tat ca ID chinh su dung `UUID`.
 - Tim kiem san pham phai duoc xu ly bang PostgreSQL Full-Text Search + trigram index.
-- Giao dich dat hang, giu cho ton kho, tao payment, tao escrow va ghi outbox phai nam trong mot database transaction.
+- Giao dich dat hang, giu cho ton kho, tao payment va ghi outbox phai nam trong mot database transaction.
 - Cac bien dong tai chinh va ton kho phai co ledger append-only.
 
 ### 2.4 Phu thuoc ngoai
@@ -169,7 +169,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | FR-CHECKOUT-003 | Checkout preview phai tinh tien hang, phi ship, voucher shop, voucher san va `grand_total`. |
 | FR-CHECKOUT-004 | Submit checkout phai tao mot ParentOrder va N SubOrders theo so shop. |
 | FR-CHECKOUT-005 | OrderItems phai luu snapshot SKU, gia, discount va line total tai thoi diem dat hang. |
-| FR-CHECKOUT-006 | Checkout phai tao Payment `Pending` va PaymentEscrows `PendingCapture`. |
+| FR-CHECKOUT-006 | Checkout phai tao Payment `Pending` cho ParentOrder. |
 | FR-CHECKOUT-007 | Checkout thanh cong phai xoa dung cac cart item da dat, giu lai item chua chon. |
 | FR-CHECKOUT-008 | Checkout phai ghi `OutboxMessage(OrderPlacedEvent)` trong cung transaction. |
 
@@ -200,23 +200,18 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | FR-FS-008 | Huy don hoac timeout phai release `reserved_qty`. |
 | FR-FS-009 | He thong phai enforce `per_user_limit`. |
 
-### 3.9 Payment, COD, Escrow, Wallet
+### 3.9 Payment, COD, Wallet & Doanh thu Shop
 
 | ID | Yeu cau |
 | :--- | :--- |
 | FR-PAY-001 | Buyer phai chon MoMo, VietQR hoac COD khi checkout. |
-| FR-PAY-002 | MoMo/VietQR phai sinh payment URL hoac QR code. |
+| FR-PAY-002 | MoMo/VietQR phai sinh payment URL hoac QR code de Buyer quet thanh toan. |
 | FR-PAY-003 | Payment webhook phai duoc xac thuc chu ky truoc khi xu ly. |
 | FR-PAY-004 | Payment online qua 15 phut chua thanh cong phai het han va kich hoat rollback ton kho. |
-| FR-PAY-005 | COD phai cho phep SubOrder chuyen `Confirmed` ngay sau checkout. |
-| FR-PAY-006 | COD chi duoc chuyen payment/escrow sang thanh cong sau khi ĐVVC doi soat tien ve san. |
-| FR-ESCROW-001 | Online/VietQR checkout phai tao escrow `PendingCapture`. |
-| FR-ESCROW-002 | Khi payment thanh cong, escrow phai chuyen sang `Holding`. |
-| FR-ESCROW-003 | Khi SubOrder delivered, he thong phai set `hold_until = delivered_at + 7 days`. |
-| FR-ESCROW-004 | Neu het T+7 khong co tranh chap, escrow phai `Released` va cong tien vao shop wallet. |
-| FR-ESCROW-005 | Khi co return/dispute, escrow phai chuyen `Disputed`. |
-| FR-WALLET-001 | Shop wallet phai co `balance`, `holding_balance`, `locked_balance`. |
-| FR-WALLET-002 | Moi bien dong vi phai tao `ShopWalletTransactions`. |
+| FR-PAY-005 | Khi quet/thanh toan MoMo/VietQR thanh cong, he thong cap nhat Payment `Success` va cong truc tiep tien vao doanh thu / so du kha dung `balance` cua tung Shop. |
+| FR-PAY-006 | COD phai cho phep SubOrder chuyen `Confirmed` ngay sau checkout; khi giao hang thanh cong va doi soat tien, he thong ghi nhan doanh thu vao vi shop. |
+| FR-WALLET-001 | Shop wallet phai co `balance` (so du kha dung / doanh thu nhan truc tiep) va `locked_balance` (tien dang cho rut). |
+| FR-WALLET-002 | Moi bien dong vi (nhan doanh thu don hang, rut tien, hoan tien) phai tao `ShopWalletTransactions`. |
 | FR-WALLET-003 | Seller phai tao payout request neu amount hop le va du balance. |
 | FR-WALLET-004 | Tao payout phai tru `balance` va cong `locked_balance`. |
 | FR-WALLET-005 | Payout thanh cong phai giam `locked_balance`; payout fail phai hoan tien ve `balance`. |
@@ -231,7 +226,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | FR-SHIP-004 | He thong phai luu tracking code, provider order id va shipping fee. |
 | FR-SHIP-005 | Buyer va Seller phai xem tracking don hang. |
 | FR-SHIP-006 | He thong phai nhan webhook trang thai van chuyen tu ĐVVC. |
-| FR-SHIP-007 | Delivered webhook phai cap nhat SubOrder delivered, set escrow hold_until va mo quyen review. |
+| FR-SHIP-007 | Delivered webhook phai cap nhat SubOrder delivered va mo quyen review. |
 | FR-SHIP-008 | Background job phai polling cac don shipping qua han neu webhook bi miss. |
 
 ### 3.11 Return & Dispute
@@ -240,12 +235,11 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | :--- | :--- |
 | FR-RETURN-001 | Buyer chi duoc tao return khi SubOrder `Delivered` va con trong 7 ngay. |
 | FR-RETURN-002 | Return request phai gom reason, item, quantity va evidence media. |
-| FR-RETURN-003 | Tao return phai chuyen escrow sang `Disputed`. |
-| FR-RETURN-004 | Seller phai approve hoac reject return trong 3 ngay. |
-| FR-RETURN-005 | Qua han hoac seller reject phai cho phep leo thang AdminDispute. |
-| FR-RETURN-006 | Admin phai resolve dispute voi ket qua BuyerWins hoac SellerWins. |
-| FR-RETURN-007 | BuyerWins phai refund dung so tien hop le sau phan bo voucher. |
-| FR-RETURN-008 | SellerWins phai release escrow cho seller. |
+| FR-RETURN-003 | Seller phai approve hoac reject return trong 3 ngay. |
+| FR-RETURN-004 | Qua han hoac seller reject phai cho phep leo thang AdminDispute. |
+| FR-RETURN-005 | Admin phai resolve dispute voi ket qua BuyerWins hoac SellerWins. |
+| FR-RETURN-006 | BuyerWins phai refund dung so tien hop le tu doanh thu shop / tai khoan shop. |
+| FR-RETURN-007 | SellerWins SubOrder giu nguyen trang thai hoan thanh. |
 
 ### 3.12 Livestream Commerce
 
@@ -327,7 +321,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 
 | ID | Yeu cau |
 | :--- | :--- |
-| NFR-REL-001 | Checkout phai atomic: neu bat ky buoc nao fail, ton kho, order, payment, escrow va cart khong duoc o trang thai nua voi. |
+| NFR-REL-001 | Checkout phai atomic: neu bat ky buoc nao fail, ton kho, order, payment va cart khong duoc o trang thai nua voi. |
 | NFR-REL-002 | Flash sale reserve phai chong overselling bang conditional update trong PostgreSQL. |
 | NFR-REL-003 | Payment webhook phai idempotent theo transaction reference/payment id. |
 | NFR-REL-004 | Shipping webhook phai idempotent theo provider, tracking code va event timestamp. |
@@ -342,7 +336,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | NFR-MAINT-002 | Use case phai duoc to chuc theo Command/Query va handler rieng. |
 | NFR-MAINT-003 | Validation phai dung pipeline behavior hoac validator tap trung. |
 | NFR-MAINT-004 | Adapter cho payment, shipping, storage, Agora phai di qua interface application layer. |
-| NFR-MAINT-005 | Logic tien, ton kho, escrow phai co unit test rieng. |
+| NFR-MAINT-005 | Logic tien, ton kho phai co unit test rieng. |
 
 ### 4.5 Kha dung va van hanh
 
@@ -369,7 +363,7 @@ NovaLive gom REST API, Realtime API, PostgreSQL, Redis, RabbitMQ, MinIO va Agora
 | Order | ParentOrders, SubOrders, OrderItems, OrderStatusHistories |
 | Discount | Discounts, DiscountUsages |
 | Flash Sale | FlashSaleCampaigns, FlashSaleItems |
-| Payment | Payments, PaymentEscrows |
+| Payment | Payments |
 | Shipping | ShippingOrders |
 | Livestream | LivestreamSessions, LivestreamProducts, LivestreamComments |
 | Review | Reviews, ReviewImages |
@@ -399,12 +393,7 @@ Nhanh phu: `Cancelled`, `ReturnRequested`, `Returned`, `Refunded`.
 `Pending -> Success`  
 Nhanh phu: `Pending -> Failed/Expired`, `Success -> Refunded`.
 
-### 6.5 Escrow
-
-`PendingCapture -> Holding -> Released`  
-Nhanh phu: `Holding -> Disputed -> Refunded/Released`, `Holding -> PartialRefund`.
-
-### 6.6 Return
+### 6.5 Return
 
 `Pending -> SellerApproved -> Completed`  
 `Pending -> SellerRejected -> AdminDispute -> AdminApproved/AdminRejected -> Completed`
@@ -453,9 +442,9 @@ Webhook handler phai idempotent va khong duoc tin payload truoc khi verify.
 | AC-004 | Buyer co the checkout item tu nhieu shop va he thong tao dung ParentOrder/SubOrders. |
 | AC-005 | Checkout that bai giua chung khong de ton kho reserved sai hoac don hang nua voi. |
 | AC-006 | Flash sale khong ban vuot so luong khi co nhieu request dong thoi. |
-| AC-007 | Payment online thanh cong chuyen escrow tu `PendingCapture` sang `Holding`. |
-| AC-008 | COD chi release tien seller sau khi ĐVVC doi soat tien ve san va het T+7. |
-| AC-009 | Return trong 7 ngay phai dong bang escrow va cho phep seller/admin xu ly. |
+| AC-007 | Payment online (VietQR/MoMo) quet thanh cong cap nhat Payment `Success` va cong truc tiep vao doanh thu / vi Shop. |
+| AC-008 | COD ghi nhan doanh thu seller sau khi don hang giao thanh cong va doi soat. |
+| AC-009 | Return trong 7 ngay cho phep seller/admin xu ly va hoan tien hop le. |
 | AC-010 | Seller payout phai lock balance va co ledger day du. |
 | AC-011 | Livestream phai broadcast pin product/chat/reaction realtime cho viewer cung session. |
 | AC-012 | Admin co the quan ly shop, flash sale, dispute, payout va dashboard. |
@@ -464,7 +453,7 @@ Webhook handler phai idempotent va khong duoc tin payload truoc khi verify.
 
 ## 9. Yeu cau kiem thu toi thieu
 
-- Unit test cho price calculator, discount proration, inventory reservation, escrow release, payout locking.
+- Unit test cho price calculator, discount proration, inventory reservation, wallet credit, payout locking.
 - Integration test cho checkout transaction, payment webhook, shipping webhook, return/dispute.
 - Concurrency test cho flash sale atomic reserve va checkout cung SKU.
 - API contract test cho cac endpoint public/private quan trong.

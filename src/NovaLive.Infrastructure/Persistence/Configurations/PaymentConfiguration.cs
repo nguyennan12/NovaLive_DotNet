@@ -6,7 +6,6 @@ namespace NovaLive.Infrastructure.Persistence.Configurations;
 
 public sealed class PaymentConfiguration :
     IEntityTypeConfiguration<Payment>,
-    IEntityTypeConfiguration<PaymentEscrow>,
     IEntityTypeConfiguration<SellerPayout>
 {
     public void Configure(EntityTypeBuilder<Payment> builder)
@@ -22,20 +21,6 @@ public sealed class PaymentConfiguration :
 
         builder.HasIndex(payment => payment.ParentOrderId);
         builder.HasIndex(payment => payment.TransactionRef).IsUnique();
-    }
-
-    public void Configure(EntityTypeBuilder<PaymentEscrow> builder)
-    {
-        builder.ToTable("payment_escrows");
-        builder.HasKey(escrow => escrow.Id);
-
-        builder.Property(escrow => escrow.HeldAmount).HasPrecision(18, 2);
-        builder.Property(escrow => escrow.PlatformFee).HasPrecision(18, 2);
-        builder.Property(escrow => escrow.Status).HasConversion<string>().HasMaxLength(20);
-
-        builder.HasIndex(escrow => escrow.SubOrderId).IsUnique();
-        builder.HasIndex(escrow => new { escrow.ShopId, escrow.Status });
-        builder.HasIndex(escrow => escrow.HoldUntil).HasFilter("status = 'Holding'");
     }
 
     public void Configure(EntityTypeBuilder<SellerPayout> builder)

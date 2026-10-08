@@ -74,9 +74,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<FlashSaleCampaign> FlashSaleCampaigns => Set<FlashSaleCampaign>();
     public DbSet<FlashSaleItem> FlashSaleItems => Set<FlashSaleItem>();
 
-    // 10. Payment & Escrow
+    // 10. Payment & Payout
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<PaymentEscrow> PaymentEscrows => Set<PaymentEscrow>();
     public DbSet<SellerPayout> SellerPayouts => Set<SellerPayout>();
 
     // 11. Shipping

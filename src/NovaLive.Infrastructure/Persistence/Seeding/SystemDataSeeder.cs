@@ -53,7 +53,7 @@ public sealed class SystemDataSeeder(
             ("shops", "Quản lý thông tin và ví gian hàng"),
             ("products", "Quản lý danh mục, SPU và SKU sản phẩm"),
             ("orders", "Quản lý đơn hàng, trả hàng và fulfillment"),
-            ("payments", "Quản lý thanh toán, ký quỹ Escrow và Payout"),
+            ("payments", "Quản lý thanh toán và doanh thu gian hàng"),
             ("livestreams", "Quản lý phiên phát sóng trực tiếp và sản phẩm ghim"),
             ("discounts", "Quản lý mã giảm giá và chiến dịch khuyến mãi"),
             ("system", "Quản trị hệ thống, RBAC và cấu hình")
