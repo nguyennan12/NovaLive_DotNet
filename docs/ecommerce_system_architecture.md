@@ -1,46 +1,46 @@
 # 🛒 KIẾN TRÚC HỆ THỐNG NOVALIVE ECOMMERCE & LIVESTREAM PLATFORM
 
 > **Mô hình**: Multi-vendor Marketplace + Livestream Commerce  
-> **Tech Stack**: .NET 10, ASP.NET Core Web API, PostgreSQL 17, Redis 7, MassTransit + RabbitMQ, MinIO, SignalR, Agora RTC
-> **Kiến trúc**: Clean Architecture (Domain $\rightarrow$ Application $\rightarrow$ Infrastructure $\rightarrow$ Api) + CQRS (MediatR) + Event-Driven Architecture (Outbox Pattern)  
+> **Tech Stack**: .NET 10, ASP.NET Core Web API, PostgreSQL 17, Redis 7, MassTransit + RabbitMQ, MinIO, SignalR, Agora RTC  
+> **Kiến trúc**: Clean Architecture (`Domain` $\rightarrow$ `Application` $\rightarrow$ `Infrastructure` $\rightarrow$ `Api`) + CQRS (MediatR) + Event-Driven Architecture (Outbox Pattern)  
 > **Auth**: JWT Bearer (HMAC-SHA256 / HS256) + Redis JTI Blacklist + Refresh Token Rotation  
-> **Triển khai**: Docker & Docker Compose + Nginx Reverse Proxy SSL  
+> **Triển khai**: Docker & Docker Compose (Hot-reload Dev / Production Multi-stage) + Nginx Reverse Proxy SSL  
 
 ---
 
-## 1. 🗺️ SƠ ĐỒ TỔNG THỂ KIẾN TRÚC (DUAL-HOST GATEWAY)
+## 1. 🗺️ SƠ ĐỒ TỔNG THỂ KIẾN TRÚC (UNIFIED SERVICE GATEWAY)
 
-```
+```text
  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
  │                            CLOUD INFRASTRUCTURE (Docker Host)                           │
  │                                                                                         │
  │  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
  │  │                       Nginx (Reverse Proxy & Load Balancer)                       │  │
- │  │      /api/* ──► CoreApi (:5000)      |      /hubs/* ──► RealtimeApi (:5001)       │  │
- │  │      https://cdn.novalive.vn ──► MinIO S3                                         │  │
- │  └──────────────────────────┬────────────────────────────┬───────────────────────────┘  │
- │                             │                            │                              │
- │  ┌──────────────────────────▼──────────────┐  ┌──────────▼───────────────────────────┐  │
- │  │    NovaLive.CoreApi (.NET 10)           │  │   NovaLive.RealtimeApi (.NET 10)     │  │
- │  │ • REST API: Auth, Products, Orders      │  │ • SignalR Hubs: Livestream, Chat, Pin│  │
- │  │ • Payments, Shipping, Admin, Reports    │  │ • Redis Backplane Pub/Sub Sync       │  │
- │  │ • MassTransit Consumers & Workers       │  │ • Realtime Notification Push         │  │
- │  └──────────────┬──────────────────────────┘  └──────────┬───────────────────────────┘  │
- │                 │                                        │                              │
- │  ┌──────────────┴────────────────────────────────────────┴───────────────────────────┐  │
+ │  │      /api/* ──► NovaLive.Api (:5001)       |      /hubs/* ──► NovaLive.Api (:5001) │  │
+ │  │      https://cdn.novalive.vn ──► MinIO S3 Console/Storage                           │  │
+ │  └─────────────────────────────────────────┬─────────────────────────────────────────┘  │
+ │                                            │                                            │
+ │  ┌─────────────────────────────────────────▼─────────────────────────────────────────┐  │
+ │  │                         NovaLive.Api (.NET 10 Web API Host)                       │  │
+ │  │ • REST API Endpoints: Auth, Users, Shops, Products, Cart, Orders, Payments, Shipping  │  │
+ │  │ • SignalR WebSockets Hubs: LivestreamHub, OrderHub, PaymentHub                       │  │
+ │  │ • Outbox Background Worker, Health Checks (/health), Scalar API Docs (/scalar/v1)   │  │
+ │  └──────────────┬────────────────────────────────────────────────────────┬───────────┘  │
+ │                 │                                                        │              │
+ │  ┌──────────────┴────────────────────────────────────────────────────────┴───────────┐  │
  │  │                               INFRASTRUCTURE SERVICES                             │  │
  │  │  ┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐  ┌──────────────┐                    │  │
  │  │  │ PG 17 │  │ Redis │  │  RMQ  │  │ MinIO │  │  Agora RTC   │                    │  │
- │  │  │ (ACID/│  │(Cache/│  │(Queue)│  │(Media)│  │ (Livestream  │                    │  │
- │  │  │ Search)│ │Backpl)│  │       │  │       │  │  P2P/Cloud)  │                    │  │
+ │  │  │ (ACID/│  │(Cache/│  │(Queue/│  │(Media)│  │ (Livestream  │                    │  │
+ │  │  │ Search)│ │Backpl)│  │Outbox)│  │ S3)   │  │  P2P/Cloud)  │                    │  │
  │  │  └───────┘  └───────┘  └───────┘  └───────┘  └──────────────┘                    │  │
  │  └───────────────────────────────────────────────────────────────────────────────────┘  │
  └─────────────────────────────────────────────────────────────────────────────────────────┘
               ▲                                           ▲
               │ HTTPS REST + JWT (HS256)                  │ WebSocket (WSS / SignalR)
  ┌────────────┴───────────────────────────────────────────┴───────────────────────────────┐
- │                           CLIENT APPS (Flutter & React 19)                              │
- │           Mobile App (Buyer/Seller)   |   Web Marketplace   |   Admin Portal            │
+ │                                CLIENT APPLICATIONS                                     │
+ │           Mobile App (Buyer/Seller)   |   Web Marketplace   |   Admin Backoffice        │
  └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,41 +48,40 @@
 
 ## 2. 🏗️ CLEAN ARCHITECTURE LAYERS
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                      PRESENTATION LAYER (Dual-Host Gateway)                   │
-│   • NovaLive.CoreApi (Port 5000): REST Controllers (DTOs ──► MediatR Commands)│
-│     Middlewares: ExceptionHandling, JwtRoleContext, RateLimiting              │
-│   • NovaLive.RealtimeApi (Port 5001): SignalR Hubs (LivestreamHub, OrderHub)  │
-│     Redis Backplane: StackExchangeRedis Pub/Sub Sync đa container             │
+│                      PRESENTATION LAYER (NovaLive.Api)                        │
+│   • Controllers: Auth, Users, Shops, Products, Cart, Orders, Payments...       │
+│   • SignalR Hubs: LivestreamHub (/hubs/livestream), OrderHub, PaymentHub       │
+│   • Middlewares: GlobalExceptionHandler, JwtRoleContext, RateLimiting         │
+│   • API Docs: Scalar OpenAPI documentation (/scalar/v1)                       │
 └───────────────────────────────────────┬───────────────────────────────────────┘
-                                        │ Gọi Mediator / Shared Application
+                                        │ Dispatch Queries / Commands via MediatR
 ┌───────────────────────────────────────▼───────────────────────────────────────┐
-│                       APPLICATION LAYER (Use Cases & CQRS)                    │
-│   • Commands & Queries: Mỗi use case 1 folder (Command + Handler + Validator) │
-│   • Pipeline Behaviors: Validation (FluentValidation), Authorization, Logging,│
-│     UnitOfWork Transaction Behavior                                           │
-│   • Ports (Interfaces): IProductRepository, IParentOrderRepository,           │
-│     ISubOrderRepository, ICacheService, IMessageBus, IPaymentGateway          │
+│                       APPLICATION LAYER (NovaLive.Application)                │
+│   • Abstractions (Ports): IAppDbContext, ICacheService, IMessageBus,           │
+│     IProductQueryService, IFileStorageService, IPaymentGateway, IShippingProvider│
+│   • Common Behaviors: ValidationBehavior, AuthorizationBehavior,               │
+│     LoggingBehavior, PerformanceBehavior, TransactionBehavior, IdempotencyBehavior│
+│   • Messaging Contract Interfaces: ICommand, ICommandHandler, IQuery, IQueryHandler│
 └───────────────────────────────────────┬───────────────────────────────────────┘
-                                        │ Đọc Domain Rules & Gọi Domain Services
+                                        │ Uses Domain Models & Enforces Rules
 ┌───────────────────────────────────────▼───────────────────────────────────────┐
-│                          DOMAIN LAYER (Enterprise Core)                       │
-│   • Entities: User, Shop, ShopWallet, Product, Sku, ParentOrder, SubOrder     │
+│                          DOMAIN LAYER (NovaLive.Domain)                       │
+│   • Entities: User, Shop, ShopWallet, Spu, Sku, Cart, ParentOrder, SubOrder    │
 │   • Value Objects: Money, Address, OtpCode                                    │
-│   • Domain Services: PriceCalculator, InventoryChecker, EscrowCalculator      │
-│   • Domain Events: OrderPlacedEvent, PaymentReceivedEvent, ShipmentDelivered  │
-│   • Enums & Custom Result<T> / Error Pattern (Không phụ thuộc thư viện ngoài) │
+│   • Common Abstractions: AggregateRoot, Entity, Result<T>, Error, Enums       │
+│   • Interfaces & Interceptors: IAuditableEntity, ISoftDeletable, IDomainEvent │
 └───────────────────────────────────────────────────────────────────────────────┘
-                                        ▲
+                                        ▲ Implements Interfaces
 ┌───────────────────────────────────────┴───────────────────────────────────────┐
-│                    INFRASTRUCTURE LAYER (Adapters & External Tech)            │
+│                    INFRASTRUCTURE LAYER (NovaLive.Infrastructure)             │
 │   • Persistence: EF Core 10 + Npgsql ──► PostgreSQL 17 (Migrations & Configs) │
-│   • Caching & Backplane: StackExchange.Redis ──► Redis 7 (Cache, JTI, PubSub) │
-│   • Messaging: MassTransit ──► RabbitMQ (Outbox Pattern + Background Workers) │
-│   • Search: PostgreSQL Full-Text Search + pg_trgm indexes                     │
-│   • Storage: Minio C# SDK ──► MinIO S3                                        │
-│   • External APIs: Refit Clients ──► GHN, GHTK, ViettelPost, MoMo, VietQR, Agora │
+│   • Interceptors: AuditableEntityInterceptor, SoftDeleteInterceptor           │
+│   • Cache & Idempotency: RedisCacheService, RedisIdempotencyService           │
+│   • Messaging & Outbox: MassTransitBusAdapter ──► RabbitMQ + OutboxWorker     │
+│   • Search Engine: PostgresProductQueryService (Full-Text Search & pg_trgm)   │
+│   • External Adapters: Minio Storage, MoMo/VietQR Payment, GHN Shipping       │
 └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,133 +89,107 @@
 
 ## 3. 📁 CẤU TRÚC SOLUTION C# (.NET 10)
 
-```
+Cấu trúc thư mục thực tế của giải pháp `NovaLive.sln` được tổ chức chuẩn Clean Architecture:
+
+```text
 NovaLive.sln
 │
-├── 🌐 NovaLive.CoreApi/                    (REST API Entry Point - Port 5000)
-│   ├── Controllers/
-│   │   ├── AuthController.cs               ← Register, VerifyOtp, Login, Refresh, Logout
-│   │   ├── UsersController.cs              ← Profile, Addresses
-│   │   ├── ShopsController.cs              ← Register shop, KYC, Shop addresses
-│   │   ├── ProductsController.cs           ← Public product search & Seller SPU/SKU CRUD
-│   │   ├── CartController.cs               ← Add/Update/Remove, Clear selected items
-│   │   ├── OrdersController.cs             ← CalculateCheckout, Submit Checkout, Cancel Order
-│   │   ├── PaymentsController.cs           ← Create payment QR, Webhooks (MoMo/VietQR)
-│   │   ├── ShippingController.cs           ← Create pickup, Webhook tracking GHN/GHTK
-│   │   ├── ReturnsController.cs            ← Return request, Seller review, Admin dispute
-│   │   ├── FlashSaleController.cs          ← Campaign list, Seller register, Reserve slot
-│   │   ├── LivestreamsController.cs        ← Start/End stream, Agora RTC token
-│   │   ├── ReviewsController.cs            ← Create review, Edit review (30d), Seller reply
-│   │   ├── AdminController.cs              ← Approve shop, Settle disputes, Approve payouts
-│   │   └── ReportsController.cs            ← Platform analytics & Seller dashboard
-│   ├── Middlewares/
-│   │   ├── ExceptionMiddleware.cs          ← Bắt lỗi toàn cục trả về ProblemDetails JSON
-│   │   └── JwtRoleContextMiddleware.cs     ← Kiểm tra Redis JTI blacklist & bind UserContext
-│   └── Program.cs                          ← DI, Database Context, MediatR, MassTransit
+├── 🌐 src/
+│   ├── NovaLive.Api/                        (ASP.NET Core Web API Host & SignalR Gateway)
+│   │   ├── Auth/                            (CurrentShop, CurrentUser context accessors)
+│   │   ├── Controllers/                     (REST Controllers: Health, Auth, Products, Orders...)
+│   │   ├── Extensions/                      (DependencyInjection, OpenApi/Scalar)
+│   │   ├── Hubs/                            (SignalR Hubs: LivestreamHub, OrderHub, PaymentHub)
+│   │   ├── Middleware/                      (GlobalExceptionHandler, JwtRoleContext)
+│   │   ├── Program.cs                       (Startup & Service Registration)
+│   │   └── appsettings.json
+│   │
+│   ├── NovaLive.Application/                (CQRS Use Cases, MediatR Pipeline Behaviors, Abstractions)
+│   │   ├── Abstractions/
+│   │   │   ├── Auth/                        (ICurrentShop, ICurrentUser, IRequirePermission)
+│   │   │   ├── Cache/                       (ICacheService)
+│   │   │   ├── Clock/                       (IDateTimeProvider)
+│   │   │   ├── Idempotency/                 (IIdempotencyService)
+│   │   │   ├── Messaging/                   (IMessageBus)
+│   │   │   ├── Persistence/                 (IAppDbContext, IMigrationService, IUnitOfWork)
+│   │   │   ├── Search/                      (IProductQueryService)
+│   │   │   ├── Storage/                     (IFileStorageService)
+│   │   │   └── ThirdParty/                  (IAgoraTokenService, IPaymentGateway, IShippingProvider)
+│   │   ├── Common/
+│   │   │   ├── Behaviors/                   (AuthorizationBehavior, IdempotencyBehavior, LoggingBehavior, PerformanceBehavior, TransactionBehavior, ValidationBehavior)
+│   │   │   └── Messaging/                   (ICommand, ICommandHandler, IQuery, IQueryHandler, ITransactionalCommand, IIdempotentCommand)
+│   │   ├── System/                          (GetSystemStatusQuery & Handler)
+│   │   └── DependencyInjection.cs
+│   │
+│   ├── NovaLive.Contracts/                  (Public DTO Requests & Responses)
+│   │   ├── Common/                          (ApiError, ApiResponse, PagedResult)
+│   │   └── V1/                              (Auth, Users, Shops, Categories, Products, Carts, Discounts, FlashSales, Orders, Payments, Shipping, Returns, Reviews, Livestreams, Dashboards)
+│   │
+│   ├── NovaLive.Domain/                     (Core Domain Entities, Enums, Value Objects, Domain Events)
+│   │   ├── Carts/                           (Cart, CartItem)
+│   │   ├── Common/                          (AggregateRoot, Entity, ValueObject, Result, Error, Enums)
+│   │   ├── Discounts/                       (Discount, DiscountUsage)
+│   │   ├── FlashSales/                      (FlashSaleCampaign, FlashSaleItem)
+│   │   ├── Inventory/                       (Inventory, InventoryHistory)
+│   │   ├── Livestreams/                     (LivestreamSession, LivestreamProduct, LivestreamComment)
+│   │   ├── Notifications/                   (Notification)
+│   │   ├── Orders/                          (ParentOrder, SubOrder, OrderItem, OrderStatusHistory, OrderReturn, OrderReturnItem)
+│   │   ├── Payments/                        (Payment, PaymentEscrow, SellerPayout)
+│   │   ├── Products/                        (Category, Spu, Sku, SkuImage, ProductAttribute)
+│   │   ├── Rbac/                            (Permission, Resource, Role, RolePermission, UserRole)
+│   │   ├── Reviews/                         (Review, ReviewImage)
+│   │   ├── Shipping/                        (ShippingOrder)
+│   │   ├── Shops/                           (Shop, ShopVerification, ShopAddress, ShopFollower, ShopWallet, ShopWalletTransaction)
+│   │   ├── System/                          (AuditLog, OutboxMessage)
+│   │   └── Users/                           (User, UserAddress, UserOtp, RefreshToken)
+│   │
+│   └── NovaLive.Infrastructure/             (Implementations: EF Core, Redis, MassTransit, MinIO)
+│       ├── Cache/                           (RedisCacheService)
+│       ├── Clock/                           (DateTimeProvider)
+│       ├── Idempotency/                     (RedisIdempotencyService)
+│       ├── Messaging/                       (MassTransitMessageBus)
+│       ├── Persistence/
+│       │   ├── AppDbContext.cs
+│       │   ├── Configurations/              (EF Core Fluent Configurations per Entity)
+│       │   ├── Interceptors/                (AuditableEntityInterceptor, DomainEventsDispatcherInterceptor, SoftDeleteInterceptor)
+│       │   ├── Migrations/                  (EF Core Database Migrations)
+│       │   └── Seeding/                     (SystemDataSeeder)
+│       ├── Search/                          (PostgresProductQueryService)
+│       ├── System/                          (OutboxBackgroundWorker)
+│       └── DependencyInjection.cs
 │
-├── ⚡ NovaLive.RealtimeApi/                (WebSocket & SignalR Gateway - Port 5001)
-│   ├── Hubs/
-│   │   ├── LivestreamHub.cs                ← WebSockets: Pin SP, Flash price, Chat, Reactions
-│   │   ├── OrderNotificationHub.cs         ← Push thông báo đơn mới realtime cho Seller
-│   │   └── PaymentNotificationHub.cs       ← Push kết quả thanh toán QR realtime cho Buyer
-│   ├── Middlewares/
-│   │   └── WebSocketAuthMiddleware.cs      ← Xác thực JWT token từ Query param (?access_token=)
-│   └── Program.cs                          ← SignalR + Redis Backplane (AddStackExchangeRedis)
+├── 🧪 tests/
+│   ├── NovaLive.Api.Tests/
+│   ├── NovaLive.Application.Tests/
+│   ├── NovaLive.Domain.Tests/
+│   └── NovaLive.Infrastructure.Tests/
 │
-├── 📋 NovaLive.Application/                (CQRS Use Cases, MediatR, Business Ports)
-│   ├── Abstractions/
-│   │   ├── Persistence/ (IUserRepository, IParentOrderRepository, ISubOrderRepository, IShopWalletRepository, IUnitOfWork...)
-│   │   ├── Cache/ (ICacheService)
-│   │   ├── Messaging/ (IMessageBus)
-│   │   ├── Search/ (IProductQueryService - PostgreSQL full-text/trigram)
-│   │   ├── Storage/ (IFileStorageService)
-│   │   └── ThirdParty/ (IPaymentGateway, IShippingProvider, IAgoraTokenService)
-│   ├── UseCases/
-│   │   ├── Auth/Commands/ (Register, Login, RefreshToken, Logout, VerifyOtp)
-│   │   ├── Shops/Commands/ (RegisterShop, UpdateKyc, AddWarehouseAddress)
-│   │   ├── Products/Commands/ (CreateProduct, UpdateProduct, RebuildProductSearchVector)
-│   │   ├── Cart/Commands/ (AddToCart, UpdateCartItem, RemoveCartItem)
-│   │   ├── Orders/
-│   │   │   ├── Queries/ (CalculateCheckoutDraftQuery, GetOrderDetailQuery)
-│   │   │   └── Commands/ (CheckoutCommand, CancelOrderCommand)
-│   │   ├── Payments/Commands/ (InitiatePayment, HandleMoMoWebhook, HandleVietQRWebhook)
-│   │   ├── Shipping/Commands/ (CreateShipmentOrder, HandleShippingWebhook)
-│   │   ├── Returns/Commands/ (RequestReturn, SellerApproveReturn, AdminResolveDispute)
-│   │   ├── FlashSale/Commands/ (CreateCampaign, RegisterSku, ReserveFlashSaleSlot)
-│   │   ├── Livestreams/Commands/ (StartLiveSession, EndLiveSession, PinProductRealtime)
-│   │   └── Reviews/Commands/ (CreateReview, UpdateReview, ReplyReview)
-│   └── Common/Behaviors/ (ValidationBehavior, LoggingBehavior, TransactionBehavior)
+├── 🐳 docker/
+│   └── dev/                                 (Dockerfile, docker-compose.yml)
 │
-├── 🏛️ NovaLive.Domain/                     (Core Entities, Value Objects, Domain Events)
-│   ├── Entities/
-│   │   ├── Users/ (User, UserAddress, UserOtp, RefreshToken)
-│   │   ├── Shops/ (Shop, ShopVerification, ShopAddress, ShopWallet, ShopWalletTransaction)
-│   │   ├── Products/ (Category, Spu, Sku, SkuImage, ProductAttribute)
-│   │   ├── Inventory/ (Inventory, InventoryHistory)
-│   │   ├── Cart/ (Cart, CartItem)
-│   │   ├── Orders/ (ParentOrder, SubOrder, OrderItem, OrderStatusHistory, OrderReturn, OrderReturnItem)
-│   │   ├── Discounts/ (Discount, DiscountUsage)
-│   │   ├── FlashSale/ (FlashSaleCampaign, FlashSaleItem)
-│   │   ├── Payments/ (Payment, PaymentEscrow, SellerPayout)
-│   │   ├── Shipping/ (ShippingOrder)
-│   │   ├── Livestreams/ (LivestreamSession, LivestreamProduct, LivestreamComment)
-│   │   ├── Reviews/ (Review, ReviewImage)
-│   │   ├── Notifications/ (Notification)
-│   │   └── System/ (AuditLog, OutboxMessage)
-│   ├── ValueObjects/ (Money, Address, OtpCode)
-│   ├── DomainServices/ (PriceCalculator, InventoryChecker, EscrowProrationService)
-│   └── Events/ (OrderPlacedEvent, PaymentSuccessEvent, ShipmentDeliveredEvent, EscrowReleasedEvent)
-│
-├── 🔧 NovaLive.Infrastructure/             (Implementations: EF Core, Redis, MassTransit, MinIO)
-│   ├── Persistence/
-│   │   ├── AppDbContext.cs
-│   │   ├── Configurations/ (EF Core Fluent API 1 file / 1 Entity)
-│   │   └── Repositories/ (Implement các Repository Interfaces từ Application)
-│   ├── Cache/ (RedisCacheService)
-│   ├── Search/ (PostgresProductQueryService)
-│   ├── Storage/ (MinioFileStorageService)
-│   ├── Messaging/
-│   │   ├── MassTransitBusAdapter.cs
-│   │   └── Consumers/
-│   │       ├── OrderPlacedConsumer.cs          ← Gửi Email/SMS xác nhận + Push Notification
-│   │       ├── ProductSearchVectorConsumer.cs  ← Cập nhật search_vector PostgreSQL
-│   │       ├── InventorySyncConsumer.cs        ← Trừ kho thực tế sau khi thanh toán
-│   │       ├── EscrowReleaseConsumer.cs        ← Tự động cộng tiền ví Shop khi hết T+7
-│   │       ├── TimeoutOrderRollbackWorker.cs   ← Hủy đơn quá hạn 15p & Hoàn trả tồn kho (Reserved Qty)
-│   │       └── RatingCalculationWorker.cs      ← Tính lại điểm sao trung bình của Shop
-│   ├── ExternalServices/
-│   │   ├── MoMoPaymentAdapter.cs
-│   │   ├── VietQRPaymentAdapter.cs
-│   │   ├── GhnShippingAdapter.cs
-│   │   ├── GhtkShippingAdapter.cs
-│   │   ├── ViettelPostShippingAdapter.cs
-│   │   └── AgoraTokenService.cs
-│   └── DependencyInjection.cs
-│
-└── 📦 NovaLive.Contracts/                  (Public API Request/Response DTOs)
-    └── V1/ (Auth, Users, Shops, Products, Cart, Orders, Payments, Shipping, Live, Reviews)
+└── 📄 docs/                                 (Architecture, SRS, Task Breakdown, Endpoints...)
 ```
 
 ---
 
 ## 4. ⚡ CÁC LUỒNG XỬ LÝ NGHIỆP VỤ THEN CHỐT
 
-### 4.1 Luồng Mua hàng Đa Shop: Giỏ hàng $\rightarrow$ Tính nháp $\rightarrow$ Đặt đơn $\rightarrow$ Ký quỹ
+### 4.1 Luồng Mua hàng Đa Shop: Giỏ hàng $\rightarrow$ Tính nháp $\rightarrow$ Đặt đơn $\rightarrow$ Ký quỹ Escrow
 
-```
+```text
 [Buyer: Màn hình Giỏ hàng]
     │
     ├─ 1. Chọn sản phẩm: Tick chọn 3 món (Shop A 2 món, Shop B 1 món)
     │
     ├─ 2. Tính toán nháp Realtime:
-    │       POST /orders/calculate-checkout { cartItemIds: [1,2,3], addressId, vouchers: [...] }
+    │       POST /api/v1/orders/calculate-checkout { cartItemIds: [1,2,3], addressId, vouchers: [...] }
     │       → Server trả về bảng chi tiết: Tiền hàng A, Tiền hàng B, Phí ship A/B, Giảm giá từng shop, Giảm giá sàn
     │
     ├─ 3. Bấm "Đặt Hàng":
-    │       POST /orders/checkout
+    │       POST /api/v1/orders/checkout
     │       │
     │       ▼
-    │       CheckoutCommandHandler (UnitOfWork Transaction):
+    │       SubmitCheckoutCommandHandler (UnitOfWork Transaction):
     │       ├── 1. Khóa giữ chỗ tồn kho (Inventories.reserved_qty += qty)
     │       ├── 2. Tạo Parent Order (quản lý grand_total toàn giỏ)
     │       ├── 3. Tạo 2 Sub-Orders (SubOrder A cho Shop A, SubOrder B cho Shop B)
@@ -238,25 +211,24 @@ NovaLive.sln
 
 ### 4.2 Luồng Livestream: Agora RTC $\rightarrow$ Pin SP $\rightarrow$ Mua Ngay (Instant Buy)
 
-```
+```text
 [Seller Bắt đầu Live]
     │
-    ├── 1. POST /livestreams/start ──► Server sinh Agora RTC Token (Role: Publisher) ──► Phát live
+    ├── 1. POST /api/v1/seller/livestreams/start ──► Server sinh Agora RTC Token (Role: Publisher) ──► Phát live
     │
 [Viewer Vào Xem Live]
     │
-    ├── 2. GET /livestreams/{id} ──► Server sinh Agora RTC Token (Role: Subscriber) ──► Xem live
-    │       Kết nối WebSocket LivestreamHub (Group: live_{id})
+    ├── 2. GET /api/v1/livestreams/{id} ──► Server sinh Agora RTC Token (Role: Subscriber) ──► Xem live
+    │       Kết nối WebSocket LivestreamHub (/hubs/livestream)
     │
 [Seller Ghim Sản Phẩm & Bật Giá Flash]
     │
-    ├── 3. POST /livestreams/{id}/pin-product { skuId, flashPrice: 99000, duration: 120s }
-    │       ──► SignalR Broadcast "ProductPinned" đến toàn bộ viewer
+    ├── 3. POST /api/v1/seller/livestreams/{id}/pin-product { skuId, flashPrice: 99000, duration: 120s }
+    │       ──► SignalR Broadcast "ProductPinned" đến toàn bộ viewer trong room
     │
 [Viewer Bấm "Mua Ngay"]
     │
-    └── 4. Client tự động thêm SKU vào giỏ, gán selectedIds=[skuId] ──► Chuyển thẳng đến trang Checkout
-            (Bỏ qua bước giỏ hàng, áp dụng giá flashPrice trong luồng tính tiền)
+    └── 4. Client gọi QuickBuyCheckoutRequest ──► Chuyển thẳng đến tạo đơn hàng Instant Checkout
 ```
 
 ---
@@ -267,68 +239,67 @@ NovaLive.sln
 version: '3.8'
 
 services:
-  core-api:
+  postgres:
+    image: postgres:17-alpine
+    container_name: novalive_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-novalive_db}
+      POSTGRES_USER: ${POSTGRES_USER:-nova_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: novalive_redis_prod
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redisdata:/data
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: novalive_rabbitmq_prod
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rmqdata:/var/lib/rabbitmq
+    restart: always
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: novalive_minio_prod
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - miniodata:/data
+    restart: always
+
+  novalive-api:
     build:
       context: .
-      dockerfile: NovaLive.CoreApi/Dockerfile
+      dockerfile: docker/dev/Dockerfile
+    container_name: novalive_api_prod
     ports:
-      - "5000:8080"
+      - "5001:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=novalive_db;Username=nova_user;Password=${DB_PASSWORD}
-      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD}
-      - RabbitMQ__Host=rabbitmq
-      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Redis__ConnectionString: redis:6379,password=${REDIS_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: ${RABBITMQ_USER}
+      RabbitMQ__Password: ${RABBITMQ_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET}
     depends_on:
       - postgres
       - redis
       - rabbitmq
       - minio
-
-  realtime-api:
-    build:
-      context: .
-      dockerfile: NovaLive.RealtimeApi/Dockerfile
-    ports:
-      - "5001:8080"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD}
-      - Jwt__SecretKey=${JWT_SECRET_KEY}
-    depends_on:
-      - redis
-
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_DB: novalive_db
-      POSTGRES_USER: nova_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    volumes:
-      - redisdata:/data
-
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    environment:
-      RABBITMQ_DEFAULT_USER: nova_guest
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-    volumes:
-      - rmqdata:/var/lib/rabbitmq
-
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-    volumes:
-      - miniodata:/data
+    restart: always
 
 volumes:
   pgdata:
