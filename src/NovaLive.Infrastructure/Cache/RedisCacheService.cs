@@ -9,6 +9,18 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheServ
     private readonly IDatabase _database = redis.GetDatabase();
     private readonly IConnectionMultiplexer _redis = redis;
 
+    public async Task<long> IncrementAsync(string key, TimeSpan ttl, CancellationToken cancellationToken = default)
+    {
+        const string script = "local count = redis.call('INCR', KEYS[1]); if count == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]); end; return count;";
+        return (long)await _database.ScriptEvaluateAsync(script, [key], [(long)ttl.TotalMilliseconds]).WaitAsync(cancellationToken);
+    }
+
+    public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
+        _database.KeyExistsAsync(key).WaitAsync(cancellationToken);
+
+    public Task<TimeSpan?> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default) =>
+        _database.KeyTimeToLiveAsync(key).WaitAsync(cancellationToken);
+
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         var value = await _database.StringGetAsync(key);

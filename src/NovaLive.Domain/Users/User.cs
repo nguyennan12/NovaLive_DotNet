@@ -41,6 +41,8 @@ public sealed class User : AuditableEntity
         AccountStatus = AccountStatus.Active;
     }
 
+    public void ChangePassword(string passwordHash) => PasswordHash = passwordHash;
+
     public void MarkAsSeller()
     {
         IsSeller = true;

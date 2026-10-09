@@ -18,6 +18,7 @@ using NovaLive.Infrastructure.Persistence.Seeding;
 using NovaLive.Infrastructure.Search;
 using NovaLive.Infrastructure.System;
 using StackExchange.Redis;
+using NovaLive.Infrastructure.Auth;
 
 namespace NovaLive.Infrastructure;
 
@@ -25,6 +26,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? "Host=localhost;Port=5432;Database=novalive_db;Username=nova_user;Password=nova_password";
 
@@ -45,6 +47,9 @@ public static class DependencyInjection
 
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<ITransactionManager, TransactionManager>();
+        services.AddScoped<IAuthPersistence, AuthPersistence>();
+        services.AddScoped<IAfterCommitActions, AfterCommitActions>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
@@ -54,6 +59,8 @@ public static class DependencyInjection
 
         // Caching & Idempotency
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
+        if (string.IsNullOrWhiteSpace(redisConnectionString))
+            throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
             services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));

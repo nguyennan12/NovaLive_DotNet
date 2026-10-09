@@ -23,6 +23,8 @@ public static class DependencyInjection
         });
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+        services.AddScoped<Auth.AuthSessionService>();
+        services.AddScoped<Auth.OtpFlowService>();
 
         return services;
     }

@@ -11,6 +11,9 @@ using NovaLive.Contracts.Common;
 using NovaLive.Contracts.Products;
 using NovaLive.Infrastructure;
 using Serilog;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using NovaLive.Domain.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +35,26 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentShop, CurrentShop>();
 builder.Services.AddNovaLiveAuthentication(builder.Configuration);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Never trust arbitrary X-Forwarded-For headers; add only configured reverse proxies.
+    foreach (var proxy in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+        options.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.OnRejected = async (context, ct) =>
+    {
+        var seconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+            ? (int)Math.Ceiling(retryAfter.TotalSeconds) : 60;
+        await AuthProblem.WriteAsync(context.HttpContext, new Error(ErrorType.TooManyRequests, "Auth.RateLimited", "Please try again later.")
+            { RetryAfterSeconds = Math.Max(1, seconds) });
+    };
+});
 
 // 4. CORS Policy (REST + WebSockets / SignalR)
 builder.Services.AddCors(options =>
@@ -76,15 +99,20 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+// Validate secrets before touching the database, rather than waiting for HostedService startup.
+_ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.JwtOptions>>().Value;
+_ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.OtpOptions>>().Value;
 
 // Auto-run Database Migrations & Seeding on Startup
 await app.ApplyMigrationsAsync();
 
 // Middleware Pipeline
-app.UseExceptionHandler();
+app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
+// Handle auth exceptions before the request logger can serialize their messages.
+app.UseExceptionHandler();
 app.UseCors("DefaultCors");
 app.UseHttpsRedirection();
 
@@ -94,7 +122,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<JwtRoleContextMiddleware>();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // ---- Controllers ----
 app.MapControllers();
