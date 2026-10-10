@@ -219,7 +219,7 @@ NovaLive
      - `ChangePasswordCommand`: Xác thực password cũ, đổi password mới và đánh dấu `revoked_at` cho toàn bộ Refresh Tokens của user.
      - `LogoutCommand`: Nhận `refreshToken`, đánh dấu `revoked_at`. Đưa `jti` của Access Token hiện tại vào Redis Blacklist với TTL bằng thời gian sống còn lại của Access Token (`Blacklist:{jti}`).
   4. **API Controllers & Security Middlewares**:
-     - `AuthController`: Implement 10 REST endpoints dưới route `/api/v1/auth/*`; `POST /auth/login/google`: **hoãn, chưa làm**.
+     - `AuthController`: Implement 11 REST endpoints dưới route `/api/v1/auth/*`.
      - `JwtRoleContextMiddleware`: Trích xuất JWT từ Authorization Header. Đọc `jti` và check key `Blacklist:{jti}` trong Redis. Nếu tồn tại → ngắt pipeline trả về `401 Unauthorized`. Bind `CurrentUser` context.
      - `AuthorizationBehavior`: Pipeline Behavior của MediatR đọc attribute `[IRequirePermission]` hoặc `[AuthorizeRole]`, kiểm tra role của user context trước khi execute handler.
 - **Dependencies**: T03, T09
