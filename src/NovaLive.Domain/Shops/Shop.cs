@@ -2,7 +2,7 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Shops;
 
-public sealed class Shop : AuditableEntity
+public sealed class Shop : AuditableEntity, ISoftDeletable
 {
     private Shop()
     {

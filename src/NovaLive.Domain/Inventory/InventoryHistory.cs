@@ -4,6 +4,37 @@ namespace NovaLive.Domain.Inventory;
 
 public sealed class InventoryHistory : Entity
 {
+    private InventoryHistory() { }
+
+    public InventoryHistory(
+        Guid inventoryId,
+        Guid skuId,
+        InventoryChangeType changeType,
+        int qtyBefore,
+        int qtyChange,
+        int reservedBefore,
+        int reservedChange,
+        int qtyAfter,
+        string? refType = null,
+        Guid? refId = null,
+        string? note = null,
+        Guid? createdBy = null)
+    {
+        InventoryId = inventoryId;
+        SkuId = skuId;
+        ChangeType = changeType;
+        QtyBefore = qtyBefore;
+        QtyChange = qtyChange;
+        ReservedBefore = reservedBefore;
+        ReservedChange = reservedChange;
+        QtyAfter = qtyAfter;
+        RefType = refType;
+        RefId = refId;
+        Note = note;
+        CreatedBy = createdBy;
+        CreatedAt = DateTimeOffset.UtcNow;
+    }
+
     public Guid InventoryId { get; private set; }
 
     public Guid SkuId { get; private set; }

@@ -4,6 +4,18 @@ namespace NovaLive.Domain.Inventory;
 
 public sealed class Inventory : Entity
 {
+    private Inventory() { }
+
+    public Inventory(Guid skuId, Guid shopId, int initialStock, int minStock = 5)
+    {
+        SkuId = skuId;
+        ShopId = shopId;
+        QtyOnHand = initialStock;
+        ReservedQty = 0;
+        MinStock = minStock;
+        LastUpdated = DateTimeOffset.UtcNow;
+    }
+
     public Guid SkuId { get; private set; }
 
     public Guid ShopId { get; private set; }
@@ -17,4 +29,16 @@ public sealed class Inventory : Entity
     public int AvailableQty => QtyOnHand - ReservedQty;
 
     public DateTimeOffset LastUpdated { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void AdjustOnHand(int qtyChange)
+    {
+        QtyOnHand += qtyChange;
+        LastUpdated = DateTimeOffset.UtcNow;
+    }
+
+    public void AdjustReserved(int reservedChange)
+    {
+        ReservedQty += reservedChange;
+        LastUpdated = DateTimeOffset.UtcNow;
+    }
 }

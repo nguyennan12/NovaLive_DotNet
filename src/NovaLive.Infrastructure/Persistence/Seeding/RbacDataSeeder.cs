@@ -5,48 +5,49 @@ using NovaLive.Domain.Rbac;
 
 namespace NovaLive.Infrastructure.Persistence.Seeding;
 
-public sealed class SystemDataSeeder(
+public sealed class RbacDataSeeder(
     AppDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
-    ILogger<SystemDataSeeder> logger)
-    : IDataSeeder
+    ILogger<RbacDataSeeder> logger) : IDataSeeder
 {
-    private const int AdvisoryLockKey = 741_096_509;
+    private const long AdvisoryLockKey = 748923748293748923L;
+
+    public int Order => 1;
 
     private static readonly RoleSeed[] SystemRoles =
     [
-        new(SystemRoleIds.Admin, "Admin", "Quản trị viên vận hành toàn sàn"),
-        new(SystemRoleIds.Seller, "Seller", "Nhà bán hàng trên nền tảng"),
-        new(SystemRoleIds.Buyer, "Buyer", "Người mua hàng trên nền tảng")
+        new(SystemRoleIds.Admin, "Admin", "Quản trị viên toàn quyền hệ thống"),
+        new(SystemRoleIds.Seller, "Seller", "Chủ gian hàng bán sản phẩm và livestream"),
+        new(SystemRoleIds.Buyer, "Buyer", "Khách hàng mua sắm trên nền tảng")
     ];
 
     private static readonly ResourceSeed[] Resources =
     [
-        new("auth", "Xác thực và phiên đăng nhập"),
-        new("users", "Người dùng và hồ sơ cá nhân"),
-        new("shops", "Gian hàng"),
-        new("wallets", "Ví và yêu cầu chi trả của gian hàng"),
+        new("auth", "Xác thực và phân quyền"),
+        new("users", "Quản lý người dùng"),
+        new("shops", "Quản lý gian hàng"),
+        new("wallets", "Ví tiền gian hàng"),
         new("categories", "Danh mục sản phẩm"),
-        new("products", "Sản phẩm SPU và SKU"),
-        new("inventory", "Tồn kho"),
+        new("products", "Sản phẩm SPU/SKU"),
+        new("inventory", "Kho hàng và tồn kho"),
         new("carts", "Giỏ hàng"),
         new("orders", "Đơn hàng"),
-        new("payments", "Thanh toán"),
+        new("payments", "Thanh toán và đối soát"),
         new("discounts", "Mã giảm giá"),
-        new("flashsales", "Chiến dịch Flash Sale"),
-        new("shipping", "Vận chuyển"),
-        new("returns", "Yêu cầu trả hàng và hoàn tiền"),
-        new("disputes", "Tranh chấp"),
-        new("livestreams", "Livestream commerce"),
+        new("flashsales", "Chương trình Flash Sale"),
+        new("shipping", "Vận chuyển và giao nhận"),
+        new("returns", "Trả hàng và hoàn tiền"),
+        new("disputes", "Khiếu nại và tranh chấp"),
+        new("livestreams", "Livestream bán hàng"),
         new("reviews", "Đánh giá sản phẩm"),
-        new("reports", "Báo cáo và dashboard"),
-        new("roles", "Vai trò và phân quyền")
+        new("reports", "Báo cáo và thống kê"),
+        new("roles", "Quản trị vai trò và quyền hạn")
     ];
 
     private static readonly PermissionSeed[] Permissions =
     [
         new(PermissionCodes.Auth.Register, RoleGrant.None),
-        new(PermissionCodes.Auth.Login, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
+        new(PermissionCodes.Auth.Login, RoleGrant.None),
         new(PermissionCodes.Auth.Logout, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
         new(PermissionCodes.Users.ViewOwnProfile, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
         new(PermissionCodes.Users.UpdateOwnProfile, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
@@ -64,6 +65,7 @@ public sealed class SystemDataSeeder(
         new(PermissionCodes.Categories.ViewPublic, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
         new(PermissionCodes.Categories.ManageAll, RoleGrant.Admin),
         new(PermissionCodes.Products.ViewPublic, RoleGrant.Buyer | RoleGrant.Seller | RoleGrant.Admin),
+        new(PermissionCodes.Products.ViewOwn, RoleGrant.Seller),
         new(PermissionCodes.Products.CreateOwn, RoleGrant.Seller),
         new(PermissionCodes.Products.UpdateOwn, RoleGrant.Seller),
         new(PermissionCodes.Products.DeleteOwn, RoleGrant.Seller),
@@ -104,11 +106,9 @@ public sealed class SystemDataSeeder(
         new(PermissionCodes.Roles.ManageAll, RoleGrant.Admin)
     ];
 
-    public int Order => 1;
-
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        logger.LogInformation("Starting system RBAC data seeding.");
+        logger.LogInformation("Starting RBAC data seeding.");
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -126,7 +126,7 @@ public sealed class SystemDataSeeder(
 
         await transaction.CommitAsync(cancellationToken);
 
-        logger.LogInformation("System RBAC data seeding completed successfully.");
+        logger.LogInformation("RBAC data seeding completed successfully.");
     }
 
     private async Task SeedRolesAsync(CancellationToken cancellationToken)
@@ -257,30 +257,38 @@ public sealed class SystemDataSeeder(
 
     private async Task SeedPermissionsAsync(CancellationToken cancellationToken)
     {
-        var resourceCodes = Resources.Select(resource => resource.Code).ToArray();
-        var resourceByCode = await dbContext.Resources
-            .Where(resource => resourceCodes.Contains(resource.Code))
+        var permissionCodes = Permissions.Select(permission => permission.Code).ToArray();
+        var existingPermissions = await dbContext.Permissions
+            .Where(permission => permissionCodes.Contains(permission.Code))
+            .ToDictionaryAsync(permission => permission.Code, cancellationToken);
+        var resources = await dbContext.Resources
+            .Where(resource => resourceCodesForPermissions.Contains(resource.Code))
             .ToDictionaryAsync(resource => resource.Code, cancellationToken);
 
-        var permissionCodes = Permissions.Select(permission => permission.Code).ToArray();
-        var existingCodes = await dbContext.Permissions
-            .Where(permission => permissionCodes.Contains(permission.Code))
-            .Select(permission => permission.Code)
-            .ToHashSetAsync(cancellationToken);
-
-        foreach (var permission in Permissions.Where(permission => !existingCodes.Contains(permission.Code)))
+        foreach (var permission in Permissions)
         {
-            var separatorIndex = permission.Code.IndexOf(':');
-            var resourceCode = permission.Code[..separatorIndex];
-            var action = permission.Code[(separatorIndex + 1)..];
+            var parts = permission.Code.Split(':', 2);
+            var resourceCode = parts[0];
+            var action = parts[1];
 
-            await dbContext.Permissions.AddAsync(
-                new Permission(resourceByCode[resourceCode].Id, action, permission.Code),
-                cancellationToken);
+            if (!existingPermissions.TryGetValue(permission.Code, out var existing))
+            {
+                var resource = resources[resourceCode];
+                await dbContext.Permissions.AddAsync(
+                    new Permission(resource.Id, action, permission.Code, $"{action} on {resourceCode}"),
+                    cancellationToken);
+            }
+            else
+            {
+                existing.UpdateDefinition(action, $"{action} on {resourceCode}");
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private static readonly string[] resourceCodesForPermissions =
+        Permissions.Select(p => p.Code.Split(':', 2)[0]).Distinct().ToArray();
 
     private async Task SeedRolePermissionsAsync(CancellationToken cancellationToken)
     {
@@ -290,13 +298,11 @@ public sealed class SystemDataSeeder(
             .Where(permission => permissionCodes.Contains(permission.Code))
             .ToDictionaryAsync(permission => permission.Code, cancellationToken);
 
-        var systemRoleIds = SystemRoles.Select(role => role.Id).ToArray();
-        var matrixPermissionIds = permissionByCode.Values.Select(permission => permission.Id).ToArray();
         var existingGrants = (await dbContext.RolePermissions
-                .Where(grant => systemRoleIds.Contains(grant.RoleId)
-                    && matrixPermissionIds.Contains(grant.PermissionId))
-                .Select(grant => new { grant.RoleId, grant.PermissionId })
-                .ToListAsync(cancellationToken))
+            .Where(grant => grant.RoleId == SystemRoleIds.Admin
+                || grant.RoleId == SystemRoleIds.Seller
+                || grant.RoleId == SystemRoleIds.Buyer)
+            .ToListAsync(cancellationToken))
             .Select(grant => (grant.RoleId, grant.PermissionId))
             .ToHashSet();
 

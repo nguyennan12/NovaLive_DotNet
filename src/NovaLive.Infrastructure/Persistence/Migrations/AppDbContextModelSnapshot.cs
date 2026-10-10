@@ -1510,7 +1510,8 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ShopId", "SkuCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_skus_shop_id_sku_code");
+                        .HasDatabaseName("ix_skus_shop_id_sku_code")
+                        .HasFilter("deleted_at IS NULL");
 
                     b.ToTable("skus", "public");
                 });

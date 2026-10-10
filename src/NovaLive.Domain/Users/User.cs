@@ -2,7 +2,7 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Users;
 
-public sealed class User : AuditableEntity
+public sealed class User : AuditableEntity, ISoftDeletable
 {
     private User()
     {

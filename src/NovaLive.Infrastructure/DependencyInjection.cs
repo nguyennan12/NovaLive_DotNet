@@ -54,7 +54,8 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
         // Migration & Seeding
-        services.AddScoped<IDataSeeder, SystemDataSeeder>();
+        services.AddScoped<IDataSeeder, RbacDataSeeder>();
+        services.AddScoped<IDataSeeder, CategoryDataSeeder>();
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency

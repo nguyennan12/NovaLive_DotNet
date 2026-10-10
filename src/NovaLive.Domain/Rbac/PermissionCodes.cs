@@ -43,6 +43,7 @@ public static class PermissionCodes
     public static class Products
     {
         public const string ViewPublic = "products:view_public";
+        public const string ViewOwn = "products:view_own";
         public const string CreateOwn = "products:create_own";
         public const string UpdateOwn = "products:update_own";
         public const string DeleteOwn = "products:delete_own";

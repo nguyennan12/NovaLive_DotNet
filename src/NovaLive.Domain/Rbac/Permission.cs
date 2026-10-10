@@ -21,4 +21,10 @@ public sealed class Permission : Entity
     public string Code { get; private set; } = string.Empty;
 
     public string? Description { get; private set; }
+
+    public void UpdateDefinition(string action, string? description)
+    {
+        Action = action;
+        Description = description;
+    }
 }

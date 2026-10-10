@@ -6,6 +6,7 @@ public record CreateSpuRequest(
     Guid CategoryId,
     string? Brand,
     string ThumbnailUrl,
+    string? AttributesConfigJson,
     List<CreateSkuDto> Skus,
     List<ProductAttributeDto>? Attributes);
 
@@ -15,6 +16,7 @@ public record UpdateSpuRequest(
     Guid CategoryId,
     string? Brand,
     string ThumbnailUrl,
+    string? AttributesConfigJson,
     List<ProductAttributeDto>? Attributes);
 
 public record CreateSkuDto(
@@ -37,11 +39,11 @@ public record ProductAttributeDto(
     string Value);
 
 public record SearchProductsRequest(
-    Guid? ShopId,
-    Guid? CategoryId,
-    string? Keyword,
-    decimal? MinPrice,
-    decimal? MaxPrice,
-    string? SortBy,
+    Guid? ShopId = null,
+    Guid? CategoryId = null,
+    string? Keyword = null,
+    decimal? MinPrice = null,
+    decimal? MaxPrice = null,
+    string? SortBy = null,
     int Page = 1,
     int Size = 20);

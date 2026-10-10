@@ -29,6 +29,7 @@ public record SpuDetailResponse(
     string Description,
     string? Brand,
     string ThumbnailUrl,
+    string? AttributesConfigJson,
     decimal MinPrice,
     decimal MaxPrice,
     double Rating,

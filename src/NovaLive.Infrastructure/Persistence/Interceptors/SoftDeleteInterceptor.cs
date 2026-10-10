@@ -43,9 +43,7 @@ public sealed class SoftDeleteInterceptor(
             if (entry.State == EntityState.Deleted)
             {
                 entry.State = EntityState.Modified;
-                entry.Entity.IsDeleted = true;
-                entry.Entity.DeletedAt = utcNow;
-                entry.Entity.DeletedBy = userId;
+                entry.Property(nameof(ISoftDeletable.DeletedAt)).CurrentValue = utcNow;
             }
         }
     }

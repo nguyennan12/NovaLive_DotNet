@@ -26,10 +26,11 @@ public sealed class SystemDataSeederTests
 
         (await context.Roles.CountAsync()).Should().Be(3);
         (await context.Resources.CountAsync()).Should().Be(19);
-        (await context.Permissions.CountAsync()).Should().Be(57);
+        (await context.Permissions.CountAsync()).Should().Be(58);
+        (await context.Categories.CountAsync()).Should().Be(5);
         (await context.Roles.Select(role => role.Id).Distinct().CountAsync()).Should().Be(3);
         (await context.Resources.Select(resource => resource.Code).Distinct().CountAsync()).Should().Be(19);
-        (await context.Permissions.Select(permission => permission.Code).Distinct().CountAsync()).Should().Be(57);
+        (await context.Permissions.Select(permission => permission.Code).Distinct().CountAsync()).Should().Be(58);
 
         var roles = await context.Roles.ToDictionaryAsync(role => role.Name);
         roles.Keys.Should().BeEquivalentTo("Admin", "Seller", "Buyer");
@@ -43,9 +44,9 @@ public sealed class SystemDataSeederTests
             .Select(group => new { RoleId = group.Key, Count = group.Count() })
             .ToDictionaryAsync(group => group.RoleId, group => group.Count);
 
-        permissionCounts[SystemRoleIds.Buyer].Should().Be(24);
+        permissionCounts[SystemRoleIds.Buyer].Should().Be(23);
         permissionCounts[SystemRoleIds.Seller].Should().Be(38);
-        permissionCounts[SystemRoleIds.Admin].Should().Be(27);
+        permissionCounts[SystemRoleIds.Admin].Should().Be(26);
 
         var registerPermissionId = await context.Permissions
             .Where(permission => permission.Code == PermissionCodes.Auth.Register)
@@ -136,12 +137,16 @@ public sealed class SystemDataSeederTests
         public async Task SeedAsync()
         {
             await using var context = CreateContext();
-            var seeder = new SystemDataSeeder(
+            var rbacSeeder = new RbacDataSeeder(
                 context,
                 new FixedDateTimeProvider(SeedTime),
-                NullLogger<SystemDataSeeder>.Instance);
+                NullLogger<RbacDataSeeder>.Instance);
+            var categorySeeder = new CategoryDataSeeder(
+                context,
+                NullLogger<CategoryDataSeeder>.Instance);
 
-            await seeder.SeedAsync();
+            await rbacSeeder.SeedAsync();
+            await categorySeeder.SeedAsync();
         }
 
         public async ValueTask DisposeAsync()
