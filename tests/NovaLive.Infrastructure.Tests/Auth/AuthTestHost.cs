@@ -35,7 +35,7 @@ internal sealed class AuthTestHost : IAsyncDisposable
     public Mock<ICurrentUser> CurrentUser { get; } = new();
     public ConcurrentDictionary<string, string> Codes { get; } = new();
     public AuthTestHost() { Cache = new(Clock); }
-    public async Task InitializeAsync()
+    public async Task InitializeAsync(Action<IServiceCollection>? configure = null)
     {
         postgresAdminConnection = Environment.GetEnvironmentVariable("NOVALIVE_TEST_POSTGRES");
         string? postgresConnection = null;
@@ -86,6 +86,7 @@ internal sealed class AuthTestHost : IAsyncDisposable
         services.AddSingleton<IOtpService>(new OtpService(Options.Create(new OtpOptions { Pepper = new string('p', 32) })));
         services.AddSingleton<IJwtTokenService>(new JwtTokenService(Options.Create(new JwtOptions
             { Secret = new string('s', 32), Issuer = "tests", Audience = "tests" }), Clock));
+        configure?.Invoke(services);
         Services = services.BuildServiceProvider();
         await WithDb(async db =>
         {

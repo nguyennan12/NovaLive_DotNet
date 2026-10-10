@@ -30,7 +30,7 @@ public sealed class OtpFlowService(IAppDbContext db, IOtpService otp, ICacheServ
             try { await email.SendOtpAsync(user.Email, code, type, token); }
             catch (Exception exception)
             {
-                // SMTP exception messages may contain server responses: never log their message/body.
+                // Email provider exception messages may contain server responses: never log their message/body.
                 logger.LogError("OTP email delivery failed for user {UserId}; failure type {FailureType}.",
                     user.Id, exception.GetType().Name);
             }

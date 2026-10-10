@@ -39,7 +39,7 @@ public sealed class AuthWorkflowTests
         await using var host = new AuthTestHost();
         await host.InitializeAsync();
         host.Mail.Setup(m => m.SendOtpAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<OtpType>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("SMTP unavailable"));
+            .ThrowsAsync(new InvalidOperationException("Email provider unavailable"));
         (await host.Send(new RegisterUserCommand(new("new@example.com", "0912345678", "Password123", "New")))).IsSuccess.Should().BeTrue();
         await host.WithDb(async db => (await db.Users.CountAsync()).Should().Be(1));
     }
