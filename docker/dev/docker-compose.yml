@@ -69,14 +69,15 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-novalive_db};Username=${POSTGRES_USER:-nova_user};Password=${POSTGRES_PASSWORD:-nova_password}"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       Redis__ConnectionString: "redis:6379"
       RabbitMQ__Host: "rabbitmq"
-      RabbitMQ__Username: "${RABBITMQ_USER:-guest}"
-      RabbitMQ__Password: "${RABBITMQ_PASS:-guest}"
-      Jwt__Secret: "${JWT_SECRET:-NovaLive_Super_Secret_Jwt_Key_For_Development_Environment_2026_KeyMustBeLongEnough!}"
+      RabbitMQ__Username: "${RABBITMQ_USER}"
+      RabbitMQ__Password: "${RABBITMQ_PASS}"
+      Jwt__Secret: "${JWT_SECRET}"
       Jwt__Issuer: "NovaLive"
       Jwt__Audience: "NovaLiveClients"
+      Otp__Pepper: "${OTP_PEPPER}"
     labels:
       project: "novalive-ecommerce"
     volumes:
