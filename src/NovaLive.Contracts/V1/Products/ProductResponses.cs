@@ -52,3 +52,24 @@ public record SkuResponse(
     int AvailableQty,
     bool IsActive,
     List<string> Images);
+
+public record PublicSkuResponse(
+    Guid Id,
+    Guid SpuId,
+    string SkuCode,
+    string AttributesJson,
+    decimal OriginalPrice,
+    decimal SellPrice,
+    int WeightGram,
+    bool InStock,
+    int AvailableQty,
+    List<string> Images);
+
+public sealed record ProductSummaryDto(
+    Guid SpuId,
+    Guid ShopId,
+    string Name,
+    string? ThumbnailUrl,
+    decimal MinPrice,
+    decimal MaxPrice,
+    decimal SearchRank);

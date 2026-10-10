@@ -1,6 +1,6 @@
 using NovaLive.Api.Auth;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Cache;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Domain.Common;
 namespace NovaLive.Api.Middleware;
 

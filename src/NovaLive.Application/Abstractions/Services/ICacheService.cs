@@ -1,4 +1,4 @@
-namespace NovaLive.Application.Abstractions.Cache;
+namespace NovaLive.Application.Abstractions.Services;
 
 public interface ICacheService
 {

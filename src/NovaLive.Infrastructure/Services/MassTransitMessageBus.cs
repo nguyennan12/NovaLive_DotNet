@@ -1,7 +1,7 @@
 using MassTransit;
-using NovaLive.Application.Abstractions.Messaging;
+using NovaLive.Application.Abstractions.Services;
 
-namespace NovaLive.Infrastructure.Messaging;
+namespace NovaLive.Infrastructure.Services;
 
 public sealed class MassTransitMessageBus(IPublishEndpoint publishEndpoint) : IMessageBus
 {

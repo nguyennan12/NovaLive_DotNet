@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using NovaLive.Application.Abstractions.Search;
-using NovaLive.Contracts.Products;
+using NovaLive.Application.Abstractions.Services;
+using NovaLive.Contracts.V1.Products;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Persistence;
 
-namespace NovaLive.Infrastructure.Search;
+namespace NovaLive.Infrastructure.Services;
 
 public sealed class PostgresProductQueryService(AppDbContext dbContext) : IProductQueryService
 {
-    public async Task<IReadOnlyList<ProductSummaryDto>> SearchAsync(ProductSearchRequest request, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProductSummaryDto>> SearchAsync(SearchProductsRequest request, CancellationToken cancellationToken = default)
     {
         var query =
             from spu in dbContext.Spus.AsNoTracking()
@@ -44,9 +44,6 @@ public sealed class PostgresProductQueryService(AppDbContext dbContext) : IProdu
             query = query.Where(item => item.Sku.SellPrice <= maxPrice);
         }
 
-        var page = Math.Max(1, request.Page);
-        var size = Math.Clamp(request.Size, 1, 100);
-
         return await query
             .GroupBy(item => new
             {
@@ -63,8 +60,8 @@ public sealed class PostgresProductQueryService(AppDbContext dbContext) : IProdu
                 group.Min(item => item.Sku.SellPrice),
                 group.Max(item => item.Sku.SellPrice),
                 0))
-            .Skip((page - 1) * size)
-            .Take(size)
+            .Skip(request.Skip)
+            .Take(request.Take)
             .ToListAsync(cancellationToken);
     }
 }

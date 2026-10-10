@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Domain.Rbac;
 
 namespace NovaLive.Infrastructure.Persistence.Seeding;

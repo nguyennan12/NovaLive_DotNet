@@ -1,8 +1,8 @@
 using System.Text.Json;
-using NovaLive.Application.Abstractions.Cache;
+using NovaLive.Application.Abstractions.Services;
 using StackExchange.Redis;
 
-namespace NovaLive.Infrastructure.Cache;
+namespace NovaLive.Infrastructure.Services;
 
 public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheService
 {

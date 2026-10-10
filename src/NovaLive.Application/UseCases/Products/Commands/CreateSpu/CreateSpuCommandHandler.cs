@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
@@ -14,6 +15,10 @@ using InventoryEntity = NovaLive.Domain.Inventory.Inventory;
 namespace NovaLive.Application.UseCases.Products.Commands.CreateSpu;
 
 public sealed class CreateSpuCommandHandler(
+    ISpuRepository spuRepository,
+    ISkuRepository skuRepository,
+    IInventoryRepository inventoryRepository,
+    ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : ICommandHandler<CreateSpuCommand, SpuDetailResponse>
@@ -29,28 +34,25 @@ public sealed class CreateSpuCommandHandler(
         var req = command.Request;
 
         // 1. Kiểm tra Category tồn tại
-        var category = await dbContext.Categories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
-
+        var category = await categoryRepository.GetByIdAsync(req.CategoryId, ct);
         if (category is null)
         {
             return ProductErrors.CategoryNotFound;
         }
 
         // 2. Kiểm tra trùng lặp mã SKU trong cùng Shop
-        var requestedSkuCodes = req.Skus
-            .Select(s => s.SkuCode.Trim())
-            .ToList();
-
-        var existingSkuCodes = await dbContext.Skus
-            .Where(s => s.ShopId == shopId.Value && requestedSkuCodes.Contains(s.SkuCode) && s.DeletedAt == null)
-            .Select(s => s.SkuCode)
-            .ToListAsync(ct);
-
-        if (existingSkuCodes.Count > 0)
+        var duplicateCodes = new List<string>();
+        foreach (var skuDto in req.Skus)
         {
-            return ProductErrors.DuplicateSkuCodes(existingSkuCodes);
+            if (await skuRepository.ExistsSkuCodeAsync(shopId.Value, skuDto.SkuCode, null, ct))
+            {
+                duplicateCodes.Add(skuDto.SkuCode);
+            }
+        }
+
+        if (duplicateCodes.Count > 0)
+        {
+            return ProductErrors.DuplicateSkuCodes(duplicateCodes);
         }
 
         // 3. Lấy tên Shop để mapping Response
@@ -58,35 +60,33 @@ public sealed class CreateSpuCommandHandler(
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == shopId.Value, ct);
 
-        var shopName = shop?.ShopName ?? "Gian hàng";
-
         // 4. Tạo SPU
         var spu = new Spu(
             shopId: shopId.Value,
             categoryId: req.CategoryId,
             name: req.Name.Trim(),
             description: req.Description,
-            brand: req.Brand,
+            brand: req.Brand?.Trim(),
             thumbnailUrl: req.ThumbnailUrl,
             attributesConfigJson: req.AttributesConfigJson,
             status: ProductStatus.Active);
 
-        await dbContext.Spus.AddAsync(spu, ct);
+        await spuRepository.AddAsync(spu, ct);
 
-        // 5. Tạo ProductAttributes nếu có
-        var createdAttributes = new List<ProductAttributeDto>();
-        if (req.Attributes != null && req.Attributes.Count > 0)
+        // 5. Tạo Product Attributes
+        if (req.Attributes is not null && req.Attributes.Count > 0)
         {
             var attrOrder = 0;
-            foreach (var attr in req.Attributes)
-            {
-                var productAttr = new ProductAttribute(spu.Id, attr.Name, attr.Value, attrOrder++);
-                await dbContext.ProductAttributes.AddAsync(productAttr, ct);
-                createdAttributes.Add(new ProductAttributeDto(attr.Name, attr.Value));
-            }
+            var attributes = req.Attributes.Select(a => new ProductAttribute(
+                spuId: spu.Id,
+                attrName: a.Name.Trim(),
+                attrValue: a.Value.Trim(),
+                displayOrder: attrOrder++)).ToList();
+
+            await dbContext.ProductAttributes.AddRangeAsync(attributes, ct);
         }
 
-        // 6. Tạo danh sách SKUs & Tự động khởi tạo tồn kho ban đầu
+        // 6. Tạo danh sách SKUs và Tồn kho khởi tạo
         var skuResponses = new List<SkuResponse>();
 
         foreach (var skuDto in req.Skus)
@@ -101,18 +101,23 @@ public sealed class CreateSpuCommandHandler(
                 weightGram: skuDto.WeightGram,
                 isActive: true);
 
-            await dbContext.Skus.AddAsync(sku, ct);
+            await skuRepository.AddAsync(sku, ct);
 
-            // Ảnh SKU
             var skuImageUrls = new List<string>();
-            if (skuDto.Images != null && skuDto.Images.Count > 0)
+            if (skuDto.Images is not null && skuDto.Images.Count > 0)
             {
-                var imgOrder = 0;
-                foreach (var imgUrl in skuDto.Images)
+                var displayOrder = 0;
+                foreach (var url in skuDto.Images)
                 {
-                    var skuImg = new SkuImage(sku.Id, imgUrl, isPrimary: imgOrder == 0, displayOrder: imgOrder++);
-                    await dbContext.SkuImages.AddAsync(skuImg, ct);
-                    skuImageUrls.Add(imgUrl);
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        var skuImage = new SkuImage(
+                            skuId: sku.Id,
+                            imageUrl: url.Trim(),
+                            displayOrder: displayOrder++);
+                        await dbContext.SkuImages.AddAsync(skuImage, ct);
+                        skuImageUrls.Add(url.Trim());
+                    }
                 }
             }
 
@@ -123,7 +128,7 @@ public sealed class CreateSpuCommandHandler(
                 initialStock: skuDto.InitialStock,
                 minStock: 5);
 
-            await dbContext.Inventories.AddAsync(inventory, ct);
+            await inventoryRepository.AddAsync(inventory, ct);
 
             // Ghi nhận sổ cái InventoryHistories
             var history = new InventoryHistory(
@@ -135,25 +140,31 @@ public sealed class CreateSpuCommandHandler(
                 reservedBefore: 0,
                 reservedChange: 0,
                 qtyAfter: skuDto.InitialStock,
+                operationId: Guid.NewGuid(),
                 refType: "InitialImport",
                 refId: spu.Id,
                 note: "Khởi tạo tồn kho ban đầu khi tạo sản phẩm mới",
                 createdBy: currentUser.UserId);
 
-            await dbContext.InventoryHistories.AddAsync(history, ct);
+            await inventoryRepository.AddHistoryAsync(history, ct);
 
             skuResponses.Add(sku.ToResponse(inventory, skuImageUrls));
         }
 
-        // 7. Ghi OutboxMessage với typed Integration Event
+        // 7. Ghi Outbox Message
         var integrationEvent = new ProductUpdatedIntegrationEvent(
             SpuId: spu.Id,
             ShopId: shopId.Value,
-            Action: "Created");
+            Action: "Created",
+            SkuId: null);
 
         var outboxMessage = new OutboxMessage("ProductUpdatedEvent", JsonSerializer.Serialize(integrationEvent));
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
 
-        return spu.ToDetailResponse(shopName, category.Name, skuResponses, createdAttributes);
+        return spu.ToDetailResponse(
+            shopName: shop?.ShopName ?? "Gian hàng",
+            categoryName: category.Name,
+            skus: skuResponses,
+            attributes: req.Attributes ?? []);
     }
 }

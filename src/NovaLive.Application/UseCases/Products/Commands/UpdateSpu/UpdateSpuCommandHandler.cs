@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
@@ -12,6 +13,10 @@ using NovaLive.Domain.System;
 namespace NovaLive.Application.UseCases.Products.Commands.UpdateSpu;
 
 public sealed class UpdateSpuCommandHandler(
+    ISpuRepository spuRepository,
+    ISkuRepository skuRepository,
+    IInventoryRepository inventoryRepository,
+    ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : ICommandHandler<UpdateSpuCommand, SpuDetailResponse>
@@ -24,8 +29,7 @@ public sealed class UpdateSpuCommandHandler(
             return ProductErrors.UnauthorizedShop;
         }
 
-        var spu = await dbContext.Spus
-            .FirstOrDefaultAsync(s => s.Id == command.SpuId && s.ShopId == shopId.Value && s.DeletedAt == null, ct);
+        var spu = await spuRepository.GetByIdAndShopAsync(command.SpuId, shopId.Value, ct);
 
         if (spu is null)
         {
@@ -35,9 +39,7 @@ public sealed class UpdateSpuCommandHandler(
         var req = command.Request;
 
         // Kiểm tra Category tồn tại
-        var category = await dbContext.Categories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == req.CategoryId, ct);
+        var category = await categoryRepository.GetByIdAsync(req.CategoryId, ct);
 
         if (category is null)
         {
@@ -52,6 +54,8 @@ public sealed class UpdateSpuCommandHandler(
             brand: req.Brand,
             thumbnailUrl: req.ThumbnailUrl,
             attributesConfigJson: req.AttributesConfigJson);
+
+        spuRepository.Update(spu);
 
         // Cập nhật ProductAttributes
         var oldAttrs = await dbContext.ProductAttributes
@@ -82,15 +86,9 @@ public sealed class UpdateSpuCommandHandler(
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
 
         // Lấy danh sách SKUs kèm Tồn kho và ảnh
-        var skus = await dbContext.Skus
-            .Where(s => s.SpuId == spu.Id && s.DeletedAt == null)
-            .ToListAsync(ct);
-
+        var skus = await skuRepository.GetBySpuIdAsync(spu.Id, ct);
         var skuIds = skus.Select(s => s.Id).ToList();
-
-        var inventories = await dbContext.Inventories
-            .Where(i => skuIds.Contains(i.SkuId))
-            .ToDictionaryAsync(i => i.SkuId, ct);
+        var inventories = await inventoryRepository.GetBySkuIdsAsync(skuIds, ct);
 
         var images = await dbContext.SkuImages
             .Where(img => skuIds.Contains(img.SkuId))

@@ -1,8 +1,6 @@
-using System.Text.Json;
-using NovaLive.Application.Abstractions.Cache;
-using NovaLive.Application.Abstractions.Idempotency;
+using NovaLive.Application.Abstractions.Services;
 
-namespace NovaLive.Infrastructure.Idempotency;
+namespace NovaLive.Infrastructure.Services;
 
 public sealed class RedisIdempotencyService(ICacheService cacheService) : IIdempotencyService
 {

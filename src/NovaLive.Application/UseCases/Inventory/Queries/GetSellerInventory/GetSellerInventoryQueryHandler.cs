@@ -1,6 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.Common;
 using NovaLive.Contracts.V1.Products;
@@ -9,7 +8,7 @@ using NovaLive.Domain.Common;
 namespace NovaLive.Application.UseCases.Inventory.Queries.GetSellerInventory;
 
 public sealed class GetSellerInventoryQueryHandler(
-    IAppDbContext dbContext,
+    IInventoryRepository inventoryRepository,
     ICurrentUser currentUser)
     : IQueryHandler<GetSellerInventoryQuery, PagedResult<InventoryResponse>>
 {
@@ -22,43 +21,17 @@ public sealed class GetSellerInventoryQueryHandler(
         }
 
         var req = query.Request;
-        var page = req.Page <= 0 ? 1 : req.Page;
-        var size = req.Size <= 0 ? 20 : (req.Size > 100 ? 100 : req.Size);
 
-        var baseQuery = from inventory in dbContext.Inventories.AsNoTracking()
-                        join sku in dbContext.Skus.AsNoTracking() on inventory.SkuId equals sku.Id
-                        join spu in dbContext.Spus.AsNoTracking() on sku.SpuId equals spu.Id
-                        where inventory.ShopId == shopId.Value
-                            && sku.DeletedAt == null
-                            && spu.DeletedAt == null
-                        select new
-                        {
-                            Inventory = inventory,
-                            Sku = sku,
-                            Spu = spu
-                        };
+        var (items, total) = await inventoryRepository.GetSellerInventoryPagedAsync(
+            shopId: shopId.Value,
+            lowStock: req.LowStock,
+            keyword: req.Keyword,
+            page: req.NormalizedPage,
+            size: req.NormalizedSize,
+            ct: ct);
 
-        if (req.LowStock == true)
-        {
-            baseQuery = baseQuery.Where(x => (x.Inventory.QtyOnHand - x.Inventory.ReservedQty) <= x.Inventory.MinStock);
-        }
+        var responses = items.Select(x => x.Inventory.ToResponse(x.Sku.SkuCode, x.Spu.Name)).ToList();
 
-        if (!string.IsNullOrWhiteSpace(req.Keyword))
-        {
-            var keyword = req.Keyword.Trim().ToLower();
-            baseQuery = baseQuery.Where(x => x.Sku.SkuCode.ToLower().Contains(keyword) || x.Spu.Name.ToLower().Contains(keyword));
-        }
-
-        var total = await baseQuery.LongCountAsync(ct);
-
-        var pagedItems = await baseQuery
-            .OrderByDescending(x => x.Inventory.LastUpdated)
-            .Skip((page - 1) * size)
-            .Take(size)
-            .ToListAsync(ct);
-
-        var responses = pagedItems.Select(x => x.Inventory.ToResponse(x.Sku.SkuCode, x.Spu.Name)).ToList();
-
-        return PagedResult<InventoryResponse>.Create(responses, page, size, total);
+        return PagedResult<InventoryResponse>.Create(responses, req.NormalizedPage, req.NormalizedSize, total);
     }
 }

@@ -1,5 +1,5 @@
 using MediatR;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Application.System.Queries;
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Domain.Common;
@@ -10,6 +10,8 @@ using NovaLive.Domain.System;
 namespace NovaLive.Application.UseCases.Products.Commands.DeleteSpu;
 
 public sealed class DeleteSpuCommandHandler(
+    ISpuRepository spuRepository,
+    ISkuRepository skuRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : ICommandHandler<DeleteSpuCommand>
@@ -22,8 +24,7 @@ public sealed class DeleteSpuCommandHandler(
             return ProductErrors.UnauthorizedShop;
         }
 
-        var spu = await dbContext.Spus
-            .FirstOrDefaultAsync(s => s.Id == command.SpuId && s.ShopId == shopId.Value && s.DeletedAt == null, ct);
+        var spu = await spuRepository.GetByIdAndShopAsync(command.SpuId, shopId.Value, ct);
 
         if (spu is null)
         {
@@ -32,15 +33,15 @@ public sealed class DeleteSpuCommandHandler(
 
         // 1. Soft-delete SPU
         spu.SoftDelete();
+        spuRepository.Update(spu);
 
         // 2. Cascade soft-delete all child SKUs
-        var skus = await dbContext.Skus
-            .Where(s => s.SpuId == spu.Id && s.DeletedAt == null)
-            .ToListAsync(ct);
+        var skus = await skuRepository.GetBySpuIdAsync(spu.Id, ct);
 
         foreach (var sku in skus)
         {
             sku.SoftDelete();
+            skuRepository.Update(sku);
         }
 
         // 3. Ghi OutboxMessage với typed Integration Event

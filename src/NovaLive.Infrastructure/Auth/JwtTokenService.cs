@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Infrastructure.Auth;
 

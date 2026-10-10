@@ -1,4 +1,4 @@
-namespace NovaLive.Application.Abstractions.Storage;
+namespace NovaLive.Application.Abstractions.Services;
 
 public interface IFileStorageService
 {

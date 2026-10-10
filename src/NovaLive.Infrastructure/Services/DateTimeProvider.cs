@@ -1,6 +1,6 @@
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 
-namespace NovaLive.Infrastructure.Clock;
+namespace NovaLive.Infrastructure.Services;
 
 public sealed class DateTimeProvider : IDateTimeProvider
 {

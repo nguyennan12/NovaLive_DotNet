@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Cache;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Infrastructure.Persistence;
 namespace NovaLive.Infrastructure.Auth;
 

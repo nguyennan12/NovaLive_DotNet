@@ -1,3 +1,5 @@
+using NovaLive.Contracts.Common;
+
 namespace NovaLive.Contracts.V1.Products;
 
 public record CreateSpuRequest(
@@ -46,4 +48,10 @@ public record SearchProductsRequest(
     decimal? MaxPrice = null,
     string? SortBy = null,
     int Page = 1,
-    int Size = 20);
+    int Size = 20) : PagedRequest(Page, Size);
+
+public record GetSellerProductsRequest(
+    Guid? CategoryId = null,
+    string? Keyword = null,
+    int Page = 1,
+    int Size = 20) : PagedRequest(Page, Size);

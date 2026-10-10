@@ -1,4 +1,4 @@
-namespace NovaLive.Application.Abstractions.Idempotency;
+namespace NovaLive.Application.Abstractions.Services;
 
 public interface IIdempotencyService
 {

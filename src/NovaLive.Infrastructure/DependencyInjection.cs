@@ -2,23 +2,17 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NovaLive.Application.Abstractions.Cache;
-using NovaLive.Application.Abstractions.Clock;
-using NovaLive.Application.Abstractions.Idempotency;
-using NovaLive.Application.Abstractions.Messaging;
 using NovaLive.Application.Abstractions.Persistence;
-using NovaLive.Application.Abstractions.Search;
-using NovaLive.Infrastructure.Cache;
-using NovaLive.Infrastructure.Clock;
-using NovaLive.Infrastructure.Idempotency;
-using NovaLive.Infrastructure.Messaging;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
+using NovaLive.Application.Abstractions.Services;
+using NovaLive.Infrastructure.Auth;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Interceptors;
+using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Persistence.Seeding;
-using NovaLive.Infrastructure.Search;
+using NovaLive.Infrastructure.Services;
 using NovaLive.Infrastructure.System;
 using StackExchange.Redis;
-using NovaLive.Infrastructure.Auth;
 
 namespace NovaLive.Infrastructure;
 
@@ -52,6 +46,12 @@ public static class DependencyInjection
         services.AddScoped<IAfterCommitActions, AfterCommitActions>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
+
+        // Repositories
+        services.AddScoped<ISpuRepository, NovaLive.Infrastructure.Persistence.Repositories.SpuRepository>();
+        services.AddScoped<ISkuRepository, NovaLive.Infrastructure.Persistence.Repositories.SkuRepository>();
+        services.AddScoped<IInventoryRepository, NovaLive.Infrastructure.Persistence.Repositories.InventoryRepository>();
+        services.AddScoped<ICategoryRepository, NovaLive.Infrastructure.Persistence.Repositories.CategoryRepository>();
 
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();

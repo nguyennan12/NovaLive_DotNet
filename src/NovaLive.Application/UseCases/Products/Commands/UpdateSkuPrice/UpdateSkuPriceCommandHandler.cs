@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
@@ -11,6 +12,8 @@ using NovaLive.Domain.System;
 namespace NovaLive.Application.UseCases.Products.Commands.UpdateSkuPrice;
 
 public sealed class UpdateSkuPriceCommandHandler(
+    ISkuRepository skuRepository,
+    IInventoryRepository inventoryRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : ICommandHandler<UpdateSkuPriceCommand, SkuResponse>
@@ -23,8 +26,7 @@ public sealed class UpdateSkuPriceCommandHandler(
             return ProductErrors.UnauthorizedShop;
         }
 
-        var sku = await dbContext.Skus
-            .FirstOrDefaultAsync(s => s.Id == command.SkuId && s.ShopId == shopId.Value && s.DeletedAt == null, ct);
+        var sku = await skuRepository.GetByIdAndShopAsync(command.SkuId, shopId.Value, ct);
 
         if (sku is null)
         {
@@ -39,6 +41,8 @@ public sealed class UpdateSkuPriceCommandHandler(
             weightGram: req.WeightGram,
             isActive: req.IsActive);
 
+        skuRepository.Update(sku);
+
         // Ghi OutboxMessage với typed Integration Event
         var integrationEvent = new ProductUpdatedIntegrationEvent(
             SpuId: sku.SpuId,
@@ -49,9 +53,7 @@ public sealed class UpdateSkuPriceCommandHandler(
         var outboxMessage = new OutboxMessage("ProductUpdatedEvent", JsonSerializer.Serialize(integrationEvent));
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
 
-        var inventory = await dbContext.Inventories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.SkuId == sku.Id, ct);
+        var inventory = await inventoryRepository.GetBySkuIdAndShopAsync(sku.Id, shopId.Value, ct);
 
         var images = await dbContext.SkuImages
             .AsNoTracking()

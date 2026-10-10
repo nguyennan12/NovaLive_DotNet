@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Domain.Common;
 
 namespace NovaLive.Infrastructure.Persistence.Interceptors;

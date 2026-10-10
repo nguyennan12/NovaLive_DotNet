@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
@@ -12,6 +12,9 @@ using NovaLive.Domain.System;
 namespace NovaLive.Application.UseCases.Inventory.Commands.AdjustInventory;
 
 public sealed class AdjustInventoryCommandHandler(
+    IInventoryRepository inventoryRepository,
+    ISkuRepository skuRepository,
+    ISpuRepository spuRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : ICommandHandler<AdjustInventoryCommand, InventoryResponse>
@@ -26,63 +29,40 @@ public sealed class AdjustInventoryCommandHandler(
 
         var req = command.Request;
 
-        // 1. Lấy thông tin Tồn kho của SKU thuộc Shop
-        var inventory = await dbContext.Inventories
-            .FirstOrDefaultAsync(i => i.SkuId == req.SkuId && i.ShopId == shopId.Value, ct);
-
-        if (inventory is null)
+        if (!Enum.TryParse<InventoryChangeType>(req.ChangeType, ignoreCase: true, out var changeType))
         {
-            return InventoryErrors.NotFound;
+            return InventoryErrors.InvalidChangeType;
         }
 
-        var sku = await dbContext.Skus
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == req.SkuId && s.ShopId == shopId.Value && s.DeletedAt == null, ct);
+        var sku = await skuRepository.GetByIdAndShopAsync(req.SkuId, shopId.Value, ct);
 
         if (sku is null)
         {
             return InventoryErrors.SkuNotFound;
         }
 
-        var spu = await dbContext.Spus
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == sku.SpuId, ct);
+        var spu = await spuRepository.GetByIdAsync(sku.SpuId, ct);
 
-        // 2. Ràng buộc cốt lõi (FR-CAT-008): qty_on_hand + qtyChange không được < reserved_qty
-        if (inventory.QtyOnHand + req.QtyChange < inventory.ReservedQty)
-        {
-            return InventoryErrors.InsufficientStock;
-        }
+        var operationId = req.OperationId ?? Guid.NewGuid();
 
-        // 3. Parse loại điều chỉnh kho
-        if (!Enum.TryParse<InventoryChangeType>(req.ChangeType, ignoreCase: true, out var changeType))
-        {
-            return InventoryErrors.InvalidChangeType;
-        }
-
-        var qtyBefore = inventory.QtyOnHand;
-
-        // 4. Cập nhật tồn kho vật lý
-        inventory.AdjustOnHand(req.QtyChange);
-
-        // 5. Ghi nhận sổ cái bất biến (Append-only Ledger - FR-CAT-006, NFR-REL-006)
-        var history = new InventoryHistory(
-            inventoryId: inventory.Id,
-            skuId: sku.Id,
-            changeType: changeType,
-            qtyBefore: qtyBefore,
+        var stockResult = await inventoryRepository.AdjustStockAsync(
+            skuId: req.SkuId,
+            shopId: shopId.Value,
             qtyChange: req.QtyChange,
-            reservedBefore: inventory.ReservedQty,
-            reservedChange: 0,
-            qtyAfter: inventory.QtyOnHand,
-            refType: "ManualAdjustment",
-            refId: null,
+            changeType: changeType,
             note: req.Note,
-            createdBy: currentUser.UserId);
+            operationId: operationId,
+            userId: currentUser.UserId,
+            ct: ct);
 
-        await dbContext.InventoryHistories.AddAsync(history, ct);
+        if (stockResult.IsFailure)
+        {
+            return stockResult.Error;
+        }
 
-        // 6. Ghi Outbox Message để đồng bộ cache/search
+        var res = stockResult.Value!;
+
+        // Ghi Outbox Message để đồng bộ cache/search
         var integrationEvent = new ProductUpdatedIntegrationEvent(
             SpuId: sku.SpuId,
             ShopId: shopId.Value,
@@ -92,6 +72,14 @@ public sealed class AdjustInventoryCommandHandler(
         var outboxMessage = new OutboxMessage("ProductUpdatedEvent", JsonSerializer.Serialize(integrationEvent));
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
 
-        return inventory.ToResponse(sku.SkuCode, spu?.Name ?? "Sản phẩm");
+        return new InventoryResponse(
+            SkuId: res.SkuId,
+            SkuCode: sku.SkuCode,
+            SpuName: spu?.Name ?? "Sản phẩm",
+            QtyOnHand: res.QtyOnHand,
+            ReservedQty: res.ReservedQty,
+            AvailableQty: res.AvailableQty,
+            MinStock: 5,
+            LastUpdated: DateTimeOffset.UtcNow);
     }
 }

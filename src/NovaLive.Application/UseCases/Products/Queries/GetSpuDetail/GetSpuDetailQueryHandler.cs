@@ -1,22 +1,26 @@
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
 using NovaLive.Domain.Common;
+using NovaLive.Domain.Products;
 
 namespace NovaLive.Application.UseCases.Products.Queries.GetSpuDetail;
 
 public sealed class GetSpuDetailQueryHandler(
+    ISpuRepository spuRepository,
+    ISkuRepository skuRepository,
+    IInventoryRepository inventoryRepository,
+    ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
     : IQueryHandler<GetSpuDetailQuery, SpuDetailResponse>
 {
     public async Task<Result<SpuDetailResponse>> Handle(GetSpuDetailQuery query, CancellationToken ct)
     {
-        var spuQuery = dbContext.Spus
-            .AsNoTracking()
-            .Where(s => s.Id == query.SpuId && s.DeletedAt == null);
+        Spu? spu;
 
         if (query.IsSellerView)
         {
@@ -26,14 +30,17 @@ public sealed class GetSpuDetailQueryHandler(
                 return ProductErrors.UnauthorizedShop;
             }
 
-            spuQuery = spuQuery.Where(s => s.ShopId == shopId.Value);
+            spu = await spuRepository.GetByIdAndShopAsync(query.SpuId, shopId.Value, ct);
         }
         else
         {
-            spuQuery = spuQuery.Where(s => s.Status == ProductStatus.Active);
+            spu = await spuRepository.GetByIdAsync(query.SpuId, ct);
+            if (spu is not null && spu.Status != ProductStatus.Active)
+            {
+                spu = null;
+            }
         }
 
-        var spu = await spuQuery.FirstOrDefaultAsync(ct);
         if (spu is null)
         {
             return ProductErrors.NotFound;
@@ -43,26 +50,13 @@ public sealed class GetSpuDetailQueryHandler(
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == spu.ShopId, ct);
 
-        var category = await dbContext.Categories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == spu.CategoryId, ct);
+        var category = await categoryRepository.GetByIdAsync(spu.CategoryId, ct);
 
-        var skuQuery = dbContext.Skus
-            .AsNoTracking()
-            .Where(s => s.SpuId == spu.Id && s.DeletedAt == null);
-
-        if (!query.IsSellerView)
-        {
-            skuQuery = skuQuery.Where(s => s.IsActive);
-        }
-
-        var skus = await skuQuery.ToListAsync(ct);
+        var allSkus = await skuRepository.GetBySpuIdAsync(spu.Id, ct);
+        var skus = query.IsSellerView ? allSkus : allSkus.Where(s => s.IsActive).ToList();
         var skuIds = skus.Select(s => s.Id).ToList();
 
-        var inventories = await dbContext.Inventories
-            .AsNoTracking()
-            .Where(i => skuIds.Contains(i.SkuId))
-            .ToDictionaryAsync(i => i.SkuId, ct);
+        var inventories = await inventoryRepository.GetBySkuIdsAsync(skuIds, ct);
 
         var images = await dbContext.SkuImages
             .AsNoTracking()

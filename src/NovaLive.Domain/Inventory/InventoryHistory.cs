@@ -15,6 +15,7 @@ public sealed class InventoryHistory : Entity
         int reservedBefore,
         int reservedChange,
         int qtyAfter,
+        Guid? operationId = null,
         string? refType = null,
         Guid? refId = null,
         string? note = null,
@@ -28,6 +29,7 @@ public sealed class InventoryHistory : Entity
         ReservedBefore = reservedBefore;
         ReservedChange = reservedChange;
         QtyAfter = qtyAfter;
+        OperationId = operationId ?? Guid.NewGuid();
         RefType = refType;
         RefId = refId;
         Note = note;
@@ -38,6 +40,8 @@ public sealed class InventoryHistory : Entity
     public Guid InventoryId { get; private set; }
 
     public Guid SkuId { get; private set; }
+
+    public Guid OperationId { get; private set; } = Guid.NewGuid();
 
     public InventoryChangeType ChangeType { get; private set; }
 

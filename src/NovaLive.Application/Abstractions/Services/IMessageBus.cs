@@ -1,4 +1,4 @@
-namespace NovaLive.Application.Abstractions.Messaging;
+namespace NovaLive.Application.Abstractions.Services;
 
 public interface IMessageBus
 {

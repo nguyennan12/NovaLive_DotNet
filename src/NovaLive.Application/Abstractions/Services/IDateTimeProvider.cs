@@ -1,4 +1,4 @@
-namespace NovaLive.Application.Abstractions.Clock;
+namespace NovaLive.Application.Abstractions.Services;
 
 public interface IDateTimeProvider
 {

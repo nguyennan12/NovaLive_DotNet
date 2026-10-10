@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Cache;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Users;
