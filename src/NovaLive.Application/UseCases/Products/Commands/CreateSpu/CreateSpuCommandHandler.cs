@@ -9,6 +9,7 @@ using NovaLive.Domain.Common;
 using NovaLive.Domain.Inventory;
 using NovaLive.Domain.Products;
 using NovaLive.Domain.System;
+using InventoryEntity = NovaLive.Domain.Inventory.Inventory;
 
 namespace NovaLive.Application.UseCases.Products.Commands.CreateSpu;
 
@@ -116,7 +117,7 @@ public sealed class CreateSpuCommandHandler(
             }
 
             // Tự động tạo bản ghi Inventories
-            var inventory = new Inventory(
+            var inventory = new InventoryEntity(
                 skuId: sku.Id,
                 shopId: shopId.Value,
                 initialStock: skuDto.InitialStock,

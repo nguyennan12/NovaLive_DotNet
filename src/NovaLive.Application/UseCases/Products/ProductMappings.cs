@@ -1,6 +1,6 @@
 using NovaLive.Contracts.V1.Products;
-using NovaLive.Domain.Inventory;
 using NovaLive.Domain.Products;
+using InventoryEntity = NovaLive.Domain.Inventory.Inventory;
 
 namespace NovaLive.Application.UseCases.Products;
 
@@ -8,7 +8,7 @@ public static class ProductMappings
 {
     public static SkuResponse ToResponse(
         this Sku sku,
-        Inventory? inv,
+        InventoryEntity? inv,
         IEnumerable<string>? imageUrls = null)
     {
         return new SkuResponse(

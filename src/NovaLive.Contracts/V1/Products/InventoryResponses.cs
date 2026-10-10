@@ -7,13 +7,22 @@ public record InventoryResponse(
     int QtyOnHand,
     int ReservedQty,
     int AvailableQty,
-    DateTime LastUpdated);
+    int MinStock,
+    DateTimeOffset LastUpdated);
 
 public record InventoryHistoryResponse(
     Guid Id,
     Guid SkuId,
-    int QtyChange,
+    string SkuCode,
+    string SpuName,
     string ChangeType,
+    int QtyBefore,
+    int QtyChange,
+    int ReservedBefore,
+    int ReservedChange,
     int QtyAfter,
+    string? RefType,
+    Guid? RefId,
     string? Note,
-    DateTime CreatedAt);
+    Guid? CreatedBy,
+    DateTimeOffset CreatedAt);
