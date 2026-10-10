@@ -27,7 +27,7 @@ public sealed class SellerProductsController(ISender sender) : ApiControllerBase
     public async Task<IActionResult> GetProductDetail(
         Guid spuId,
         CancellationToken ct) =>
-        Respond(await Sender.Send(new GetSpuDetailQuery(spuId, IsSellerView: true), ct));
+        Respond(await Sender.Send(new GetSpuDetailQuery(spuId), ct));
 
     [HttpPost("products")]
     public async Task<IActionResult> CreateProduct(

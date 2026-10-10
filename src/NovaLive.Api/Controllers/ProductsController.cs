@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NovaLive.Api.Controllers.Common;
-using NovaLive.Application.UseCases.Products.Queries.GetSpuDetail;
+using NovaLive.Application.UseCases.Products.Queries.GetPublicProductDetail;
 
 namespace NovaLive.Api.Controllers;
 
@@ -14,5 +14,5 @@ public sealed class ProductsController(ISender sender) : ApiControllerBase(sende
     public async Task<IActionResult> GetProductDetail(
         Guid spuId,
         CancellationToken ct) =>
-        Respond(await Sender.Send(new GetSpuDetailQuery(spuId, IsSellerView: false), ct));
+        Respond(await Sender.Send(new GetPublicProductDetailQuery(spuId), ct));
 }

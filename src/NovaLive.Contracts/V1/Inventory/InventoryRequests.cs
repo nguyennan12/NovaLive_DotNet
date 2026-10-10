@@ -1,6 +1,6 @@
 using NovaLive.Contracts.Common;
 
-namespace NovaLive.Contracts.V1.Products;
+namespace NovaLive.Contracts.V1.Inventory;
 
 public record AdjustInventoryRequest(
     Guid SkuId,

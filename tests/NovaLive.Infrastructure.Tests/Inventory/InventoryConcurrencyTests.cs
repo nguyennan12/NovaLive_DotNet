@@ -190,17 +190,90 @@ public sealed class InventoryConcurrencyTests
         var inventoryRepo = scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
         var db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
 
-        var returnId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
 
-        // Return 2 items
-        var returnResult = await inventoryRepo.ReturnStockAsync(skuId, shopId, 2, "Return", returnId, Guid.NewGuid(), sellerId);
+        // 1. Reserve 2 items
+        await inventoryRepo.ReserveStockAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await ((DbContext)db).SaveChangesAsync();
+
+        // 2. Confirm sale (on-hand becomes 3, reserved 0)
+        await inventoryRepo.ConfirmSaleAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await ((DbContext)db).SaveChangesAsync();
+
+        // 3. Customer returns 2 items for that order
+        var returnResult = await inventoryRepo.ReturnStockAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
         await ((DbContext)db).SaveChangesAsync();
 
         // Assert
         returnResult.IsSuccess.Should().BeTrue();
-        returnResult.Value!.QtyOnHand.Should().Be(7);
+        returnResult.Value!.QtyOnHand.Should().Be(5);
         returnResult.Value.ReservedQty.Should().Be(0);
-        returnResult.Value.AvailableQty.Should().Be(7);
+        returnResult.Value.AvailableQty.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task ReturnStock_WithoutPriorSale_OrExceedingSoldQuantity_Fails()
+    {
+        // Arrange
+        await using var host = new AuthTestHost();
+        await host.InitializeAsync();
+        var (sellerId, shopId, skuId) = await SeedStockFixtureAsync(host, initialStock: 10);
+
+        using var scope = host.Services.CreateScope();
+        var inventoryRepo = scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
+
+        var orderId = Guid.NewGuid();
+
+        // Return without any sale
+        var noSaleResult = await inventoryRepo.ReturnStockAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        noSaleResult.IsSuccess.Should().BeFalse();
+        noSaleResult.Error.Code.Should().Be("Inventory.CannotReturnMoreThanSold");
+
+        // Reserve & Confirm sale of 2 items
+        await inventoryRepo.ReserveStockAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await inventoryRepo.ConfirmSaleAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await ((DbContext)db).SaveChangesAsync();
+
+        // Try to return 3 items (exceeds sold 2)
+        var exceedResult = await inventoryRepo.ReturnStockAsync(skuId, shopId, 3, "Order", orderId, Guid.NewGuid(), sellerId);
+        exceedResult.IsSuccess.Should().BeFalse();
+        exceedResult.Error.Code.Should().Be("Inventory.CannotReturnMoreThanSold");
+    }
+
+    [Fact]
+    public async Task CancelSale_WithoutPriorSale_OrExceedingSoldQuantity_Fails()
+    {
+        // Arrange
+        await using var host = new AuthTestHost();
+        await host.InitializeAsync();
+        var (sellerId, shopId, skuId) = await SeedStockFixtureAsync(host, initialStock: 10);
+
+        using var scope = host.Services.CreateScope();
+        var inventoryRepo = scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
+        var db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
+
+        var orderId = Guid.NewGuid();
+
+        // Cancel sale without prior sale
+        var noSaleResult = await inventoryRepo.CancelSaleAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        noSaleResult.IsSuccess.Should().BeFalse();
+        noSaleResult.Error.Code.Should().Be("Inventory.CannotCancelMoreThanSold");
+
+        // Reserve & Confirm sale of 2 items
+        await inventoryRepo.ReserveStockAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await inventoryRepo.ConfirmSaleAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        await ((DbContext)db).SaveChangesAsync();
+
+        // Try to cancel sale of 5 items (exceeds sold 2)
+        var exceedResult = await inventoryRepo.CancelSaleAsync(skuId, shopId, 5, "Order", orderId, Guid.NewGuid(), sellerId);
+        exceedResult.IsSuccess.Should().BeFalse();
+        exceedResult.Error.Code.Should().Be("Inventory.CannotCancelMoreThanSold");
+
+        // Valid cancel of 2 items succeeds
+        var validCancelResult = await inventoryRepo.CancelSaleAsync(skuId, shopId, 2, "Order", orderId, Guid.NewGuid(), sellerId);
+        validCancelResult.IsSuccess.Should().BeTrue();
+        validCancelResult.Value!.QtyOnHand.Should().Be(10);
     }
 
     [Fact]

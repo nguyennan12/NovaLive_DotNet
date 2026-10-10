@@ -39,6 +39,27 @@ public record SpuDetailResponse(
     List<SkuResponse> Skus,
     List<ProductAttributeDto> Attributes);
 
+public record PublicSpuDetailResponse(
+    Guid Id,
+    Guid ShopId,
+    string ShopName,
+    Guid CategoryId,
+    string CategoryName,
+    string Name,
+    string Slug,
+    string Description,
+    string? Brand,
+    string ThumbnailUrl,
+    string? AttributesConfigJson,
+    decimal MinPrice,
+    decimal MaxPrice,
+    double Rating,
+    int SoldCount,
+    string Status,
+    DateTime CreatedAt,
+    List<PublicSkuResponse> Skus,
+    List<ProductAttributeDto> Attributes);
+
 public record SkuResponse(
     Guid Id,
     Guid SpuId,

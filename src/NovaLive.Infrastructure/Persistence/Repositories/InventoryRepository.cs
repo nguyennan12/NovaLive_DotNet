@@ -135,9 +135,9 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             : ExecuteStockTransitionAsync(
                 skuId, shopId, operationId, userId, refType, refId, $"Giữ chỗ đơn hàng {refId}",
                 InventoryChangeType.ReserveAdd, qtyChange: 0, reservedChange: qty,
-                inv => inv.AvailableQty < qty ? InventoryErrors.InsufficientStock : null,
-                inv => inv.Reserve(qty),
-                ct);
+                validatePrecondition: inv => inv.AvailableQty < qty ? InventoryErrors.InsufficientStock : null,
+                applyTransition: inv => inv.Reserve(qty),
+                ct: ct);
     }
 
     public Task<Result<InventoryStockResult>> ReleaseStockAsync(
@@ -148,9 +148,9 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             : ExecuteStockTransitionAsync(
                 skuId, shopId, operationId, userId, refType, refId, $"Giải phóng giữ chỗ đơn hàng {refId}",
                 InventoryChangeType.ReserveRelease, qtyChange: 0, reservedChange: -qty,
-                inv => inv.ReservedQty < qty ? InventoryErrors.InsufficientStock : null,
-                inv => inv.ReleaseReservation(qty),
-                ct);
+                validatePrecondition: inv => inv.ReservedQty < qty ? InventoryErrors.InsufficientStock : null,
+                applyTransition: inv => inv.ReleaseReservation(qty),
+                ct: ct);
     }
 
     public Task<Result<InventoryStockResult>> ConfirmSaleAsync(
@@ -161,35 +161,81 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             : ExecuteStockTransitionAsync(
                 skuId, shopId, operationId, userId, refType, refId, $"Xuất bán đơn hàng {refId}",
                 InventoryChangeType.SaleConfirmed, qtyChange: -qty, reservedChange: -qty,
-                inv => (inv.ReservedQty < qty || inv.QtyOnHand < qty) ? InventoryErrors.InsufficientStock : null,
-                inv => inv.ConfirmSale(qty),
-                ct);
+                validatePrecondition: inv => (inv.ReservedQty < qty || inv.QtyOnHand < qty) ? InventoryErrors.InsufficientStock : null,
+                applyTransition: inv => inv.ConfirmSale(qty),
+                ct: ct);
     }
 
-    public Task<Result<InventoryStockResult>> ReturnStockAsync(
+    public async Task<Result<InventoryStockResult>> ReturnStockAsync(
         Guid skuId, Guid shopId, int qty, string refType, Guid refId, Guid operationId, Guid? userId, CancellationToken ct = default)
     {
-        return qty <= 0
-            ? Task.FromResult<Result<InventoryStockResult>>(InventoryErrors.InvalidQtyChange)
-            : ExecuteStockTransitionAsync(
-                skuId, shopId, operationId, userId, refType, refId, $"Khách trả hàng {refId}",
-                InventoryChangeType.ReturnIn, qtyChange: qty, reservedChange: 0,
-                _ => null,
-                inv => inv.Return(qty),
-                ct);
+        if (qty <= 0)
+        {
+            return InventoryErrors.InvalidQtyChange;
+        }
+
+        if (refId == Guid.Empty)
+        {
+            return InventoryErrors.MissingOrderReference;
+        }
+
+        // Kiểm tra chặt chẽ: chỉ cho phép hoàn trả số lượng đã bán thực tế của refId (Order)
+        var confirmedSold = await dbContext.InventoryHistories
+            .Where(h => h.SkuId == skuId && h.RefId == refId && h.ChangeType == InventoryChangeType.SaleConfirmed)
+            .SumAsync(h => (int?)Math.Abs(h.QtyChange), ct) ?? 0;
+
+        var alreadyRestored = await dbContext.InventoryHistories
+            .Where(h => h.SkuId == skuId && h.RefId == refId && (h.ChangeType == InventoryChangeType.SaleCancelled || h.ChangeType == InventoryChangeType.ReturnIn))
+            .SumAsync(h => (int?)h.QtyChange, ct) ?? 0;
+
+        var eligibleQty = confirmedSold - alreadyRestored;
+        if (confirmedSold == 0 || qty > eligibleQty)
+        {
+            return InventoryErrors.CannotReturnMoreThanSold;
+        }
+
+        return await ExecuteStockTransitionAsync(
+            skuId, shopId, operationId, userId, refType, refId, $"Khách trả hàng đơn {refId}",
+            InventoryChangeType.ReturnIn, qtyChange: qty, reservedChange: 0,
+            validatePrecondition: _ => null,
+            applyTransition: inv => inv.Return(qty),
+            ct: ct);
     }
 
-    public Task<Result<InventoryStockResult>> CancelSaleAsync(
+    public async Task<Result<InventoryStockResult>> CancelSaleAsync(
         Guid skuId, Guid shopId, int qty, string refType, Guid refId, Guid operationId, Guid? userId, CancellationToken ct = default)
     {
-        return qty <= 0
-            ? Task.FromResult<Result<InventoryStockResult>>(InventoryErrors.InvalidQtyChange)
-            : ExecuteStockTransitionAsync(
-                skuId, shopId, operationId, userId, refType, refId, $"Hủy xuất bán hoàn kho {refId}",
-                InventoryChangeType.ManualAdjust, qtyChange: qty, reservedChange: 0,
-                _ => null,
-                inv => inv.CancelSale(qty),
-                ct);
+        if (qty <= 0)
+        {
+            return InventoryErrors.InvalidQtyChange;
+        }
+
+        if (refId == Guid.Empty)
+        {
+            return InventoryErrors.MissingOrderReference;
+        }
+
+        // Kiểm tra chặt chẽ: chỉ cho phép hủy bán số lượng đã confirm bán thực tế của refId
+        var confirmedSold = await dbContext.InventoryHistories
+            .Where(h => h.SkuId == skuId && h.RefId == refId && h.ChangeType == InventoryChangeType.SaleConfirmed)
+            .SumAsync(h => (int?)Math.Abs(h.QtyChange), ct) ?? 0;
+
+        var alreadyRestored = await dbContext.InventoryHistories
+            .Where(h => h.SkuId == skuId && h.RefId == refId && (h.ChangeType == InventoryChangeType.SaleCancelled || h.ChangeType == InventoryChangeType.ReturnIn))
+            .SumAsync(h => (int?)h.QtyChange, ct) ?? 0;
+
+        var eligibleQty = confirmedSold - alreadyRestored;
+        if (confirmedSold == 0 || qty > eligibleQty)
+        {
+            return InventoryErrors.CannotCancelMoreThanSold;
+        }
+
+        return await ExecuteStockTransitionAsync(
+            skuId, shopId, operationId, userId, refType, refId, $"Hủy xuất bán đơn hàng {refId}",
+            InventoryChangeType.SaleCancelled, qtyChange: qty, reservedChange: 0,
+            validatePrecondition: _ => null,
+            applyTransition: inv => inv.CancelSale(qty),
+            ct: ct);
     }
 
     public Task<Result<InventoryStockResult>> AdjustStockAsync(
@@ -200,9 +246,9 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             : ExecuteStockTransitionAsync(
                 skuId, shopId, operationId, userId, "ManualAdjustment", null, note,
                 changeType, qtyChange: qtyChange, reservedChange: 0,
-                inv => (inv.QtyOnHand + qtyChange < inv.ReservedQty || inv.QtyOnHand + qtyChange < 0) ? InventoryErrors.InsufficientStock : null,
-                inv => inv.AdjustOnHand(qtyChange),
-                ct);
+                validatePrecondition: inv => (inv.QtyOnHand + qtyChange < inv.ReservedQty || inv.QtyOnHand + qtyChange < 0) ? InventoryErrors.InsufficientStock : null,
+                applyTransition: inv => inv.AdjustOnHand(qtyChange),
+                ct: ct);
     }
 
     private async Task<Result<InventoryStockResult>> ExecuteStockTransitionAsync(
@@ -239,6 +285,7 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
                     existingInv.QtyOnHand,
                     existingInv.ReservedQty,
                     existingInv.AvailableQty,
+                    existingInv.MinStock,
                     existingInv.Version,
                     AlreadyProcessed: true);
             }
@@ -290,6 +337,7 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             inventory.QtyOnHand,
             inventory.ReservedQty,
             inventory.AvailableQty,
+            inventory.MinStock,
             inventory.Version);
     }
 }

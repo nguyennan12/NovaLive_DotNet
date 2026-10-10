@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Messaging;
@@ -7,28 +6,20 @@ using NovaLive.Contracts.V1.Products;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Products;
 
-namespace NovaLive.Application.UseCases.Products.Queries.GetSpuDetail;
+namespace NovaLive.Application.UseCases.Products.Queries.GetPublicProductDetail;
 
-public sealed class GetSpuDetailQueryHandler(
+public sealed class GetPublicProductDetailQueryHandler(
     ISpuRepository spuRepository,
     ISkuRepository skuRepository,
     IInventoryRepository inventoryRepository,
     ICategoryRepository categoryRepository,
-    IAppDbContext dbContext,
-    ICurrentUser currentUser)
-    : IQueryHandler<GetSpuDetailQuery, SpuDetailResponse>
+    IAppDbContext dbContext)
+    : IQueryHandler<GetPublicProductDetailQuery, PublicSpuDetailResponse>
 {
-    public async Task<Result<SpuDetailResponse>> Handle(GetSpuDetailQuery query, CancellationToken ct)
+    public async Task<Result<PublicSpuDetailResponse>> Handle(GetPublicProductDetailQuery query, CancellationToken ct)
     {
-        var shopId = currentUser.ShopId;
-        if (!shopId.HasValue || shopId.Value == Guid.Empty)
-        {
-            return ProductErrors.UnauthorizedShop;
-        }
-
-        var spu = await spuRepository.GetByIdAndShopAsync(query.SpuId, shopId.Value, ct);
-
-        if (spu is null)
+        var spu = await spuRepository.GetByIdAsync(query.SpuId, ct);
+        if (spu is null || spu.Status != ProductStatus.Active)
         {
             return ProductErrors.NotFound;
         }
@@ -39,8 +30,9 @@ public sealed class GetSpuDetailQueryHandler(
 
         var category = await categoryRepository.GetByIdAsync(spu.CategoryId, ct);
 
-        var skus = await skuRepository.GetBySpuIdAsync(spu.Id, ct);
-        var skuIds = skus.Select(s => s.Id).ToList();
+        var allSkus = await skuRepository.GetBySpuIdAsync(spu.Id, ct);
+        var activeSkus = allSkus.Where(s => s.IsActive).ToList();
+        var skuIds = activeSkus.Select(s => s.Id).ToList();
 
         var inventories = await inventoryRepository.GetBySkuIdsAsync(skuIds, ct);
 
@@ -57,14 +49,14 @@ public sealed class GetSpuDetailQueryHandler(
             .Select(a => new ProductAttributeDto(a.AttrName, a.AttrValue))
             .ToListAsync(ct);
 
-        var skuResponses = skus.Select(sku =>
+        var skuResponses = activeSkus.Select(sku =>
         {
             inventories.TryGetValue(sku.Id, out var inv);
             var skuImgs = images.Where(img => img.SkuId == sku.Id).Select(img => img.ImageUrl);
-            return sku.ToResponse(inv, skuImgs);
+            return sku.ToPublicResponse(inv, skuImgs);
         }).ToList();
 
-        return spu.ToDetailResponse(
+        return spu.ToPublicDetailResponse(
             shop?.ShopName ?? "Gian hàng",
             category?.Name ?? "Danh mục",
             skuResponses,

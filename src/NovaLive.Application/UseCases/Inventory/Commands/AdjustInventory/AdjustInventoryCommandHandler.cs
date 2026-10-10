@@ -4,7 +4,7 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Events;
 using NovaLive.Application.Common.Messaging;
-using NovaLive.Contracts.V1.Products;
+using NovaLive.Contracts.V1.Inventory;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Inventory;
 using NovaLive.Domain.System;
@@ -79,7 +79,7 @@ public sealed class AdjustInventoryCommandHandler(
             QtyOnHand: res.QtyOnHand,
             ReservedQty: res.ReservedQty,
             AvailableQty: res.AvailableQty,
-            MinStock: 5,
+            MinStock: res.MinStock,
             LastUpdated: DateTimeOffset.UtcNow);
     }
 }

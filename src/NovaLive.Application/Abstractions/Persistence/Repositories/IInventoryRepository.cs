@@ -10,6 +10,7 @@ public sealed record InventoryStockResult(
     int QtyOnHand,
     int ReservedQty,
     int AvailableQty,
+    int MinStock,
     int Version,
     bool AlreadyProcessed = false);
 

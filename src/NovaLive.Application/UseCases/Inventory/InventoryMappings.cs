@@ -1,4 +1,4 @@
-using NovaLive.Contracts.V1.Products;
+using NovaLive.Contracts.V1.Inventory;
 using NovaLive.Domain.Inventory;
 using NovaLive.Domain.Products;
 

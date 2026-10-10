@@ -27,4 +27,16 @@ public static class InventoryErrors
     public static readonly Error InvalidChangeType = Error.Validation(
         "Inventory.InvalidChangeType",
         "Loại điều chỉnh tồn kho không hợp lệ. Chỉ chấp nhận Import hoặc ManualAdjust.");
+
+    public static readonly Error CannotCancelMoreThanSold = Error.Validation(
+        "Inventory.CannotCancelMoreThanSold",
+        "Số lượng hủy xuất bán vượt quá số lượng đã bán thực tế của đơn hàng.");
+
+    public static readonly Error CannotReturnMoreThanSold = Error.Validation(
+        "Inventory.CannotReturnMoreThanSold",
+        "Số lượng hoàn trả vượt quá số lượng đã bán thực tế của đơn hàng.");
+
+    public static readonly Error MissingOrderReference = Error.Validation(
+        "Inventory.MissingOrderReference",
+        "Hủy bán hoặc trả hàng bắt buộc phải có thông tin mã đơn hàng tham chiếu.");
 }

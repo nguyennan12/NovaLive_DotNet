@@ -1,6 +1,6 @@
 using FluentAssertions;
 using NovaLive.Application.UseCases.Inventory.Commands.AdjustInventory;
-using NovaLive.Contracts.V1.Products;
+using NovaLive.Contracts.V1.Inventory;
 
 namespace NovaLive.Application.Tests.Inventory;
 

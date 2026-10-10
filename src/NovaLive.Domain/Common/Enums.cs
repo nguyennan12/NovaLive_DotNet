@@ -68,7 +68,8 @@ public enum InventoryChangeType
     ReturnIn = 2,
     ManualAdjust = 3,
     ReserveAdd = 4,
-    ReserveRelease = 5
+    ReserveRelease = 5,
+    SaleCancelled = 6
 }
 
 public enum ParentOrderPaymentStatus

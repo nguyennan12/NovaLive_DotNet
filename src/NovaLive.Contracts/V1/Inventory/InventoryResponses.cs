@@ -1,4 +1,4 @@
-namespace NovaLive.Contracts.V1.Products;
+namespace NovaLive.Contracts.V1.Inventory;
 
 public record InventoryResponse(
     Guid SkuId,
