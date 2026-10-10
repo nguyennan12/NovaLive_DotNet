@@ -7,7 +7,6 @@ public sealed record RegisterUserCommand(RegisterUserRequest Data) : ICommand<Re
 public sealed record VerifyOtpCommand(VerifyOtpRequest Data) : ICommand, ITransactionalCommand;
 public sealed record ResendOtpCommand(ResendOtpRequest Data) : ICommand, ITransactionalCommand;
 public sealed record LoginCommand(LoginRequest Data, string? IpAddress = null, string? UserAgent = null) : ICommand<AuthResponse>, ITransactionalCommand;
-public sealed record LoginGoogleCommand(LoginGoogleRequest Data, string? IpAddress = null, string? UserAgent = null) : ICommand<AuthResponse>, ITransactionalCommand;
 public sealed record RefreshTokenCommand(RefreshTokenRequest Data, string? IpAddress = null, string? UserAgent = null) : ICommand<AuthResponse>, ICommitOnFailureCommand;
 public sealed record ForgotPasswordCommand(ForgotPasswordRequest Data) : ICommand, ITransactionalCommand;
 public sealed record ResetPasswordCommand(ResetPasswordRequest Data) : ICommand, ITransactionalCommand;

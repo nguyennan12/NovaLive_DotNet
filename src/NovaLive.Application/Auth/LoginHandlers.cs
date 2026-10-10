@@ -47,32 +47,3 @@ public sealed class LoginCommandHandler(IAppDbContext db, IAuthPersistence persi
         return await sessions.IssueAsync(user, request.IpAddress, request.UserAgent, ct);
     }
 }
-public sealed class LoginGoogleCommandHandler(IGoogleTokenValidator google, IAppDbContext db, IAuthPersistence persistence,
-    IDateTimeProvider clock, AuthSessionService sessions) : ICommandHandler<LoginGoogleCommand, AuthResponse>
-{
-    public async Task<Result<AuthResponse>> Handle(LoginGoogleCommand request, CancellationToken ct)
-    {
-        if (!google.Enabled) return Error.NotFound("Auth.GoogleDisabled", "Google login is disabled.");
-        var identity = await google.ValidateAsync(request.Data.IdToken, ct);
-        if (identity is null) return AuthErrors.InvalidCredentials;
-        var email = AuthSessionService.Normalize(identity.Email);
-        var user = await db.Users.SingleOrDefaultAsync(item => item.Email == email && item.DeletedAt == null, ct);
-        if (user is null)
-        {
-            user = new User(email, "", identity.FullName) { CreatedAt = clock.UtcNow, UpdatedAt = clock.UtcNow };
-            user.Activate();
-            db.Users.Add(user);
-            db.UserRoles.Add(new UserRole(user.Id, SystemRoleIds.Buyer, clock.UtcNow));
-            var error = await persistence.SaveRegistrationAsync(ct);
-            if (error is not null) return error;
-        }
-        await persistence.LockUserAsync(user.Id, ct);
-        user = await db.Users.AsNoTracking().SingleAsync(item => item.Id == user.Id, ct);
-        // An existing unverified local account must finish its own verification; do not silently link it.
-        if (user.AccountStatus == AccountStatus.Unverified) return AuthErrors.NotVerified;
-        if (user.AccountStatus != AccountStatus.Active || user.DeletedAt != null) return AuthErrors.Inactive;
-        await sessions.ResetLoginAsync(email, ct);
-        return await sessions.IssueAsync(user, request.IpAddress, request.UserAgent, ct);
-    }
-}
-

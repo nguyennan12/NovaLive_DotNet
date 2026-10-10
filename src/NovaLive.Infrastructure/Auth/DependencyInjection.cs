@@ -17,17 +17,10 @@ public static class DependencyInjection
             .Validate(options => Encoding.UTF8.GetByteCount(options.Pepper) >= 32, "Otp:Pepper must contain at least 32 UTF-8 bytes.")
             .ValidateOnStart();
         services.AddOptions<SmtpOptions>().Bind(configuration.GetSection("Smtp"));
-        services.AddOptions<GoogleOptions>().Configure(options =>
-        {
-            options.Enabled = configuration.GetValue<bool>("Auth:Google:Enabled");
-            options.ClientId = configuration["Google:ClientId"] ?? "";
-        }).Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ClientId),
-            "Google:ClientId is required when Google login is enabled.").ValidateOnStart();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
-        services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
         services.AddScoped<IPermissionProvider, PermissionProvider>();
         services.AddTransient<IEmailSender>(provider =>
         {

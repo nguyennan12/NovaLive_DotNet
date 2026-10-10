@@ -28,12 +28,6 @@ public interface IEmailSender
 {
     Task SendOtpAsync(string email, string otp, OtpType type, CancellationToken cancellationToken = default);
 }
-public sealed record GoogleIdentity(string Email, string FullName);
-public interface IGoogleTokenValidator
-{
-    bool Enabled { get; }
-    Task<GoogleIdentity?> ValidateAsync(string idToken, CancellationToken cancellationToken);
-}
 public interface IPermissionProvider
 {
     Task<IReadOnlyCollection<string>> GetPermissionsAsync(IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default);

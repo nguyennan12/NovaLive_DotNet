@@ -28,9 +28,6 @@ public sealed class AuthController(ISender sender) : ControllerBase
     [AllowAnonymous, HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest data, CancellationToken ct) =>
         Respond(await sender.Send(new LoginCommand(data, Ip, Device), ct));
-    [AllowAnonymous, HttpPost("login/google")]
-    public async Task<IActionResult> Google(LoginGoogleRequest data, CancellationToken ct) =>
-        Respond(await sender.Send(new LoginGoogleCommand(data, Ip, Device), ct));
     [AllowAnonymous, HttpPost("refresh")]
     public async Task<IActionResult> Refresh(RefreshTokenRequest data, CancellationToken ct) =>
         Respond(await sender.Send(new RefreshTokenCommand(data, Ip, Device), ct));

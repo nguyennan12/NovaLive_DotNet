@@ -63,18 +63,6 @@ public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
     }
 }
 
-public sealed class LoginGoogleCommandValidator : AbstractValidator<LoginGoogleCommand>
-{
-    public LoginGoogleCommandValidator()
-    {
-        RuleFor(x => x.Data).NotNull();
-        When(x => x.Data is not null, () =>
-        {
-        RuleFor(x => x.Data.IdToken).NotEmpty().MaximumLength(16384);
-        });
-    }
-}
-
 public sealed class RefreshTokenCommandValidator : AbstractValidator<RefreshTokenCommand>
 {
     public RefreshTokenCommandValidator()

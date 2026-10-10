@@ -23,9 +23,3 @@ public sealed class SmtpOptions
     public bool UseSsl { get; set; }
     public bool UseLoggingSender { get; set; }
 }
-public sealed class GoogleOptions
-{
-    public bool Enabled { get; set; }
-    public string ClientId { get; set; } = "";
-}
-

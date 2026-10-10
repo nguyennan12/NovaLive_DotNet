@@ -209,21 +209,4 @@ public sealed class AuthWorkflowTests
         await host.WithDb(async db => (await db.RefreshTokens.SingleAsync()).RevokedAt.Should().BeNull());
         (await host.Cache.GetTimeToLiveAsync("Blacklist:" + host.CurrentUser.Object.Jti)).Should().Be(TimeSpan.FromMinutes(12));
     }
-    [Fact]
-    public async Task Google_DisabledReturnsNotFound_EnabledCreatesActiveBuyer()
-    {
-        await using var host = new AuthTestHost();
-        await host.InitializeAsync();
-        (await host.Send(new LoginGoogleCommand(new("id-token")))).Error.Type.Should().Be(ErrorType.NotFound);
-        host.Google.SetupGet(g => g.Enabled).Returns(true);
-        host.Google.Setup(g => g.ValidateAsync("id-token", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GoogleIdentity("google@example.com", "Google User"));
-        (await host.Send(new LoginGoogleCommand(new("id-token")))).IsSuccess.Should().BeTrue();
-        await host.WithDb(async db =>
-        {
-            (await db.Users.SingleAsync()).AccountStatus.Should().Be(AccountStatus.Active);
-            (await db.UserRoles.SingleAsync()).RoleId.Should().Be(SystemRoleIds.Buyer);
-        });
-    }
 }
-

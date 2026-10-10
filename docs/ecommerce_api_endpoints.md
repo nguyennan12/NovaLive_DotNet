@@ -29,7 +29,7 @@ Toàn bộ API của hệ thống được chuẩn hóa theo tiền tố (Route 
 | `POST` | `/auth/verify-otp` | `{ email, otp }` | Xác thực OTP 6 số kích hoạt tài khoản (`status = Active`), gán Role `Buyer` | `FR-AUTH-002`, `003` | `[Public]` |
 | `POST` | `/auth/resend-otp` | `{ email }` | Gửi lại mã OTP (Giới hạn tối đa 3 lần / 15 phút qua Redis key lock) | `FR-AUTH-004`, `005` | `[Public]` |
 | `POST` | `/auth/login` | `{ email, password }` | Đăng nhập (Kiểm tra sai 5 lần liên tiếp khóa backoff, trả về cặp Token) | `FR-AUTH-006`, `011` | `[Public]` |
-| `POST` | `/auth/login/google` | `{ idToken }` | Đăng nhập / Đăng ký nhanh qua Google OAuth OpenID Connect | `FR-AUTH-006` | `[Public]` |
+| `POST` | `/auth/login/google` | `{ idToken }` | Đăng nhập / Đăng ký nhanh qua Google OAuth OpenID Connect — **hoãn, chưa làm** | `FR-AUTH-006` | `[Public]` |
 | `POST` | `/auth/refresh` | `{ refreshToken }` | Cấp Access Token mới (Token Rotation; phát hiện token reuse sẽ revoke toàn bộ) | `FR-AUTH-007`, `008`, `009` | `[Public]` |
 | `POST` | `/auth/logout` | `{ refreshToken }` | Đăng xuất (Đưa `jti` Access Token vào Redis Blacklist, revoke Refresh Token) | `FR-AUTH-010` | `[Authorize]` |
 | `POST` | `/auth/forgot-password`| `{ email }` | Gửi mã OTP 6 số đặt lại mật khẩu qua email | `FR-AUTH-003` | `[Public]` |

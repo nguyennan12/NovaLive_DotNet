@@ -20,7 +20,6 @@ public record LoginRequest(
 public record RefreshTokenRequest(
     string RefreshToken);
 
-public record LoginGoogleRequest(string IdToken);
 
 public record LogoutRequest(string RefreshToken);
 
