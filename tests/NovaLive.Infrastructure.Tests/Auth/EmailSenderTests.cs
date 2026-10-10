@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Auth;
+using NovaLive.Application.UseCases.Auth.Commands.Register;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Auth;
 
@@ -176,7 +176,7 @@ public sealed class EmailSenderTests
             services.AddSingleton<IEmailSender>(CreateSender(client, logs));
             services.AddLogging(builder => builder.AddProvider(logs));
         });
-        var result = await host.Send(new RegisterUserCommand(new("new@example.com", "0912345678", "Password123", "New")));
+        var result = await host.Send(new RegisterCommand(new("new@example.com", "0912345678", "Password123", "New")));
         result.IsSuccess.Should().BeTrue();
         await host.WithDb(async db =>
         {

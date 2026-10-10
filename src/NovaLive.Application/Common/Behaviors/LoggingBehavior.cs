@@ -53,7 +53,7 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
         catch (Exception ex)
         {
             stopwatch.Stop();
-            if (typeof(TRequest).Namespace == "NovaLive.Application.Auth")
+            if (typeof(TRequest).Namespace?.StartsWith("NovaLive.Application.UseCases.Auth.", StringComparison.Ordinal) == true)
             {
                 logger.LogError("Auth request {RequestName} failed with exception type {FailureType}.", requestName, ex.GetType().Name);
                 throw;

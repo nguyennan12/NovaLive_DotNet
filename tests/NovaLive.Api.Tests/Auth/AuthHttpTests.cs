@@ -17,7 +17,8 @@ using NovaLive.Api.Extensions;
 using NovaLive.Api.Middleware;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Services;
-using NovaLive.Application.Auth;
+using NovaLive.Application.UseCases.Auth.Commands.Login;
+using NovaLive.Application.UseCases.Auth.Queries.GetCurrentUser;
 using NovaLive.Contracts.V1.Auth;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Auth;
@@ -28,6 +29,19 @@ namespace NovaLive.Api.Tests.Auth;
 
 public sealed class AuthHttpTests
 {
+    [Fact]
+    public void AuthController_InheritsSharedBase_AndExposesExactlyTenEndpoints()
+    {
+        typeof(AuthController).Should().BeDerivedFrom<NovaLive.Api.Controllers.Common.ApiControllerBase>();
+        var endpoints = typeof(AuthController).GetMethods()
+            .SelectMany(method => method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute), true)
+                .Cast<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>())
+            .SelectMany(attribute => attribute.HttpMethods.Select(method => $"{method} {attribute.Template}"));
+        endpoints.Should().BeEquivalentTo(
+            "POST register", "POST verify-otp", "POST resend-otp", "POST login", "POST refresh",
+            "POST forgot-password", "POST reset-password", "POST change-password", "POST logout", "GET me");
+    }
+
     [Theory]
     [InlineData(ErrorType.AlreadyExists, 409)]
     [InlineData(ErrorType.Locked, 423)]
