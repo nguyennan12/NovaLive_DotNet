@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Domain.Rbac;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Seeding;

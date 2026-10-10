@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
-using NovaLive.Application.Abstractions.Clock;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Auth;
 namespace NovaLive.Infrastructure.Tests.Auth;

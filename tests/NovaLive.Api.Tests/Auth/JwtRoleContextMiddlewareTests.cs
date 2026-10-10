@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NovaLive.Api.Auth;
 using NovaLive.Api.Middleware;
-using NovaLive.Application.Abstractions.Cache;
+using NovaLive.Application.Abstractions.Services;
 namespace NovaLive.Api.Tests.Auth;
 
 public sealed class JwtRoleContextMiddlewareTests
