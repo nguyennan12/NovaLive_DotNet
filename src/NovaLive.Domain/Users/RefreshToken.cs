@@ -4,6 +4,17 @@ namespace NovaLive.Domain.Users;
 
 public sealed class RefreshToken : Entity
 {
+    private RefreshToken() { }
+    public RefreshToken(Guid userId, string hash, string? deviceInfo, string? ipAddress, DateTimeOffset now)
+    {
+        UserId = userId;
+        TokenHash = hash;
+        DeviceInfo = deviceInfo is { Length: > 500 } ? deviceInfo[..500] : deviceInfo;
+        IpAddress = ipAddress is { Length: > 45 } ? ipAddress[..45] : ipAddress;
+        CreatedAt = now;
+        ExpiresAt = now.AddDays(30);
+    }
+    public void Revoke(DateTimeOffset now) => RevokedAt ??= now;
     public Guid UserId { get; private set; }
 
     public string TokenHash { get; private set; } = string.Empty;
@@ -16,5 +27,5 @@ public sealed class RefreshToken : Entity
 
     public DateTimeOffset? RevokedAt { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; }
 }

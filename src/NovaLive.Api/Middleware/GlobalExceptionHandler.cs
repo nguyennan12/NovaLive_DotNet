@@ -21,6 +21,15 @@ public sealed class GlobalExceptionHandler(
         var requestId = httpContext.TraceIdentifier;
         var traceId = System.Diagnostics.Activity.Current?.Id;
 
+        if (httpContext.Request.Path.StartsWithSegments("/api/v1/auth"))
+        {
+            // Do not serialize third-party error messages that could contain credentials.
+            logger.LogError("Auth request failed. RequestId {RequestId}; failure type {FailureType}.", requestId, exception.GetType().Name);
+            await NovaLive.Api.Auth.AuthProblem.WriteAsync(httpContext,
+                Error.Failure("Auth.ServiceUnavailable", "Unable to complete authentication. Please try again later."));
+            return true;
+        }
+
         logger.LogError(
             exception,
             "Unhandled exception occurred. RequestId: {RequestId}, TraceId: {TraceId}",

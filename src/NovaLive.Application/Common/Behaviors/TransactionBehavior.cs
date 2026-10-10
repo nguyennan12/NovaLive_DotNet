@@ -5,7 +5,7 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.Common.Behaviors;
 
-public sealed class TransactionBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
+public sealed class TransactionBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork, ITransactionManager transactions)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
@@ -18,6 +18,10 @@ public sealed class TransactionBehavior<TRequest, TResponse>(IUnitOfWork unitOfW
         {
             return await next(cancellationToken);
         }
+
+        if (request is ITransactionalCommand)
+            return await transactions.ExecuteAsync(() => next(cancellationToken),
+                request is ICommitOnFailureCommand, cancellationToken);
 
         var response = await next(cancellationToken);
 

@@ -1,10 +1,11 @@
 using MediatR;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Domain.Common;
+using System.Reflection;
 
 namespace NovaLive.Application.Common.Behaviors;
 
-public sealed class AuthorizationBehavior<TRequest, TResponse>(ICurrentUser currentUser)
+public sealed class AuthorizationBehavior<TRequest, TResponse>(ICurrentUser currentUser, IPermissionProvider permissionProvider)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
     where TResponse : Result
@@ -14,7 +15,11 @@ public sealed class AuthorizationBehavior<TRequest, TResponse>(ICurrentUser curr
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        if (request is not IRequirePermission permissionRequest)
+        var type = request.GetType();
+        var permissions = type.GetCustomAttributes<RequirePermissionAttribute>().SelectMany(attribute => attribute.Permissions).ToList();
+        if (request is IRequirePermission permissionRequest) permissions.Add(permissionRequest.RequiredPermission);
+        var roleAttributes = type.GetCustomAttributes<AuthorizeRoleAttribute>().ToArray();
+        if (permissions.Count == 0 && roleAttributes.Length == 0 && !type.IsDefined(typeof(RequireAuthenticatedAttribute)))
         {
             return await next(cancellationToken);
         }
@@ -25,7 +30,10 @@ public sealed class AuthorizationBehavior<TRequest, TResponse>(ICurrentUser curr
                 new Error(ErrorType.Unauthorized, "Authorization.Unauthorized", "Vui lòng đăng nhập để thực hiện thao tác này."));
         }
 
-        if (!currentUser.HasPermission(permissionRequest.RequiredPermission))
+        var granted = permissions.Count == 0 ? [] :
+            await permissionProvider.GetPermissionsAsync(currentUser.Roles, cancellationToken);
+        if (permissions.Any(permission => !granted.Contains(permission, StringComparer.Ordinal))
+            || roleAttributes.Any(attribute => !attribute.Roles.Any(role => currentUser.Roles.Contains(role, StringComparer.Ordinal))))
         {
             return CreateFailure<TResponse>(
                 new Error(ErrorType.Forbidden, "Authorization.Forbidden", "Bạn không có quyền thực hiện thao tác này."));

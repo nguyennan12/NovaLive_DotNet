@@ -1,5 +1,9 @@
 namespace NovaLive.Contracts.V1.Auth;
 
+public record UserInfoResponse(
+    Guid UserId, string Email, string FullName,
+    IReadOnlyCollection<string> Roles, Guid? ShopId, IReadOnlyCollection<string> Permissions);
+
 public record AuthResponse(
     string AccessToken,
     string RefreshToken,
