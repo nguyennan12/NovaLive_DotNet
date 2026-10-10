@@ -97,8 +97,8 @@ public static class ServiceCollectionExtensions
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
-        // 7. OpenAPI Documentation
-        services.AddOpenApi();
+        // 7. OpenAPI Documentation & Scalar
+        services.AddOpenApiDocumentation();
 
         // 8. Health Checks
         services.AddHealthChecks();

@@ -23,11 +23,8 @@ public static class WebApplicationExtensions
         app.UseCors("DefaultCors");
         app.UseHttpsRedirection();
 
-        // 5. OpenAPI in Development
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-        }
+        // 5. OpenAPI & Scalar API Reference in Development
+        app.MapOpenApiDocumentation();
 
         // 6. Authentication & RBAC Context
         app.UseAuthentication();
