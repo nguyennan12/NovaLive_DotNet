@@ -53,18 +53,6 @@ public enum WalletTxType
     ManualAdjustment = 7
 }
 
-public enum RbacAction
-{
-    Create = 0,
-    Read = 1,
-    Update = 2,
-    Delete = 3,
-    Approve = 4,
-    Export = 5,
-    Override = 6,
-    Suspend = 7
-}
-
 public enum ProductStatus
 {
     Draft = 0,
@@ -80,7 +68,8 @@ public enum InventoryChangeType
     ReturnIn = 2,
     ManualAdjust = 3,
     ReserveAdd = 4,
-    ReserveRelease = 5
+    ReserveRelease = 5,
+    SaleCancelled = 6
 }
 
 public enum ParentOrderPaymentStatus

@@ -143,8 +143,8 @@ NovaLive
 | **T13** | Shop Wallet, Financial Ledger & Payout Request | FEATURE | BE/API | MISSING | P1 | Dev B | T11 |
 | **T14** | Admin Shop Onboarding, Ban Policy & Payout Approval | FEATURE | BE/API | MISSING | P1 | Dev B | T08, T11 |
 | **T15** | Multi-level Category Tree Management | FEATURE | BE/API | MISSING | P1 | Dev B | T08 |
-| **T16** | Product SPU & SKU Multi-variant Management | FEATURE | BE/API | MISSING | P1 | Dev B | T11, T15 |
-| **T17** | Inventory 2-State Management & Ledger Logging | FEATURE | BE/API | MISSING | P1 | Dev B | T16 |
+| **T16** | Product SPU & SKU Multi-variant Management | FEATURE | BE/API | COMPLETED | P1 | Dev B | T11, T15 |
+| **T17** | Inventory 2-State Management & Ledger Logging | FEATURE | BE/API | COMPLETED | P1 | Dev B | T16 |
 | **T18** | Public Product Search Engine (Full-text + Trigram) | FEATURE | BE/API | MISSING | P1 | Dev B | T16 |
 | **T19** | Cart Multi-shop Management Use Cases | FEATURE | BE/API | MISSING | P1 | Dev A | T16, T08 |
 | **T20** | PriceCalculator Domain Service (3-tier Proration Engine) | FEATURE | DOMAIN | MISSING | P0 | Dev A | T07 |
@@ -346,7 +346,7 @@ NovaLive
 ---
 
 ### T16 — [BE/API] Product SPU & SKU Multi-variant Management
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-CAT-002`, `FR-CAT-003`, `FR-CAT-004`, `FR-CAT-005`
 - **Detailed Technical Implementation**:
   - `CreateSpuCommand` (Seller):
@@ -367,7 +367,7 @@ NovaLive
 ---
 
 ### T17 — [BE/API] Inventory 2-State Management & Ledger Logging
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-CAT-006`, `FR-CAT-007`, `FR-CAT-008`, `NFR-REL-006`
 - **Detailed Technical Implementation**:
   - `GetSellerInventoryQuery`: Lấy danh sách tồn kho các SKU của shop. Tính toán động: `AvailableStock = Inventories.qty_on_hand - Inventories.reserved_qty`. Hỗ trợ filter `lowStock = TRUE` (khi `AvailableStock <= min_stock`).

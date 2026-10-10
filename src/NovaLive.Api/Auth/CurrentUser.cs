@@ -16,7 +16,11 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
         }
     }
 
-    public string? Email => User?.FindFirstValue(ClaimTypes.Email);
+    public string? Email => User?.FindFirstValue("email") ?? User?.FindFirstValue(ClaimTypes.Email);
+    public string? Jti => User?.FindFirstValue("jti");
+    public DateTimeOffset? AccessTokenExpiresAt =>
+        long.TryParse(User?.FindFirstValue("exp"), out var expires) && expires is >= 0 and <= 253402300799
+            ? DateTimeOffset.FromUnixTimeSeconds(expires) : null;
 
     public Guid? ShopId
     {
@@ -28,7 +32,7 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     }
 
     public IReadOnlyCollection<string> Roles =>
-        User?.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray()
+        User?.Claims.Where(claim => claim.Type is "role" or ClaimTypes.Role).Select(claim => claim.Value).Distinct().ToArray()
         ?? [];
 
     public IReadOnlyCollection<string> Permissions =>
@@ -38,8 +42,7 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 
     public bool HasPermission(string permission) =>
-        Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase) ||
-        Roles.Contains("SuperAdmin", StringComparer.OrdinalIgnoreCase);
+        Permissions.Contains(permission, StringComparer.Ordinal);
 
     public bool IsInRole(string role) =>
         User?.IsInRole(role) ?? false;

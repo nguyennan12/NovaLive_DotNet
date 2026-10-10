@@ -107,9 +107,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
             {
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var property = Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted));
-                var notDeleted = Expression.Not(property);
-                var lambda = Expression.Lambda(notDeleted, parameter);
+                var property = Expression.Property(parameter, nameof(ISoftDeletable.DeletedAt));
+                var isNull = Expression.Equal(property, Expression.Constant(null, typeof(DateTimeOffset?)));
+                var lambda = Expression.Lambda(isNull, parameter);
 
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
             }

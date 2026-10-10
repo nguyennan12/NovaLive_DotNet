@@ -417,6 +417,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("sku_id");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
                     b.HasKey("Id")
                         .HasName("pk_inventories");
 
@@ -427,7 +432,16 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_inventories_sku_id");
 
-                    b.ToTable("inventories", "public");
+                    b.ToTable("inventories", "public", t =>
+                        {
+                            t.HasCheckConstraint("chk_inventory_min_stock_non_negative", "min_stock >= 0");
+
+                            t.HasCheckConstraint("chk_inventory_on_hand_gte_reserved", "qty_on_hand >= reserved_qty");
+
+                            t.HasCheckConstraint("chk_inventory_qty_on_hand_non_negative", "qty_on_hand >= 0");
+
+                            t.HasCheckConstraint("chk_inventory_reserved_qty_non_negative", "reserved_qty >= 0");
+                        });
                 });
 
             modelBuilder.Entity("NovaLive.Domain.Inventory.InventoryHistory", b =>
@@ -456,8 +470,13 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnName("inventory_id");
 
                     b.Property<string>("Note")
-                        .HasColumnType("text")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("note");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
 
                     b.Property<int>("QtyAfter")
                         .HasColumnType("integer")
@@ -476,8 +495,8 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnName("ref_id");
 
                     b.Property<string>("RefType")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("ref_type");
 
                     b.Property<int>("ReservedBefore")
@@ -494,6 +513,13 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_inventory_histories");
+
+                    b.HasIndex("InventoryId")
+                        .HasDatabaseName("ix_inventory_histories_inventory_id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_inventory_histories_operation_id");
 
                     b.HasIndex("RefType", "RefId")
                         .HasDatabaseName("ix_inventory_histories_ref_type_ref_id");
@@ -1510,7 +1536,8 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ShopId", "SkuCode")
                         .IsUnique()
-                        .HasDatabaseName("ix_skus_shop_id_sku_code");
+                        .HasDatabaseName("ix_skus_shop_id_sku_code")
+                        .HasFilter("deleted_at IS NULL");
 
                     b.ToTable("skus", "public");
                 });
@@ -2816,6 +2843,33 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_user_otps_user_id_otp_type_expires_at");
 
                     b.ToTable("user_otps", "public");
+                });
+
+            modelBuilder.Entity("NovaLive.Domain.Inventory.Inventory", b =>
+                {
+                    b.HasOne("NovaLive.Domain.Products.Sku", null)
+                        .WithOne()
+                        .HasForeignKey("NovaLive.Domain.Inventory.Inventory", "SkuId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventories_skus_sku_id");
+                });
+
+            modelBuilder.Entity("NovaLive.Domain.Inventory.InventoryHistory", b =>
+                {
+                    b.HasOne("NovaLive.Domain.Inventory.Inventory", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_histories_inventories_inventory_id");
+
+                    b.HasOne("NovaLive.Domain.Products.Sku", null)
+                        .WithMany()
+                        .HasForeignKey("SkuId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_histories_skus_sku_id");
                 });
 #pragma warning restore 612, 618
         }
