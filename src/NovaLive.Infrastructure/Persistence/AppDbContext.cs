@@ -102,6 +102,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.HasDefaultSchema("public");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.HasPostgresExtension("pg_trgm");
+
+            modelBuilder.Entity<Spu>(builder =>
+            {
+                builder.Property<NpgsqlTypes.NpgsqlTsVector?>("SearchVector")
+                    .HasColumnName("search_vector")
+                    .HasColumnType("tsvector")
+                    .IsRequired(false);
+
+                builder.HasIndex("SearchVector")
+                    .HasMethod("gin")
+                    .HasDatabaseName("idx_spus_search_vector");
+
+                builder.HasIndex(spu => spu.Name)
+                    .HasMethod("gin")
+                    .HasOperators("gin_trgm_ops")
+                    .HasDatabaseName("idx_spus_name_trgm");
+            });
+        }
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))

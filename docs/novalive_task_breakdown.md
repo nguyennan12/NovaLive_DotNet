@@ -385,7 +385,7 @@ NovaLive
 ---
 
 ### T18 — [BE/API] Public Product Search Engine (Full-text + Trigram)
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-SEARCH-001`, `FR-SEARCH-002`, `FR-SEARCH-003`, `FR-SEARCH-004`, `FR-SEARCH-005`, `NFR-PERF-001`, `NFR-PERF-004`
 - **Detailed Technical Implementation**:
   - Thực thi trong `PostgresProductQueryService : IProductQueryService`:

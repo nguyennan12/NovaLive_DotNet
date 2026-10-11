@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Products;
 using NovaLive.Domain.Common;
@@ -13,11 +14,21 @@ public sealed class GetPublicProductDetailQueryHandler(
     ISkuRepository skuRepository,
     IInventoryRepository inventoryRepository,
     ICategoryRepository categoryRepository,
-    IAppDbContext dbContext)
+    IAppDbContext dbContext,
+    ICacheService cacheService)
     : IQueryHandler<GetPublicProductDetailQuery, PublicSpuDetailResponse>
 {
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
+
     public async Task<Result<PublicSpuDetailResponse>> Handle(GetPublicProductDetailQuery query, CancellationToken ct)
     {
+        var cacheKey = $"products:detail:{query.SpuId}";
+        var cached = await cacheService.GetAsync<PublicSpuDetailResponse>(cacheKey, ct);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         var spu = await spuRepository.GetByIdAsync(query.SpuId, ct);
         if (spu is null || spu.Status != ProductStatus.Active)
         {
@@ -56,10 +67,14 @@ public sealed class GetPublicProductDetailQueryHandler(
             return sku.ToPublicResponse(inv, skuImgs);
         }).ToList();
 
-        return spu.ToPublicDetailResponse(
+        var response = spu.ToPublicDetailResponse(
             shop?.ShopName ?? "Gian hàng",
             category?.Name ?? "Danh mục",
             skuResponses,
             attributes);
+
+        await cacheService.SetAsync(cacheKey, response, CacheTtl, ct);
+
+        return response;
     }
 }

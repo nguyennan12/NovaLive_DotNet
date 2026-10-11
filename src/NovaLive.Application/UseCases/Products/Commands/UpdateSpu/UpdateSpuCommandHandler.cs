@@ -10,6 +10,8 @@ using NovaLive.Domain.Common;
 using NovaLive.Domain.Products;
 using NovaLive.Domain.System;
 
+using NovaLive.Application.Abstractions.Services;
+
 namespace NovaLive.Application.UseCases.Products.Commands.UpdateSpu;
 
 public sealed class UpdateSpuCommandHandler(
@@ -18,7 +20,8 @@ public sealed class UpdateSpuCommandHandler(
     IInventoryRepository inventoryRepository,
     ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    ICacheService cacheService)
     : ICommandHandler<UpdateSpuCommand, SpuDetailResponse>
 {
     public async Task<Result<SpuDetailResponse>> Handle(UpdateSpuCommand command, CancellationToken ct)
@@ -103,6 +106,9 @@ public sealed class UpdateSpuCommandHandler(
         }).ToList();
 
         var shop = await dbContext.Shops.AsNoTracking().FirstOrDefaultAsync(s => s.Id == shopId.Value, ct);
+
+        await cacheService.RemoveByPrefixAsync("products:search:", ct);
+        await cacheService.RemoveAsync($"products:detail:{spu.Id}", ct);
 
         return spu.ToDetailResponse(shop?.ShopName ?? "Gian hàng", category.Name, skuResponses, createdAttributes);
     }

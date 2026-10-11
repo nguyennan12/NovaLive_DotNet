@@ -12,6 +12,8 @@ using NovaLive.Domain.Products;
 using NovaLive.Domain.System;
 using InventoryEntity = NovaLive.Domain.Inventory.Inventory;
 
+using NovaLive.Application.Abstractions.Services;
+
 namespace NovaLive.Application.UseCases.Products.Commands.CreateSpu;
 
 public sealed class CreateSpuCommandHandler(
@@ -20,7 +22,8 @@ public sealed class CreateSpuCommandHandler(
     IInventoryRepository inventoryRepository,
     ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    ICacheService cacheService)
     : ICommandHandler<CreateSpuCommand, SpuDetailResponse>
 {
     public async Task<Result<SpuDetailResponse>> Handle(CreateSpuCommand command, CancellationToken ct)
@@ -160,6 +163,8 @@ public sealed class CreateSpuCommandHandler(
 
         var outboxMessage = new OutboxMessage("ProductUpdatedEvent", JsonSerializer.Serialize(integrationEvent));
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
+
+        await cacheService.RemoveByPrefixAsync("products:search:", ct);
 
         return spu.ToDetailResponse(
             shopName: shop?.ShopName ?? "Gian hàng",

@@ -7,13 +7,16 @@ using NovaLive.Application.Common.Messaging;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.System;
 
+using NovaLive.Application.Abstractions.Services;
+
 namespace NovaLive.Application.UseCases.Products.Commands.DeleteSpu;
 
 public sealed class DeleteSpuCommandHandler(
     ISpuRepository spuRepository,
     ISkuRepository skuRepository,
     IAppDbContext dbContext,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    ICacheService cacheService)
     : ICommandHandler<DeleteSpuCommand>
 {
     public async Task<Result> Handle(DeleteSpuCommand command, CancellationToken ct)
@@ -52,6 +55,9 @@ public sealed class DeleteSpuCommandHandler(
 
         var outboxMessage = new OutboxMessage("ProductUpdatedEvent", JsonSerializer.Serialize(integrationEvent));
         await dbContext.OutboxMessages.AddAsync(outboxMessage, ct);
+
+        await cacheService.RemoveByPrefixAsync("products:search:", ct);
+        await cacheService.RemoveAsync($"products:detail:{command.SpuId}", ct);
 
         return Result.Success();
     }

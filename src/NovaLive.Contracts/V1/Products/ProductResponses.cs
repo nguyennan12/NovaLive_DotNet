@@ -86,6 +86,20 @@ public record PublicSkuResponse(
     int AvailableQty,
     List<string> Images);
 
+public sealed record ProductSummaryResponse(
+    Guid Id,
+    Guid ShopId,
+    string ShopName,
+    Guid CategoryId,
+    string CategoryName,
+    string Name,
+    string? ThumbnailUrl,
+    decimal MinPrice,
+    decimal MaxPrice,
+    double Rating,
+    int SoldCount,
+    decimal SearchRank);
+
 public sealed record ProductSummaryDto(
     Guid SpuId,
     Guid ShopId,

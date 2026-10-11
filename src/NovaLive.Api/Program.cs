@@ -41,7 +41,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "NovaLive.Api terminated unexpectedly during startup.");
 }
