@@ -3,7 +3,6 @@ using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Common.Messaging;
-using NovaLive.Contracts.V1.Auth;
 using NovaLive.Domain.Common;
 using NovaLive.Application.UseCases.Auth.Common;
 using NovaLive.Application.UseCases.Auth.Errors;
@@ -11,9 +10,9 @@ using NovaLive.Application.UseCases.Auth.Errors;
 namespace NovaLive.Application.UseCases.Auth.Commands.Login;
 
 public sealed class LoginCommandHandler(IAppDbContext db, IAuthPersistence persistence, IPasswordHasher passwords,
-    ICacheService cache, AuthSessionService sessions) : ICommandHandler<LoginCommand, AuthResponse>
+    ICacheService cache, AuthSessionService sessions) : ICommandHandler<LoginCommand, SessionResult>
 {
-    public async Task<Result<AuthResponse>> Handle(LoginCommand request, CancellationToken ct)
+    public async Task<Result<SessionResult>> Handle(LoginCommand request, CancellationToken ct)
     {
         var user = await sessions.FindUserAsync(request.Data.EmailOrPhone, ct);
         var email = user?.Email ?? AuthSessionService.Normalize(request.Data.EmailOrPhone);

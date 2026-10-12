@@ -66,10 +66,14 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy("DefaultCors", policy =>
             {
-                policy.AllowAnyHeader()
+                var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+                if (origins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                    || uri.Scheme is not ("http" or "https") || origin.Contains('*')
+                    || uri.GetLeftPart(UriPartial.Authority) != origin))
+                    throw new InvalidOperationException("Cors:AllowedOrigins must contain explicit HTTP(S) origins without wildcards or paths.");
+                policy.WithOrigins(origins).AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowCredentials()
-                    .SetIsOriginAllowed(_ => true);
+                    .AllowCredentials();
             });
         });
 
@@ -101,7 +105,10 @@ public static class ServiceCollectionExtensions
         services.AddOpenApiDocumentation();
 
         // 8. Health Checks
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddCheck<NovaLive.Api.Health.DatabaseHealthCheck>("database", timeout: TimeSpan.FromSeconds(5))
+            .AddCheck<NovaLive.Api.Health.RedisHealthCheck>("redis", timeout: TimeSpan.FromSeconds(5))
+            .AddCheck<NovaLive.Api.Health.SystemRolesHealthCheck>("systemRoles", timeout: TimeSpan.FromSeconds(5));
 
         return services;
     }

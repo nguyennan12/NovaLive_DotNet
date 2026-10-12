@@ -27,7 +27,7 @@ public sealed class PostgresAuthTests
         var login = await host.Send(new LoginCommand(new("buyer@example.com", "Password123")));
         var command = new RefreshTokenCommand(new(login.Value!.RefreshToken));
         var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        async Task<Result<NovaLive.Contracts.V1.Auth.AuthResponse>> Refresh()
+        async Task<Result<NovaLive.Application.UseCases.Auth.Common.SessionResult>> Refresh()
         {
             await start.Task;
             return await host.Send(command);

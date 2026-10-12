@@ -32,8 +32,11 @@ try
     // ---------- 4. Early Option Validation ----------
     _ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.JwtOptions>>().Value;
     _ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.OtpOptions>>().Value;
+    var emailOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.EmailOptions>>().Value;
+    app.Logger.LogInformation("Email provider configured: {EmailProvider}.", emailOptions.Provider);
 
     // ---------- 5. Auto-run Database Migrations & Multi-part Seeders ----------
+    // Keep initialization awaited before Run starts the server and accepts requests.
     await app.ApplyMigrationsAsync();
 
     // ---------- 6. Middleware & Endpoints Pipeline ----------
@@ -49,3 +52,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }

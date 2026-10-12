@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: "${POSTGRES_USER:-nova_user}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-nova_password}"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
     image: redis:7-alpine
     container_name: novalive_redis_dev
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -33,11 +33,11 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: novalive_rabbitmq_dev
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-guest}"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS:-guest}"
+      RABBITMQ_DEFAULT_USER: "${RabbitMQ__Username:-guest}"
+      RABBITMQ_DEFAULT_PASS: "${RabbitMQ__Password:-guest}"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
@@ -54,8 +54,8 @@ services:
       MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minio_admin}"
       MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minio_password}"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
 
@@ -66,22 +66,19 @@ services:
     container_name: novalive_api_dev
     ports:
       - "5001:8080"
+    # Relative to this compose file; load the root .env using ASP.NET Core __ keys.
+    env_file:
+      - ../../.env
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-      Redis__ConnectionString: "redis:6379"
-      RabbitMQ__Host: "rabbitmq"
-      RabbitMQ__Username: "${RABBITMQ_USER}"
-      RabbitMQ__Password: "${RABBITMQ_PASS}"
-      Jwt__Secret: "${JWT_SECRET}"
-      Jwt__Issuer: "NovaLive"
-      Jwt__Audience: "NovaLiveClients"
-      Otp__Pepper: "${OTP_PEPPER}"
-      Ghn__BaseUrl: "${GHN_BASE_URL}"
-      Ghn__ApiToken: "${GHN_API_TOKEN}"
-      Ghn__ShopId: "${GHN_SHOP_ID}"
-      Ghn__WebhookSecret: "${GHN_WEBHOOK_SECRET}"
+      Cookies__AccessTokenName: "${Cookies__AccessTokenName:-nova_at}"
+      Cookies__RefreshTokenName: "${Cookies__RefreshTokenName:-nova_rt}"
+      Cookies__SameSite: "${Cookies__SameSite:-Lax}"
+      Cookies__Secure: "${Cookies__Secure:-false}"
+      Cookies__Domain: "${Cookies__Domain:-}"
+      Cors__AllowedOrigins__0: "${Cors__AllowedOrigins__0:-http://localhost:3000}"
+      Cors__AllowedOrigins__1: "${Cors__AllowedOrigins__1:-http://localhost:5173}"
+      Cors__AllowedOrigins__2: "${Cors__AllowedOrigins__2:-http://localhost:8080}"
     labels:
       project: "novalive-ecommerce"
     volumes:

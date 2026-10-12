@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using NovaLive.Application.Abstractions.Auth;
+using NovaLive.Infrastructure.Persistence.Interceptors;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Domain.Carts;
 using NovaLive.Domain.Common;
@@ -20,8 +22,18 @@ using NovaLive.Domain.Users;
 
 namespace NovaLive.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext, IUnitOfWork
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IPermissionCacheInvalidator? permissionCache = null)
+    : DbContext(options), IAppDbContext, IUnitOfWork
 {
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (permissionCache is not null)
+        {
+            var state = new PermissionCacheInvalidation(permissionCache);
+            optionsBuilder.AddInterceptors(new PermissionSaveInterceptor(state), new PermissionTransactionInterceptor(state));
+        }
+    }
+
     // 1. Core
     public DbSet<User> Users => Set<User>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();

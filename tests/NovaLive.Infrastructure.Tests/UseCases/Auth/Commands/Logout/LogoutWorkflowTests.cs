@@ -20,11 +20,19 @@ public sealed class LogoutWorkflowTests
     {
         await using var host = new AuthTestHost();
         await host.InitializeAsync();
-        host.Authenticate(await host.AddUser());
+        var userId = await host.AddUser();
+        host.Authenticate(userId);
+        (await host.Send(new LoginCommand(new("buyer@example.com", "Password123")))).IsSuccess.Should().BeTrue();
+        (await host.Send(new LoginCommand(new("buyer@example.com", "Password123")))).IsSuccess.Should().BeTrue();
         await host.AddUser("other@example.com", phone: "0987654321");
-        var otherLogin = await host.Send(new LoginCommand(new("other@example.com", "Password123")));
-        (await host.Send(new LogoutCommand(new(otherLogin.Value!.RefreshToken)))).IsSuccess.Should().BeTrue();
-        await host.WithDb(async db => (await db.RefreshTokens.SingleAsync()).RevokedAt.Should().BeNull());
+        (await host.Send(new LoginCommand(new("other@example.com", "Password123")))).IsSuccess.Should().BeTrue();
+        (await host.Send(new LogoutCommand())).IsSuccess.Should().BeTrue();
+        await host.WithDb(async db =>
+        {
+            var tokens = await db.RefreshTokens.ToListAsync();
+            tokens.Where(token => token.UserId == userId).Should().HaveCount(2).And.OnlyContain(token => token.RevokedAt != null);
+            tokens.Single(token => token.UserId != userId).RevokedAt.Should().BeNull();
+        });
         (await host.Cache.GetTimeToLiveAsync("Blacklist:" + host.CurrentUser.Object.Jti)).Should().Be(TimeSpan.FromMinutes(12));
     }
 }
