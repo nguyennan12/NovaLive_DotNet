@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Infrastructure.Auth;
@@ -63,6 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency
+        services.AddSingleton<RolePermissionCache>();
+        services.AddSingleton<IPermissionCacheInvalidator>(provider => provider.GetRequiredService<RolePermissionCache>());
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
