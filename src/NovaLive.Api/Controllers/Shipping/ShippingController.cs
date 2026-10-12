@@ -8,7 +8,7 @@ using NovaLive.Application.UseCases.Shipping.Queries.CalculateFee;
 using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Infrastructure.Shipping.Ghn;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Shipping;
 
 [Route("api/v1/shipping")]
 public sealed class ShippingController(
@@ -39,7 +39,6 @@ public sealed class ShippingController(
         {
             return Unauthorized(new { message = "Xác thực chữ ký hoặc Secret Webhook GHN thất bại." });
         }
-
 
         var result = await Sender.Send(new HandleShippingWebhookCommand(request, rawJson), ct);
         return Respond(result, message: "Webhook processed successfully.");

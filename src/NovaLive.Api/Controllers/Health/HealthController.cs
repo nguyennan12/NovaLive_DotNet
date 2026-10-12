@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NovaLive.Application.System.Queries;
 using NovaLive.Contracts.Common;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Health;
 
 [ApiController]
 [Route("api/v1/health")]

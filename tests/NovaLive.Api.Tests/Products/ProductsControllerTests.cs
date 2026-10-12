@@ -2,7 +2,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using NovaLive.Api.Controllers;
+using NovaLive.Api.Controllers.Products;
 using NovaLive.Application.UseCases.Products.Queries.GetPublicProductDetail;
 using NovaLive.Application.UseCases.Products.Queries.SearchProducts;
 using NovaLive.Contracts.Common;

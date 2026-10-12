@@ -10,6 +10,8 @@ public static class AuthErrors
     public static readonly Error NotVerified = Error.Forbidden("Auth.AccountNotVerified", "Verify your account before signing in.");
     public static readonly Error Inactive = Error.Forbidden("Auth.AccountInactive", "This account cannot sign in.");
     public static readonly Error Duplicate = Error.Conflict("Auth.DuplicateAccount", "Email or phone is already registered.");
+    public static readonly Error InvalidPassword = new(ErrorType.Invalid, "Auth.InvalidPassword", "Current password is incorrect.");
+    public static readonly Error PasswordUnchanged = new(ErrorType.Invalid, "Auth.PasswordUnchanged", "New password must differ from current password.");
     public static Error Limited(int seconds) => new(ErrorType.TooManyRequests, "Auth.RateLimited", "Please try again later.")
         { RetryAfterSeconds = Math.Max(1, seconds) };
     public static Error Locked(int seconds) => new(ErrorType.Locked, "Auth.AccountLocked", "Sign in is temporarily locked.")

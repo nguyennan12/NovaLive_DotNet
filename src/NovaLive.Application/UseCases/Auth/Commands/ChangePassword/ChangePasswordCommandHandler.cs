@@ -19,9 +19,9 @@ public sealed class ChangePasswordCommandHandler(IAppDbContext db, IAuthPersiste
         var user = await db.Users.SingleOrDefaultAsync(item => item.Id == userId, ct);
         if (user is null || user.AccountStatus != AccountStatus.Active || user.DeletedAt != null) return AuthErrors.Inactive;
         if (!passwords.Verify(request.Data.OldPassword, user.PasswordHash))
-            return new Error(ErrorType.Invalid, "Auth.InvalidPassword", "Current password is incorrect.");
+            return AuthErrors.InvalidPassword;
         if (passwords.Verify(request.Data.NewPassword, user.PasswordHash))
-            return new Error(ErrorType.Invalid, "Auth.PasswordUnchanged", "New password must differ from current password.");
+            return AuthErrors.PasswordUnchanged;
         user.ChangePassword(passwords.Hash(request.Data.NewPassword));
         await persistence.RevokeAllAsync(user.Id, clock.UtcNow, ct);
         await sessions.BlacklistCurrentAsync(ct);

@@ -11,7 +11,7 @@ using NovaLive.Application.UseCases.Products.Queries.GetSellerProducts;
 using NovaLive.Application.UseCases.Products.Queries.GetSpuDetail;
 using NovaLive.Contracts.V1.Products;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Products;
 
 [Authorize]
 [Route("api/v1/seller")]

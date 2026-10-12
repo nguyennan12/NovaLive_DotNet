@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using NovaLive.Api.Controllers;
+using NovaLive.Api.Controllers.Shipping;
 using NovaLive.Application.UseCases.Shipping.Commands.Webhook;
 using NovaLive.Application.UseCases.Shipping.Queries.CalculateFee;
 using NovaLive.Contracts.Common;

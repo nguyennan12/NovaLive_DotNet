@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NovaLive.Api.Auth;
 using NovaLive.Api.Controllers;
+using NovaLive.Api.Controllers.Auth;
 using NovaLive.Api.Extensions;
 using NovaLive.Api.Middleware;
 using NovaLive.Application.Abstractions.Auth;

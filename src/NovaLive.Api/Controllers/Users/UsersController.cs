@@ -12,7 +12,7 @@ using NovaLive.Application.UseCases.Users.Profile.Commands.UpdateUserProfile;
 using NovaLive.Application.UseCases.Users.Profile.Queries.GetUserProfile;
 using NovaLive.Contracts.V1.Users;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Users;
 
 [Authorize]
 [Route("api/v1/users")]

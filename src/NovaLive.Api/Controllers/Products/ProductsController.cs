@@ -6,7 +6,7 @@ using NovaLive.Application.UseCases.Products.Queries.GetPublicProductDetail;
 using NovaLive.Application.UseCases.Products.Queries.SearchProducts;
 using NovaLive.Contracts.V1.Products;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Products;
 
 [AllowAnonymous]
 [Route("api/v1/products")]

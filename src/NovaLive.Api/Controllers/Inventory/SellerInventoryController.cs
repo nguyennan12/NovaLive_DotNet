@@ -7,7 +7,7 @@ using NovaLive.Application.UseCases.Inventory.Queries.GetInventoryHistories;
 using NovaLive.Application.UseCases.Inventory.Queries.GetSellerInventory;
 using NovaLive.Contracts.V1.Inventory;
 
-namespace NovaLive.Api.Controllers;
+namespace NovaLive.Api.Controllers.Inventory;
 
 [Authorize]
 [Route("api/v1/seller/inventory")]
