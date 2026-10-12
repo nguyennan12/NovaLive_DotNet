@@ -23,17 +23,17 @@ public sealed class CalculateShippingFeeQueryHandler(
 
         if (warehouse is null)
         {
-            return Result<ShippingFeeResponse>.Failure(new Error(ErrorType.NotFound, "Shipping.WarehouseNotFound", "Không tìm thấy thông tin kho xuất hàng."));
+            return ShippingErrors.WarehouseNotFound;
         }
 
         if (warehouse.ShopId != req.ShopId)
         {
-            return Result<ShippingFeeResponse>.Failure(new Error(ErrorType.Validation, "Shipping.InvalidShopWarehouse", "Kho xuất hàng không thuộc về gian hàng đã chọn."));
+            return ShippingErrors.InvalidShopWarehouse;
         }
 
         if (!warehouse.DistrictId.HasValue || string.IsNullOrWhiteSpace(warehouse.WardCode))
         {
-            return Result<ShippingFeeResponse>.Failure(new Error(ErrorType.Validation, "Shipping.IncompleteWarehouseAddress", "Địa chỉ kho hàng chưa đầy đủ thông tin Quận/Huyện hoặc Phường/Xã để tính phí."));
+            return ShippingErrors.IncompleteWarehouseAddress;
         }
 
         // 2. Lấy thông tin địa chỉ giao hàng của Buyer
@@ -43,12 +43,12 @@ public sealed class CalculateShippingFeeQueryHandler(
 
         if (recipientAddress is null)
         {
-            return Result<ShippingFeeResponse>.Failure(new Error(ErrorType.NotFound, "Shipping.RecipientAddressNotFound", "Không tìm thấy thông tin địa chỉ giao hàng."));
+            return ShippingErrors.RecipientAddressNotFound;
         }
 
         if (!recipientAddress.DistrictId.HasValue || string.IsNullOrWhiteSpace(recipientAddress.WardCode))
         {
-            return Result<ShippingFeeResponse>.Failure(new Error(ErrorType.Validation, "Shipping.IncompleteRecipientAddress", "Địa chỉ người nhận chưa đầy đủ thông tin Quận/Huyện hoặc Phường/Xã để tính phí."));
+            return ShippingErrors.IncompleteRecipientAddress;
         }
 
         // 3. Tính tổng khối lượng (WeightGram)
@@ -78,7 +78,7 @@ public sealed class CalculateShippingFeeQueryHandler(
         var quoteResult = await shippingProvider.CalculateFeeAsync(calcModel, cancellationToken);
         if (!quoteResult.IsSuccess || quoteResult.Value is null)
         {
-            return Result<ShippingFeeResponse>.Failure(quoteResult.Error);
+            return quoteResult.Error;
         }
 
         var quote = quoteResult.Value;
@@ -89,6 +89,7 @@ public sealed class CalculateShippingFeeQueryHandler(
             ShippingFee: quote.TotalFee,
             EstimatedDeliveryDate: quote.ExpectedDeliveryDate ?? DateTime.UtcNow.AddDays(3));
 
-        return Result<ShippingFeeResponse>.Success(response);
+        return response;
+
     }
 }
