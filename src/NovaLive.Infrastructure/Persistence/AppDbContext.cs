@@ -22,17 +22,9 @@ using NovaLive.Domain.Users;
 
 namespace NovaLive.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IPermissionCacheInvalidator? permissionCache = null)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     : DbContext(options), IAppDbContext, IUnitOfWork
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (permissionCache is not null)
-        {
-            var state = new PermissionCacheInvalidation(permissionCache);
-            optionsBuilder.AddInterceptors(new PermissionSaveInterceptor(state), new PermissionTransactionInterceptor(state));
-        }
-    }
 
     // 1. Core
     public DbSet<User> Users => Set<User>();

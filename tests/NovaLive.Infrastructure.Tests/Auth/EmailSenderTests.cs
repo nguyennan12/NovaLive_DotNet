@@ -288,7 +288,6 @@ public sealed class EmailSenderTests
                 services.AddAuthServices(context.Configuration);
                 // Isolate email startup from unrelated database/token services, retaining DI validation.
                 services.Replace(ServiceDescriptor.Singleton(Mock.Of<IJwtTokenService>()));
-                services.Replace(ServiceDescriptor.Singleton(Mock.Of<IPermissionProvider>()));
                 if (handler is not null) services.AddHttpClient<ResendEmailSender>().ConfigurePrimaryHttpMessageHandler(() => handler);
             }).Build();
 

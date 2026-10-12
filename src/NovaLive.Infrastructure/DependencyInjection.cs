@@ -27,7 +27,7 @@ public static class DependencyInjection
     {
         services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=novalive_db;Username=nova_user;Password=nova_password";
+            ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
 
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
@@ -53,6 +53,8 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
         // Repositories
+        services.AddScoped<IUserRepository, NovaLive.Infrastructure.Persistence.Repositories.UserRepository>();
+        services.AddScoped<IPermissionRepository, NovaLive.Infrastructure.Persistence.Repositories.PermissionRepository>();
         services.AddScoped<ISpuRepository, NovaLive.Infrastructure.Persistence.Repositories.SpuRepository>();
         services.AddScoped<ISkuRepository, NovaLive.Infrastructure.Persistence.Repositories.SkuRepository>();
         services.AddScoped<IInventoryRepository, NovaLive.Infrastructure.Persistence.Repositories.InventoryRepository>();
@@ -64,8 +66,6 @@ public static class DependencyInjection
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency
-        services.AddSingleton<RolePermissionCache>();
-        services.AddSingleton<IPermissionCacheInvalidator>(provider => provider.GetRequiredService<RolePermissionCache>());
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
@@ -84,11 +84,16 @@ public static class DependencyInjection
         {
             bus.UsingRabbitMq((context, cfg) =>
             {
-                var host = configuration.GetValue<string>("RabbitMQ:Host") ?? "localhost";
+                var host = configuration.GetValue<string>("RabbitMQ:Host")
+                    ?? throw new InvalidOperationException("RabbitMQ:Host is required.");
+                var username = configuration.GetValue<string>("RabbitMQ:Username")
+                    ?? throw new InvalidOperationException("RabbitMQ:Username is required.");
+                var password = configuration.GetValue<string>("RabbitMQ:Password")
+                    ?? throw new InvalidOperationException("RabbitMQ:Password is required.");
                 cfg.Host(host, "/", h =>
                 {
-                    h.Username(configuration.GetValue<string>("RabbitMQ:Username") ?? "guest");
-                    h.Password(configuration.GetValue<string>("RabbitMQ:Password") ?? "guest");
+                    h.Username(username);
+                    h.Password(password);
                 });
                 cfg.ConfigureEndpoints(context);
             });

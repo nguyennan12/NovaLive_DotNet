@@ -75,15 +75,14 @@ internal sealed class AuthTestHost : IAsyncDisposable
         services.AddScoped<ISkuRepository, SkuRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddSingleton<IDateTimeProvider>(Clock);
         services.AddSingleton<ICacheService>(Cache);
         services.AddSingleton(CurrentUser.Object);
         services.AddSingleton(Passwords.Object);
         services.AddSingleton(Mail.Object);
         services.AddSingleton<IIdempotencyService>(Mock.Of<IIdempotencyService>());
-        services.AddScoped<IPermissionProvider, PermissionProvider>();
-        services.AddSingleton<RolePermissionCache>();
-        services.AddSingleton<IPermissionCacheInvalidator>(p => p.GetRequiredService<RolePermissionCache>());
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
         services.AddSingleton<IOtpService>(new OtpService(Options.Create(new OtpOptions { Pepper = new string('p', 32) })));
         services.AddSingleton<IJwtTokenService>(new JwtTokenService(Options.Create(new JwtOptions

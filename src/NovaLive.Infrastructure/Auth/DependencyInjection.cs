@@ -35,7 +35,6 @@ public static class DependencyInjection
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
-        services.AddScoped<IPermissionProvider, PermissionProvider>();
         services.AddTransient<IEmailSender>(provider =>
         {
             var settings = provider.GetRequiredService<IOptions<EmailOptions>>().Value;

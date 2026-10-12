@@ -2,6 +2,8 @@ using FluentAssertions;
 using NovaLive.Application.UseCases.Auth.Commands.Logout;
 using Moq;
 using NovaLive.Application.Abstractions.Auth;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Common.Behaviors;
 using NovaLive.Domain.Common;
 
@@ -20,7 +22,8 @@ public sealed class LogoutCommandValidatorTests
         user.SetupGet(x => x.IsAuthenticated).Returns(authenticated);
         user.SetupGet(x => x.UserId).Returns(hasId ? Guid.NewGuid() : null);
         var called = false;
-        var result = await new AuthorizationBehavior<LogoutCommand, Result>(user.Object, Mock.Of<IPermissionProvider>())
+        var result = await new AuthorizationBehavior<LogoutCommand, Result>(
+            user.Object, Mock.Of<ICacheService>(), Mock.Of<IUserRepository>(), Mock.Of<IPermissionRepository>())
             .Handle(new LogoutCommand(), _ => { called = true; return Task.FromResult(Result.Success()); }, default);
         called.Should().Be(allowed);
         result.IsSuccess.Should().Be(allowed);

@@ -28,9 +28,5 @@ public interface IEmailSender
 {
     Task SendOtpAsync(string email, string otp, OtpType type, CancellationToken cancellationToken = default);
 }
-public interface IPermissionProvider
-{
-    Task<IReadOnlyCollection<string>> GetPermissionsAsync(IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default);
-    Task InvalidateAsync(Guid roleId, CancellationToken cancellationToken = default);
-}
+
 
