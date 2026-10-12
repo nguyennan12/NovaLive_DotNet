@@ -22,6 +22,8 @@ public sealed class SubOrder : AuditableEntity
 
     public decimal PlatformDiscountAmount { get; private set; }
 
+    public decimal ShippingDiscountAmount { get; private set; }
+
     public decimal SubTotal { get; private set; }
 
     public decimal SellerEarnings { get; private set; }

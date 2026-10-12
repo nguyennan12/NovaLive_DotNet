@@ -41,6 +41,7 @@ public sealed class OrderConfiguration :
         builder.Property(order => order.ShippingFee).HasPrecision(18, 2);
         builder.Property(order => order.ShopDiscountAmount).HasPrecision(18, 2);
         builder.Property(order => order.PlatformDiscountAmount).HasPrecision(18, 2);
+        builder.Property(order => order.ShippingDiscountAmount).HasPrecision(18, 2);
         builder.Property(order => order.SubTotal).HasPrecision(18, 2);
         builder.Property(order => order.SellerEarnings).HasPrecision(18, 2);
         builder.Property(order => order.Status).HasConversion<string>().HasMaxLength(30);

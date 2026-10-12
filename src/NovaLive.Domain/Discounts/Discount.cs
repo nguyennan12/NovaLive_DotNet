@@ -35,4 +35,54 @@ public sealed class Discount : AuditableEntity
     public bool IsPublic { get; private set; } = true;
 
     public bool IsActive { get; private set; } = true;
+
+    public bool IsTimeValid(DateTimeOffset currentTime) =>
+        IsActive && currentTime >= ValidFrom && currentTime <= ValidTo;
+
+    public bool MeetsMinOrderAmount(decimal amount) =>
+        amount >= MinOrderAmount;
+
+    public bool IsItemEligible(Guid spuId, Guid? categoryId)
+    {
+        return AppliesTo switch
+        {
+            DiscountAppliesTo.AllProducts => true,
+            DiscountAppliesTo.SpecificSpus => TargetIds != null && TargetIds.Contains(spuId),
+            DiscountAppliesTo.SpecificCategories => categoryId.HasValue && TargetIds != null && TargetIds.Contains(categoryId.Value),
+            _ => true
+        };
+    }
+
+    public decimal CalculateDiscount(decimal baseAmount)
+    {
+        if (baseAmount <= 0)
+            return 0m;
+
+        decimal amount = DiscountType switch
+        {
+            DiscountType.FixedCart or DiscountType.FreeShip =>
+                Math.Min(DiscountValue, baseAmount),
+
+            DiscountType.PercentCart or DiscountType.PercentShip =>
+                Math.Min(Math.Floor(baseAmount * (DiscountValue / 100m)), MaxDiscountAmount ?? baseAmount),
+
+            _ => 0m
+        };
+
+        return Math.Min(amount, baseAmount);
+    }
+
+    public VoucherSnapshot ToSnapshot() => new(
+        Id,
+        ShopId,
+        Code,
+        DiscountType,
+        DiscountValue,
+        MinOrderAmount,
+        MaxDiscountAmount,
+        AppliesTo,
+        TargetIds,
+        ValidFrom,
+        ValidTo,
+        IsActive);
 }

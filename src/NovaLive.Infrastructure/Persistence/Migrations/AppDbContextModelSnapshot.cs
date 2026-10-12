@@ -1160,6 +1160,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("shipped_at");
 
+                    b.Property<decimal>("ShippingDiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("shipping_discount_amount");
+
                     b.Property<decimal>("ShippingFee")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")

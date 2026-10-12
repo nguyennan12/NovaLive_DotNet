@@ -147,7 +147,7 @@ NovaLive
 | **T17** | Inventory 2-State Management & Ledger Logging | FEATURE | BE/API | COMPLETED | P1 | Dev B | T16 |
 | **T18** | Public Product Search Engine (Full-text + Trigram) | FEATURE | BE/API | MISSING | P1 | Dev B | T16 |
 | **T19** | Cart Multi-shop Management Use Cases | FEATURE | BE/API | MISSING | P1 | Dev A | T16, T08 |
-| **T20** | PriceCalculator Domain Service (3-tier Proration Engine) | FEATURE | DOMAIN | MISSING | P0 | Dev A | T07 |
+| **T20** | PriceCalculator Domain Service (3-tier Proration Engine) | FEATURE | DOMAIN | **COMPLETED** | P0 | Dev A | T07 |
 | **T21** | Calculate Checkout Draft Query (Realtime Preview) | FEATURE | BE | MISSING | P0 | Dev A | T19, T20 |
 | **T22** | Checkout Command Handler (Atomic UoW 8-Step Transaction) | FEATURE | BE | MISSING | P0 | Dev A | T21, T32 |
 | **T23** | Order Controller Endpoints & Seller Order Operations | FEATURE | API | MISSING | P0 | Dev A | T22 |
@@ -428,7 +428,7 @@ NovaLive
 ---
 
 ### T20 — [DOMAIN] PriceCalculator Domain Service (3-tier Proration Engine)
-- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev A
+- **Status**: **COMPLETED** | **Priority**: P0 | **Assign**: Dev A
 - **SRS Requirement**: `FR-CHECKOUT-003`, `FR-DISCOUNT-005`, `NFR-MAINT-005`
 - **Detailed Technical Implementation**:
   - Tạo Domain Service `PriceCalculator` thuần túy trong `NovaLive.Domain`:

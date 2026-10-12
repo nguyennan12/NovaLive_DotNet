@@ -450,6 +450,7 @@ CREATE TABLE SubOrders (
     shipping_fee             DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (shipping_fee >= 0),
     shop_discount_amount     DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (shop_discount_amount >= 0),
     platform_discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (platform_discount_amount >= 0),
+    shipping_discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (shipping_discount_amount >= 0),
     sub_total                DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (sub_total >= 0),
     seller_earnings          DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK (seller_earnings >= 0), -- Số tiền Shop thực nhận (sau khi trừ phí sàn)
     status                   VARCHAR(30) NOT NULL DEFAULT 'PendingPayment' 
