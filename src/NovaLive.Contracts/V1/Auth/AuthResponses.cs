@@ -5,8 +5,6 @@ public record UserInfoResponse(
     IReadOnlyCollection<string> Roles, Guid? ShopId, IReadOnlyCollection<string> Permissions);
 
 public record AuthResponse(
-    string AccessToken,
-    string RefreshToken,
     DateTime ExpiresAt,
     UserSummaryDto User);
 

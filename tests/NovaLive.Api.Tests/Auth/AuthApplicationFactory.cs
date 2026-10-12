@@ -24,6 +24,8 @@ namespace NovaLive.Api.Tests.Auth;
 
 internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
 {
+    private readonly string environment;
+    private readonly Dictionary<string, string?> overrides;
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     public CapturingEmailSender Mail { get; } = new();
     public MutableClock Clock { get; } = new();
@@ -33,8 +35,10 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
     public bool InitializationComplete { get; private set; }
     public const string TestApiKey = "fake-resend-key-must-not-appear-in-health";
 
-    public AuthApplicationFactory(bool pauseInitialization = false)
+    public AuthApplicationFactory(bool pauseInitialization = false, string environment = "Testing", Dictionary<string, string?>? settings = null)
     {
+        this.environment = environment;
+        overrides = settings ?? [];
         connection.Open();
         RedisDatabase.Setup(db => db.PingAsync(It.IsAny<CommandFlags>())).ReturnsAsync(TimeSpan.FromMilliseconds(1));
         if (!pauseInitialization) ReleaseInitialization.SetResult();
@@ -43,7 +47,7 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // Authentication reads configuration before builder.Build; pass test settings to the entry point too.
-        builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(TestConfiguration));
+        builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(TestConfiguration).AddInMemoryCollection(overrides));
         return base.CreateHost(builder);
     }
 
@@ -57,8 +61,8 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(TestConfiguration));
+        builder.UseEnvironment(environment);
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(TestConfiguration).AddInMemoryCollection(overrides));
         builder.ConfigureTestServices(services =>
         {
             // Run the real Program, DI, pipeline and handlers, isolating external infrastructure.
@@ -92,17 +96,28 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
         });
     }
 
-    private static ICacheService CreateCache()
+    private ICacheService CreateCache()
     {
         var counts = new ConcurrentDictionary<string, long>();
+        var flags = new ConcurrentDictionary<string, (bool Value, DateTimeOffset? Expires)>();
         var cache = new Mock<ICacheService>();
+        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+            .Returns((string key, bool value, TimeSpan? ttl, CancellationToken ct) =>
+            { flags[key] = (value, ttl.HasValue ? Clock.UtcNow + ttl.Value : null); return Task.CompletedTask; });
+        cache.Setup(c => c.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string key, CancellationToken ct) => Task.FromResult(flags.TryGetValue(key, out var entry)
+                && (entry.Expires is null || entry.Expires > Clock.UtcNow)));
+        cache.Setup(c => c.GetOrSetAsync(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task<string[]>>>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+            .Returns((string key, Func<CancellationToken, Task<string[]>> factory, TimeSpan? ttl, CancellationToken ct) => factory(ct));
         cache.Setup(c => c.GetAsync<long>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns((string key, CancellationToken _) => Task.FromResult(counts.GetValueOrDefault(key)));
         cache.Setup(c => c.IncrementAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .Returns((string key, TimeSpan _, CancellationToken _) => Task.FromResult(counts.AddOrUpdate(key, 1, (_, count) => count + 1)));
-        cache.Setup(c => c.GetTimeToLiveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(TimeSpan.FromMinutes(5));
+        cache.Setup(c => c.GetTimeToLiveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string key, CancellationToken ct) => Task.FromResult(flags.TryGetValue(key, out var entry)
+                ? entry.Expires - Clock.UtcNow : (TimeSpan?)TimeSpan.FromMinutes(5)));
         cache.Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string key, CancellationToken ct) => { counts.TryRemove(key, out _); return Task.CompletedTask; });
+            .Returns((string key, CancellationToken ct) => { counts.TryRemove(key, out _); flags.TryRemove(key, out _); return Task.CompletedTask; });
         return cache.Object;
     }
 

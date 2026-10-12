@@ -4,7 +4,6 @@ using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Common.Messaging;
-using NovaLive.Contracts.V1.Auth;
 using NovaLive.Domain.Common;
 using NovaLive.Application.UseCases.Auth.Common;
 using NovaLive.Application.UseCases.Auth.Errors;
@@ -13,9 +12,9 @@ namespace NovaLive.Application.UseCases.Auth.Commands.Refresh;
 
 public sealed class RefreshTokenCommandHandler(IAppDbContext db, IAuthPersistence persistence,
     IRefreshTokenService tokens, IDateTimeProvider clock, AuthSessionService sessions,
-    ILogger<RefreshTokenCommandHandler> logger) : ICommandHandler<RefreshTokenCommand, AuthResponse>
+    ILogger<RefreshTokenCommandHandler> logger) : ICommandHandler<RefreshTokenCommand, SessionResult>
 {
-    public async Task<Result<AuthResponse>> Handle(RefreshTokenCommand request, CancellationToken ct)
+    public async Task<Result<SessionResult>> Handle(RefreshTokenCommand request, CancellationToken ct)
     {
         var hash = tokens.Hash(request.Data.RefreshToken);
         var userId = await db.RefreshTokens.Where(token => token.TokenHash == hash)

@@ -23,7 +23,8 @@ public sealed class AuthRegistrationTests
             services.Should().ContainSingle(service => service.ServiceType.IsGenericType
                 && service.ServiceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)
                 && service.ServiceType.GenericTypeArguments[0] == request);
-            if (request == typeof(GetCurrentUserQuery)) continue;
+            // Logout has no input DTO; its boundary is RequireAuthenticated, covered by authorization tests.
+            if (request == typeof(GetCurrentUserQuery) || request == typeof(NovaLive.Application.UseCases.Auth.Commands.Logout.LogoutCommand)) continue;
             services.Should().ContainSingle(service => service.ServiceType == typeof(IValidator<>).MakeGenericType(request));
         }
     }
