@@ -32,6 +32,7 @@ try
     // ---------- 4. Early Option Validation ----------
     _ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.JwtOptions>>().Value;
     _ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.OtpOptions>>().Value;
+    _ = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<NovaLive.Infrastructure.Auth.EmailOptions>>().Value;
 
     // ---------- 5. Auto-run Database Migrations & Multi-part Seeders ----------
     await app.ApplyMigrationsAsync();
