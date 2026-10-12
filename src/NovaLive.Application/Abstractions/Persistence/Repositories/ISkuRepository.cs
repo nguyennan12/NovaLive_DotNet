@@ -5,6 +5,7 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 public interface ISkuRepository
 {
     Task<Sku?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<Sku>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Sku?> GetByIdAndShopAsync(Guid id, Guid shopId, CancellationToken ct = default);
     Task<List<Sku>> GetBySpuIdAsync(Guid spuId, CancellationToken ct = default);
     Task<Dictionary<Guid, List<Sku>>> GetBySpuIdsAsync(IEnumerable<Guid> spuIds, CancellationToken ct = default);

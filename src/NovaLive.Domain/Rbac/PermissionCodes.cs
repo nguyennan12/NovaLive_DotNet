@@ -80,8 +80,10 @@ public static class PermissionCodes
     public static class Discounts
     {
         public const string ViewPublic = "discounts:view_public";
-        public const string CreateOwnShop = "discounts:create_own_shop";
-        public const string CreatePlatform = "discounts:create_platform";
+        public const string ManageOwnShop = "discounts:manage_own_shop";
+        public const string CreateOwnShop = ManageOwnShop;
+        public const string ManagePlatform = "discounts:manage_platform";
+        public const string CreatePlatform = ManagePlatform;
     }
 
     public static class FlashSales

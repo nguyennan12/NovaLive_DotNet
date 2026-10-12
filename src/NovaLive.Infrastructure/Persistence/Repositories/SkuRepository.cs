@@ -13,6 +13,14 @@ public sealed class SkuRepository(IAppDbContext dbContext) : ISkuRepository
             .FirstOrDefaultAsync(s => s.Id == id && s.DeletedAt == null, ct);
     }
 
+    public async Task<List<Sku>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.ToList();
+        return await dbContext.Skus
+            .Where(s => idList.Contains(s.Id) && s.DeletedAt == null)
+            .ToListAsync(ct);
+    }
+
     public async Task<Sku?> GetByIdAndShopAsync(Guid id, Guid shopId, CancellationToken ct = default)
     {
         return await dbContext.Skus

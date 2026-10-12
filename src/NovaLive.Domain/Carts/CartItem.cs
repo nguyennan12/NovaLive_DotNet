@@ -16,5 +16,15 @@ public sealed class CartItem : Entity
 
     public DateTimeOffset AddedAt { get; private set; } = DateTimeOffset.UtcNow;
 
-    public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public CartItem() { }
+
+    public CartItem(Guid id, Guid cartId, Guid skuId, Guid shopId, int quantity, decimal unitPrice)
+        : base(id)
+    {
+        CartId = cartId;
+        SkuId = skuId;
+        ShopId = shopId;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
 }

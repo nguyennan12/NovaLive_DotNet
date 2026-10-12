@@ -13,6 +13,14 @@ public sealed class SpuRepository(IAppDbContext dbContext) : ISpuRepository
             .FirstOrDefaultAsync(s => s.Id == id && s.DeletedAt == null, ct);
     }
 
+    public async Task<List<Spu>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.ToList();
+        return await dbContext.Spus
+            .Where(s => idList.Contains(s.Id) && s.DeletedAt == null)
+            .ToListAsync(ct);
+    }
+
     public async Task<Spu?> GetByIdAndShopAsync(Guid id, Guid shopId, CancellationToken ct = default)
     {
         return await dbContext.Spus

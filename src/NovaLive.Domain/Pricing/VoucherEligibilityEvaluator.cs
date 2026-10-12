@@ -3,7 +3,7 @@ using NovaLive.Domain.Discounts;
 
 namespace NovaLive.Domain.Pricing;
 
-internal static class VoucherEligibilityEvaluator
+public static class VoucherEligibilityEvaluator
 {
     public static (decimal Discount, VoucherEvaluationResult Evaluation) EvaluateShopVoucher(
         ShopCalculationInput shop,

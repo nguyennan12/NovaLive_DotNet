@@ -5,6 +5,7 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 public interface ISpuRepository
 {
     Task<Spu?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<Spu>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Spu?> GetByIdAndShopAsync(Guid id, Guid shopId, CancellationToken ct = default);
     Task<(List<Spu> Items, long TotalCount)> GetPagedAsync(
         Guid shopId,

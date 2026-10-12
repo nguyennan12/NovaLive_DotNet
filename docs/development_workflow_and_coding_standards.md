@@ -126,6 +126,31 @@ Hệ thống tuân thủ nghiêm ngặt **Clean Architecture** kết hợp **CQR
      return response; // Implicit operator tự chuyển T thành Result<T>.Success(response)
      ```
 
+#### E. Nguyên Tắc 1 File / 1 Trách Nhiệm (Single Responsibility Principle - File Structure):
+* **Mỗi file C# chỉ chứa duy nhất 1 class hoặc 1 record**:
+  * ❌ **CẤM**: Gộp Query/Command và Handler vào chung 1 file.
+  * ❌ **CẤM**: Gộp Validator vào chung file Query/Command.
+  * ✅ **ĐÚNG**: Tách riêng thành các file độc lập: `[Feature]Command.cs`, `[Feature]CommandHandler.cs`, `[Feature]CommandValidator.cs`.
+* **Tên file bắt buộc trùng khớp 100% với tên class/record/interface**.
+
+#### F. Quy Chuẩn Repositories & Độc Lập Bảng Dữ Liệu (Domain Table Isolation):
+* **1 Repository chỉ truy cập đúng bảng/DbSet của chính nó**:
+  * Ví dụ: `DiscountRepository` chỉ thao tác trên `Discounts` và `DiscountUsages`. `CartRepository` chỉ thao tác trên `Carts` và `CartItems`. `SkuRepository` chỉ thao tác trên `Skus`. `SpuRepository` chỉ thao tác trên `Spus`.
+  * **TUYỆT ĐỐI KHÔNG JOIN CHÉO BẢNG** giữa các Domain/Module khác nhau bên trong một Repository (tránh rò rỉ quan hệ và phá vỡ kiến trúc module).
+* **Kết hợp dữ liệu đa module tại Application Handler**:
+  * Khi một Use Case cần dữ liệu từ nhiều module (ví dụ: Validate Voucher cần `CartItems`, `Skus`, `Spus`, `Discount`):
+    * Handler inject các repository độc lập (`ICartRepository`, `ISkuRepository`, `ISpuRepository`, `IDiscountRepository`).
+    * Tải dữ liệu riêng biệt qua `GetByIdAsync` / `GetByIdsAsync`.
+    * Ghép nối dữ liệu và truyền vào Domain Service / Domain Evaluator để thực hiện nghiệp vụ.
+* **CẤM inject trực tiếp DbContext vào Handler**: Mọi thao tác đọc/ghi phải đi qua Interface Repository tương ứng.
+
+#### G. Quy Chuẩn Tổ Chức Mapping:
+* File Mapping DTO (ví dụ: `DiscountMappings.cs`) phải được đặt ngay trong thư mục Use Cases của module đó (`NovaLive.Application/UseCases/[Module]/`), không để vào thư mục dùng chung `Common/` nếu nó chỉ phục vụ riêng cho module đó.
+
+#### H. Tái Sử Dụng Domain Evaluators & Price Calculator:
+* **Không duplicate logic**: Logic tính toán tiền, kiểm tra điều kiện áp dụng voucher, phân bổ giảm giá (proration) phải nằm ở Domain (`VoucherEligibilityEvaluator`, `PriceCalculator`). Handler chỉ chịu trách nhiệm nạp dữ liệu từ DB và ủy quyền tính toán cho Domain.
+* **Đảm bảo tính nhất quán giá thời gian thực (Real-time Pricing)**: Khi kiểm tra giỏ hàng hay áp mã giảm giá, giá bán của sản phẩm phải luôn được lấy từ giá hiện hành (`Skus.SellPrice`), tuyệt đối không tin cậy giá snapshot cũ lưu trong `CartItems.UnitPrice`.
+
 ---
 
 ### 2.4. Tầng Infrastructure (`NovaLive.Infrastructure`)
@@ -139,6 +164,14 @@ Hệ thống tuân thủ nghiêm ngặt **Clean Architecture** kết hợp **CQR
    * Cấu hình Timeout rõ ràng (ví dụ: 15s).
    * Bọc lỗi từ API đối tác vào `Result.Failure(ShippingErrors.ProviderError(...))`, không để văng Unhandled Exception.
    * Cấu hình tham số (URL, Token, Secret) thông qua class `[Provider]Options` bind từ `appsettings.json`.
+3. **Quy Chuẩn Xóa Dữ Liệu (Soft Delete vs Hard Delete)**:
+   * **Soft Delete (Xóa mềm)**:
+     * Áp dụng cho các thực thể quan trọng có liên kết lịch sử đơn hàng, thanh toán, tài khoản (`IsDeleted = true` hoặc `DeletedAt = DateTimeOffset.UtcNow`).
+     * Mọi query đọc phải tự động hoặc chủ động lọc `!IsDeleted`.
+   * **Hard Delete (Xóa cứng)**:
+     * Được phép áp dụng khi đối tượng chưa phát sinh bất kỳ ràng buộc/lịch sử giao dịch liên đới nào (ví dụ: Voucher chưa có ai sử dụng - `UsedCount == 0`).
+   * **Ràng buộc an toàn khi xóa**:
+     * Nếu đối tượng đã có lịch sử giao dịch/lượt sử dụng (`UsedCount > 0`), **tuyệt đối không xóa cứng** mà phải từ chối xóa với mã lỗi nghiệp vụ rõ ràng (ví dụ: `CannotDeleteUsedVoucher`: *"Không thể xóa voucher đã có lượt sử dụng. Vui lòng tắt kích hoạt thay vì xóa."*).
 
 ---
 
@@ -158,6 +191,12 @@ Hệ thống tuân thủ nghiêm ngặt **Clean Architecture** kết hợp **CQR
    * Private / Seller / Buyer: Bắt buộc `[Authorize]`.
    * Webhook: Dùng `[AllowAnonymous]` + xác thực qua Secret Header / Checksum Validator.
    * Dùng method `Respond(...)` của `ApiControllerBase` để tự động map `Result<T>` sang HTTP Status (`200`, `201`, `400`, `401`, `403`, `404`).
+3. **Cấu Trúc Thư Mục Controllers Theo Phân Hệ (`Controllers/[Module]/`)**:
+   * Khi một module có nhiều nhóm vai trò (Public, Seller, Admin), gom nhóm toàn bộ Controllers vào thư mục module tương ứng:
+     * `src/NovaLive.Api/Controllers/Discounts/DiscountsController.cs` (Public & Buyer endpoints)
+     * `src/NovaLive.Api/Controllers/Discounts/SellerDiscountsController.cs` (Seller endpoints)
+     * `src/NovaLive.Api/Controllers/Discounts/AdminDiscountsController.cs` (Admin endpoints)
+   * Namespace phải phản ánh đúng thư mục: `namespace NovaLive.Api.Controllers.[Module];`.
 
 ---
 

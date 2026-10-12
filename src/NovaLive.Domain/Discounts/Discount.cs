@@ -4,6 +4,209 @@ namespace NovaLive.Domain.Discounts;
 
 public sealed class Discount : AuditableEntity
 {
+    private Discount() { }
+
+    public Discount(
+        Guid? shopId,
+        string code,
+        string name,
+        DiscountType discountType,
+        decimal discountValue,
+        decimal minOrderAmount,
+        decimal? maxDiscountAmount,
+        int? maxUses,
+        int perUserLimit,
+        DiscountAppliesTo appliesTo,
+        List<Guid>? targetIds,
+        DateTimeOffset validFrom,
+        DateTimeOffset validTo,
+        bool isPublic,
+        bool isActive = true)
+    {
+        ShopId = shopId;
+        Code = code;
+        Name = name;
+        DiscountType = discountType;
+        DiscountValue = discountValue;
+        MinOrderAmount = minOrderAmount;
+        MaxDiscountAmount = maxDiscountAmount;
+        MaxUses = maxUses;
+        UsedCount = 0;
+        PerUserLimit = perUserLimit;
+        AppliesTo = appliesTo;
+        TargetIds = targetIds;
+        ValidFrom = validFrom;
+        ValidTo = validTo;
+        IsPublic = isPublic;
+        IsActive = isActive;
+    }
+
+    public static Result<Discount> CreateShopDiscount(
+        Guid shopId,
+        string code,
+        string name,
+        DiscountType discountType,
+        decimal discountValue,
+        decimal minOrderAmount,
+        decimal? maxDiscountAmount,
+        int? maxUses,
+        int perUserLimit,
+        DiscountAppliesTo appliesTo,
+        List<Guid>? targetIds,
+        DateTimeOffset validFrom,
+        DateTimeOffset validTo,
+        bool isPublic)
+    {
+        if (discountType is not (DiscountType.PercentCart or DiscountType.FixedCart))
+        {
+            return Result.Failure<Discount>(Error.Validation(
+                "Discounts.InvalidType", "Voucher Shop chỉ hỗ trợ loại PercentCart hoặc FixedCart."));
+        }
+
+        var validationResult = ValidateCommon(validFrom, validTo, minOrderAmount, discountType, discountValue, maxDiscountAmount, perUserLimit, maxUses);
+        if (validationResult.IsFailure)
+            return Result.Failure<Discount>(validationResult.Error);
+
+        return Result.Success(new Discount(
+            shopId,
+            code.Trim().ToUpperInvariant(),
+            name.Trim(),
+            discountType,
+            discountValue,
+            minOrderAmount,
+            maxDiscountAmount,
+            maxUses,
+            perUserLimit,
+            appliesTo,
+            targetIds,
+            validFrom,
+            validTo,
+            isPublic));
+    }
+
+    public static Result<Discount> CreatePlatformDiscount(
+        string code,
+        string name,
+        DiscountType discountType,
+        decimal discountValue,
+        decimal minOrderAmount,
+        decimal? maxDiscountAmount,
+        int? maxUses,
+        int perUserLimit,
+        DiscountAppliesTo appliesTo,
+        List<Guid>? targetIds,
+        DateTimeOffset validFrom,
+        DateTimeOffset validTo,
+        bool isPublic)
+    {
+        var validationResult = ValidateCommon(validFrom, validTo, minOrderAmount, discountType, discountValue, maxDiscountAmount, perUserLimit, maxUses);
+        if (validationResult.IsFailure)
+            return Result.Failure<Discount>(validationResult.Error);
+
+        return Result.Success(new Discount(
+            null,
+            code.Trim().ToUpperInvariant(),
+            name.Trim(),
+            discountType,
+            discountValue,
+            minOrderAmount,
+            maxDiscountAmount,
+            maxUses,
+            perUserLimit,
+            appliesTo,
+            targetIds,
+            validFrom,
+            validTo,
+            isPublic));
+    }
+
+    private static Result ValidateCommon(
+        DateTimeOffset validFrom,
+        DateTimeOffset validTo,
+        decimal minOrderAmount,
+        DiscountType discountType,
+        decimal discountValue,
+        decimal? maxDiscountAmount,
+        int perUserLimit,
+        int? maxUses)
+    {
+        if (validTo <= validFrom)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidDateRange", "Thời gian kết thúc (valid_to) phải lớn hơn thời gian bắt đầu (valid_from)."));
+        }
+
+        if (minOrderAmount < 0)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidMinOrderAmount", "Giá trị đơn hàng tối thiểu không được âm."));
+        }
+
+        if (discountValue <= 0)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidDiscountValue", "Giá trị giảm giá phải lớn hơn 0."));
+        }
+
+        if (discountType is DiscountType.PercentCart or DiscountType.PercentShip)
+        {
+            if (discountValue > 100)
+            {
+                return Result.Failure(Error.Validation(
+                    "Discounts.InvalidPercentValue", "Phần trăm giảm giá không được vượt quá 100%."));
+            }
+
+            if (!maxDiscountAmount.HasValue || maxDiscountAmount.Value <= 0)
+            {
+                return Result.Failure(Error.Validation(
+                    "Discounts.MaxDiscountAmountRequired", "Giảm giá phần trăm bắt buộc phải có mức giảm tối đa lớn hơn 0."));
+            }
+        }
+
+        if (perUserLimit <= 0)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidPerUserLimit", "Giới hạn mỗi người dùng phải lớn hơn 0."));
+        }
+
+        if (maxUses.HasValue && maxUses.Value <= 0)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidMaxUses", "Tổng số lượt dùng phải lớn hơn 0."));
+        }
+
+        return Result.Success();
+    }
+
+    public Result Update(string name, int? maxUses, DateTimeOffset validTo, bool isActive)
+    {
+        if (validTo <= ValidFrom)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidDateRange", "Thời gian kết thúc (valid_to) phải lớn hơn thời gian bắt đầu (valid_from)."));
+        }
+
+        if (maxUses.HasValue && maxUses.Value < UsedCount)
+        {
+            return Result.Failure(Error.Validation(
+                "Discounts.InvalidMaxUses", $"Tổng lượt dùng mới ({maxUses.Value}) không được nhỏ hơn số lượt đã dùng ({UsedCount})."));
+        }
+
+        Name = name.Trim();
+        MaxUses = maxUses;
+        ValidTo = validTo;
+        IsActive = isActive;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        return Result.Success();
+    }
+
+    public void IncrementUsedCount()
+    {
+        UsedCount++;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public Guid? ShopId { get; private set; }
 
     public string Code { get; private set; } = string.Empty;
