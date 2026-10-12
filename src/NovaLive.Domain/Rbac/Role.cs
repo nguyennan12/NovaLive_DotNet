@@ -6,12 +6,18 @@ public sealed class Role : Entity
 {
     private Role() { }
 
-    public Role(string name, string? description = null, bool isSystem = false)
+    public Role(
+        Guid id,
+        string name,
+        DateTimeOffset createdAt,
+        string? description = null,
+        bool isSystem = false)
+        : base(id)
     {
         Name = name;
         Description = description;
         IsSystem = isSystem;
-        CreatedAt = DateTimeOffset.UtcNow;
+        CreatedAt = createdAt;
     }
 
     public string Name { get; private set; } = string.Empty;
@@ -20,5 +26,12 @@ public sealed class Role : Entity
 
     public bool IsSystem { get; private set; }
 
-    public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private set; }
+
+    public void UpdateSystemDefinition(string name, string description)
+    {
+        Name = name;
+        Description = description;
+        IsSystem = true;
+    }
 }

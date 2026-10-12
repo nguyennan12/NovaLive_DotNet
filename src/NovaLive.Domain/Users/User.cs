@@ -2,7 +2,7 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Users;
 
-public sealed class User : AuditableEntity
+public sealed class User : AuditableEntity, ISoftDeletable
 {
     private User()
     {
@@ -41,8 +41,19 @@ public sealed class User : AuditableEntity
         AccountStatus = AccountStatus.Active;
     }
 
+    public void ChangePassword(string passwordHash) => PasswordHash = passwordHash;
+
     public void MarkAsSeller()
     {
         IsSeller = true;
+    }
+
+    public void UpdateProfile(string fullName, string? phone, DateOnly? birthday, UserGender? gender, string? avatarUrl)
+    {
+        FullName = fullName;
+        Phone = phone;
+        Birthday = birthday;
+        Gender = gender;
+        AvatarUrl = avatarUrl;
     }
 }

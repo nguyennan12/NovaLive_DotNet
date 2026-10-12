@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using NovaLive.Application.Abstractions.Idempotency;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Domain.Common;
 

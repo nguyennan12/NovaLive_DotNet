@@ -4,6 +4,35 @@ namespace NovaLive.Domain.Shipping;
 
 public sealed class ShippingOrder : AuditableEntity
 {
+    private ShippingOrder()
+    {
+    }
+
+    public ShippingOrder(
+        Guid subOrderId,
+        ShippingProvider provider,
+        string serviceCode,
+        string pickupAddressJson,
+        string deliveryAddressJson,
+        decimal codAmount,
+        decimal shippingFee,
+        int weightGram,
+        string? trackingCode = null,
+        string? providerOrderId = null)
+    {
+        SubOrderId = subOrderId;
+        Provider = provider;
+        ServiceCode = serviceCode;
+        PickupAddressJson = pickupAddressJson;
+        DeliveryAddressJson = deliveryAddressJson;
+        CodAmount = codAmount;
+        ShippingFee = shippingFee;
+        WeightGram = weightGram;
+        TrackingCode = trackingCode;
+        ProviderOrderId = providerOrderId;
+        Status = ShippingStatus.ReadyToPick;
+    }
+
     public Guid SubOrderId { get; private set; }
 
     public ShippingProvider Provider { get; private set; }
@@ -33,4 +62,36 @@ public sealed class ShippingOrder : AuditableEntity
     public DateTimeOffset? PickedAt { get; private set; }
 
     public DateTimeOffset? DeliveredAt { get; private set; }
+
+    public void UpdateStatusFromWebhook(
+        ShippingStatus newStatus,
+        string? webhookPayload,
+        DateTimeOffset? eventTime = null)
+    {
+        WebhookPayload = webhookPayload;
+
+        // Tránh ghi đè ngược khi đơn đã hoàn tất giao
+        if (Status == ShippingStatus.Delivered && newStatus != ShippingStatus.Delivered)
+        {
+            return;
+        }
+
+        Status = newStatus;
+        var now = eventTime ?? DateTimeOffset.UtcNow;
+
+        if (newStatus == ShippingStatus.Picking && PickedAt is null)
+        {
+            PickedAt = now;
+        }
+        else if (newStatus == ShippingStatus.Delivered && DeliveredAt is null)
+        {
+            DeliveredAt = now;
+        }
+    }
+
+    public void SetTracking(string trackingCode, string? providerOrderId = null)
+    {
+        TrackingCode = trackingCode;
+        ProviderOrderId = providerOrderId ?? trackingCode;
+    }
 }

@@ -5,6 +5,8 @@ public interface ICurrentUser
     Guid? UserId { get; }
 
     string? Email { get; }
+    string? Jti { get; }
+    DateTimeOffset? AccessTokenExpiresAt { get; }
 
     Guid? ShopId { get; }
 

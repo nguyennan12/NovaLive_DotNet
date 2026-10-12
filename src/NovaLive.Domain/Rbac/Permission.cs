@@ -6,7 +6,7 @@ public sealed class Permission : Entity
 {
     private Permission() { }
 
-    public Permission(Guid resourceId, RbacAction action, string code, string? description = null)
+    public Permission(Guid resourceId, string action, string code, string? description = null)
     {
         ResourceId = resourceId;
         Action = action;
@@ -16,9 +16,15 @@ public sealed class Permission : Entity
 
     public Guid ResourceId { get; private set; }
 
-    public RbacAction Action { get; private set; }
+    public string Action { get; private set; } = string.Empty;
 
     public string Code { get; private set; } = string.Empty;
 
     public string? Description { get; private set; }
+
+    public void UpdateDefinition(string action, string? description)
+    {
+        Action = action;
+        Description = description;
+    }
 }

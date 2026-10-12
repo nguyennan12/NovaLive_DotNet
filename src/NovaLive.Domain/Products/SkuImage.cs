@@ -4,6 +4,17 @@ namespace NovaLive.Domain.Products;
 
 public sealed class SkuImage : Entity
 {
+    private SkuImage() { }
+
+    public SkuImage(Guid skuId, string imageUrl, bool isPrimary = false, int displayOrder = 0)
+    {
+        SkuId = skuId;
+        ImageUrl = imageUrl;
+        IsPrimary = isPrimary;
+        DisplayOrder = displayOrder;
+        CreatedAt = DateTimeOffset.UtcNow;
+    }
+
     public Guid SkuId { get; private set; }
 
     public string ImageUrl { get; private set; } = string.Empty;

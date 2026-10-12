@@ -9,11 +9,14 @@ public enum ErrorType
     Invalid = 4,
     Unauthorized = 5,
     Forbidden = 6,
-    Unexpected = 7
+    Unexpected = 7,
+    TooManyRequests = 8,
+    Locked = 9
 }
 
 public record Error(string Code, string? Message = null)
 {
+    public int? RetryAfterSeconds { get; init; }
     public ErrorType Type { get; init; } = ErrorType.Unexpected;
 
     public Error(ErrorType type, string code, string? message = null)

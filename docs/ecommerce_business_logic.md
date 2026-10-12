@@ -175,11 +175,12 @@
 Hệ thống hỗ trợ áp dụng đồng thời 3 tầng voucher trong 1 lần checkout:
 1. **Tầng 1: Shop Voucher (`Discounts.shop_id = Shop.Id`)**: Do Seller tài trợ, giảm giá trực tiếp vào tiền hàng của Shop đó.
 2. **Tầng 2: Platform Product Voucher (`Discounts.shop_id = NULL`, `discount_type IN ('PercentCart','FixedCart')`)**: Do sàn tài trợ, giảm giá trên tổng tiền hàng toàn sàn, được phân bổ tỷ lệ về từng Sub-order.
-3. **Tầng 3: Platform FreeShipping Voucher (`Discounts.shop_id = NULL`, `discount_type = 'FreeShip'`)**: Do sàn tài trợ, giảm trừ trực tiếp vào phí vận chuyển của các Sub-order.
+3. **Tầng 3: Platform FreeShipping Voucher (`Discounts.shop_id = NULL`, `discount_type IN ('FreeShip','PercentShip')`)**: Do sàn tài trợ, giảm trừ trực tiếp vào phí vận chuyển của các Sub-order.
 
 ### 6.2 Công thức phân bổ Voucher Sàn (Proration)
 - Khi áp Voucher Sàn giảm $V$ đồng cho đơn gồm các Sub-order $S_1, S_2, ..., S_n$:
-  $$\text{Tiền giảm cho Sub-order } S_i = V \times \frac{\text{Subtotal}_{S_i}}{\sum \text{Subtotal}}$$
+  $$\text{Tiền giảm cho Sub-order } S_i = \text{ROUND}\left(V \times \frac{\text{EligibleAfterShop}_{S_i}}{\sum \text{EligibleAfterShop}}\right)$$
+- Sử dụng thuật toán Largest Remainder (Hamilton/Hare-Niemeyer) có kiểm soát trần và bù sai số 1 đồng deterministic theo `ShopId`.
 - Số tiền giảm được ghi nhận snapshot vào từng `OrderItems.discount_amount` để phục vụ đối soát và hoàn tiền nếu có khiếu nại.
 - Khi có hoàn hàng 1 phần: Buyer chỉ được hoàn đúng số tiền thực trả sau khi đã trừ phần voucher phân bổ.
 
@@ -253,7 +254,7 @@ Khi Buyer đặt đơn hàng, dòng tiền đầu vào được nạp vào hệ 
 
 ### 8.3 Công thức Bóc tách Dòng tiền & Doanh thu Shop
 Khi Buyer thanh toán một đơn hàng:
-$$\text{Tổng tiền Buyer trả} = \text{Tiền hàng (Subtotal)} + \text{Phí Ship} - \text{Voucher Shop} - \text{Voucher Sàn}$$
+$$\text{Tổng tiền Buyer trả} = \text{Tiền hàng (Subtotal)} + \text{Phí Ship} - \text{Voucher Shop} - \text{Voucher Sàn} - \text{Voucher FreeShip}$$
 
 Hệ thống tự động phân bổ dòng tiền khi thanh toán thành công:
 

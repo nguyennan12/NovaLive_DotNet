@@ -1,5 +1,5 @@
 using FluentAssertions;
-using NovaLive.Infrastructure.Clock;
+using NovaLive.Infrastructure.Services;
 
 namespace NovaLive.Infrastructure.Tests.Clock;
 

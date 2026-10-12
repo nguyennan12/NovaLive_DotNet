@@ -5,6 +5,7 @@ public record CheckoutPreviewResponse(
     decimal TotalShippingFee,
     decimal TotalShopDiscount,
     decimal TotalPlatformDiscount,
+    decimal TotalShippingDiscount,
     decimal GrandTotal,
     List<ShopCheckoutPreviewDto> ShopPreviews);
 
@@ -15,6 +16,7 @@ public record ShopCheckoutPreviewDto(
     decimal ShippingFee,
     decimal ShopDiscount,
     decimal AllocatedPlatformDiscount,
+    decimal ShippingDiscount,
     decimal ShopTotal,
     List<CheckoutItemDto> Items);
 
@@ -57,6 +59,7 @@ public record SubOrderResponse(
     decimal ShippingFee,
     decimal ShopDiscountAmount,
     decimal PlatformDiscountAmount,
+    decimal ShippingDiscountAmount,
     decimal FinalAmount,
     string Status,
     string? TrackingCode,

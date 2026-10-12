@@ -143,11 +143,11 @@ NovaLive
 | **T13** | Shop Wallet, Financial Ledger & Payout Request | FEATURE | BE/API | MISSING | P1 | Dev B | T11 |
 | **T14** | Admin Shop Onboarding, Ban Policy & Payout Approval | FEATURE | BE/API | MISSING | P1 | Dev B | T08, T11 |
 | **T15** | Multi-level Category Tree Management | FEATURE | BE/API | MISSING | P1 | Dev B | T08 |
-| **T16** | Product SPU & SKU Multi-variant Management | FEATURE | BE/API | MISSING | P1 | Dev B | T11, T15 |
-| **T17** | Inventory 2-State Management & Ledger Logging | FEATURE | BE/API | MISSING | P1 | Dev B | T16 |
+| **T16** | Product SPU & SKU Multi-variant Management | FEATURE | BE/API | COMPLETED | P1 | Dev B | T11, T15 |
+| **T17** | Inventory 2-State Management & Ledger Logging | FEATURE | BE/API | COMPLETED | P1 | Dev B | T16 |
 | **T18** | Public Product Search Engine (Full-text + Trigram) | FEATURE | BE/API | MISSING | P1 | Dev B | T16 |
 | **T19** | Cart Multi-shop Management Use Cases | FEATURE | BE/API | MISSING | P1 | Dev A | T16, T08 |
-| **T20** | PriceCalculator Domain Service (3-tier Proration Engine) | FEATURE | DOMAIN | MISSING | P0 | Dev A | T07 |
+| **T20** | PriceCalculator Domain Service (3-tier Proration Engine) | FEATURE | DOMAIN | **COMPLETED** | P0 | Dev A | T07 |
 | **T21** | Calculate Checkout Draft Query (Realtime Preview) | FEATURE | BE | MISSING | P0 | Dev A | T19, T20 |
 | **T22** | Checkout Command Handler (Atomic UoW 8-Step Transaction) | FEATURE | BE | MISSING | P0 | Dev A | T21, T32 |
 | **T23** | Order Controller Endpoints & Seller Order Operations | FEATURE | API | MISSING | P0 | Dev A | T22 |
@@ -346,7 +346,7 @@ NovaLive
 ---
 
 ### T16 — [BE/API] Product SPU & SKU Multi-variant Management
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-CAT-002`, `FR-CAT-003`, `FR-CAT-004`, `FR-CAT-005`
 - **Detailed Technical Implementation**:
   - `CreateSpuCommand` (Seller):
@@ -367,7 +367,7 @@ NovaLive
 ---
 
 ### T17 — [BE/API] Inventory 2-State Management & Ledger Logging
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-CAT-006`, `FR-CAT-007`, `FR-CAT-008`, `NFR-REL-006`
 - **Detailed Technical Implementation**:
   - `GetSellerInventoryQuery`: Lấy danh sách tồn kho các SKU của shop. Tính toán động: `AvailableStock = Inventories.qty_on_hand - Inventories.reserved_qty`. Hỗ trợ filter `lowStock = TRUE` (khi `AvailableStock <= min_stock`).
@@ -385,7 +385,7 @@ NovaLive
 ---
 
 ### T18 — [BE/API] Public Product Search Engine (Full-text + Trigram)
-- **Status**: MISSING | **Priority**: P1 | **Assign**: Dev B
+- **Status**: COMPLETED | **Priority**: P1 | **Assign**: Dev B
 - **SRS Requirement**: `FR-SEARCH-001`, `FR-SEARCH-002`, `FR-SEARCH-003`, `FR-SEARCH-004`, `FR-SEARCH-005`, `NFR-PERF-001`, `NFR-PERF-004`
 - **Detailed Technical Implementation**:
   - Thực thi trong `PostgresProductQueryService : IProductQueryService`:
@@ -428,7 +428,7 @@ NovaLive
 ---
 
 ### T20 — [DOMAIN] PriceCalculator Domain Service (3-tier Proration Engine)
-- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev A
+- **Status**: **COMPLETED** | **Priority**: P0 | **Assign**: Dev A
 - **SRS Requirement**: `FR-CHECKOUT-003`, `FR-DISCOUNT-005`, `NFR-MAINT-005`
 - **Detailed Technical Implementation**:
   - Tạo Domain Service `PriceCalculator` thuần túy trong `NovaLive.Domain`:

@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using NovaLive.Application.Abstractions.Auth;
+using NovaLive.Infrastructure.Persistence.Interceptors;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Domain.Carts;
 using NovaLive.Domain.Common;
@@ -20,8 +22,10 @@ using NovaLive.Domain.Users;
 
 namespace NovaLive.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IAppDbContext, IUnitOfWork
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
+    : DbContext(options), IAppDbContext, IUnitOfWork
 {
+
     // 1. Core
     public DbSet<User> Users => Set<User>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
@@ -102,14 +106,36 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.HasDefaultSchema("public");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.HasPostgresExtension("pg_trgm");
+
+            modelBuilder.Entity<Spu>(builder =>
+            {
+                builder.Property<NpgsqlTypes.NpgsqlTsVector?>("SearchVector")
+                    .HasColumnName("search_vector")
+                    .HasColumnType("tsvector")
+                    .IsRequired(false);
+
+                builder.HasIndex("SearchVector")
+                    .HasMethod("gin")
+                    .HasDatabaseName("idx_spus_search_vector");
+
+                builder.HasIndex(spu => spu.Name)
+                    .HasMethod("gin")
+                    .HasOperators("gin_trgm_ops")
+                    .HasDatabaseName("idx_spus_name_trgm");
+            });
+        }
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
             {
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var property = Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted));
-                var notDeleted = Expression.Not(property);
-                var lambda = Expression.Lambda(notDeleted, parameter);
+                var property = Expression.Property(parameter, nameof(ISoftDeletable.DeletedAt));
+                var isNull = Expression.Equal(property, Expression.Constant(null, typeof(DateTimeOffset?)));
+                var lambda = Expression.Lambda(isNull, parameter);
 
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
             }

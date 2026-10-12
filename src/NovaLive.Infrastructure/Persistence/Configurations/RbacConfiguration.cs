@@ -38,7 +38,7 @@ public sealed class RbacConfiguration :
         builder.ToTable("permissions");
         builder.HasKey(p => p.Id);
 
-        builder.Property(p => p.Action).HasConversion<string>().HasMaxLength(30);
+        builder.Property(p => p.Action).HasMaxLength(30).IsRequired();
         builder.Property(p => p.Code).HasMaxLength(120).IsRequired();
         builder.Property(p => p.Description).HasMaxLength(300);
 

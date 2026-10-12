@@ -21,7 +21,7 @@ public class MigrationService(
             logger.LogInformation("Executing database seeders...");
             foreach (var seeder in seeders.OrderBy(s => s.Order))
             {
-                await seeder.SeedAsync();
+                await seeder.SeedAsync(cancellationToken);
             }
             logger.LogInformation("All seeders executed successfully.");
         }

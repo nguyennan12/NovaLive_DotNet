@@ -78,7 +78,8 @@ dotnet test NovaLive.sln
 | Dịch vụ | Địa chỉ / URL | Ghi chú |
 | :--- | :--- | :--- |
 | **NovaLive Web API** | http://localhost:5000 | Cổng chính API Backend |
-| **OpenAPI / Swagger Spec** | http://localhost:5000/openapi/v1.json | Tài liệu định dạng API |
+| **Scalar API Reference (UI)** | http://localhost:5000/scalar/v1 | Giao diện tài liệu & tương tác API (Development) |
+| **OpenAPI Spec** | http://localhost:5000/openapi/v1.json | Đặc tả OpenAPI v3 JSON |
 | **Health Check Endpoint** | http://localhost:5000/api/v1/health | Kiểm tra tình trạng hoạt động của API |
 | **SignalR Livestream Hub** | `ws://localhost:5000/hubs/livestream` | Kênh realtime phòng Live, chat, thả tim |
 | **SignalR Order Hub** | `ws://localhost:5000/hubs/order` | Kênh realtime nhận thông báo đơn hàng |
@@ -113,6 +114,3 @@ dotnet test NovaLive.sln
 - **Console Web UI:** `http://localhost:9001`
 - **Root User / Password:** `minio_admin` / `minio_password`
 
----
-
-```

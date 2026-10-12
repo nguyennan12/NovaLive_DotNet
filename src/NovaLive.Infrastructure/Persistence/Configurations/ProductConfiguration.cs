@@ -49,7 +49,7 @@ public sealed class ProductConfiguration :
         builder.Property(sku => sku.OriginalPrice).HasPrecision(18, 2);
         builder.Property(sku => sku.SellPrice).HasPrecision(18, 2);
 
-        builder.HasIndex(sku => new { sku.ShopId, sku.SkuCode }).IsUnique();
+        builder.HasIndex(sku => new { sku.ShopId, sku.SkuCode }).IsUnique().HasFilter("deleted_at IS NULL");
         builder.HasIndex(sku => sku.SpuId).HasFilter("deleted_at IS NULL");
         builder.HasIndex(sku => new { sku.ShopId, sku.IsActive }).HasFilter("deleted_at IS NULL");
     }

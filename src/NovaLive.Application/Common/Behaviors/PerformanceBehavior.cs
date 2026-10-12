@@ -30,11 +30,10 @@ public sealed class PerformanceBehavior<TRequest, TResponse>(
             var userId = currentUser.UserId;
 
             logger.LogWarning(
-                "Long Running Request: {RequestName} ({ElapsedMilliseconds} ms) executed by User {UserId} with payload {@Request}",
+                "Long Running Request: {RequestName} ({ElapsedMilliseconds} ms) executed by User {UserId}",
                 requestName,
                 stopwatch.ElapsedMilliseconds,
-                userId,
-                request);
+                userId);
         }
 
         return response;
