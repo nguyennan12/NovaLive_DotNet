@@ -10,9 +10,9 @@ using NovaLive.Application.UseCases.Auth.Errors;
 namespace NovaLive.Application.UseCases.Auth.Commands.VerifyOtp;
 
 public sealed class VerifyOtpCommandHandler(IAppDbContext db, IAuthPersistence persistence, IDateTimeProvider clock,
-    OtpFlowService otps) : ICommandHandler<VerifyOtpCommand>
+    OtpFlowService otps, AuthSessionService sessions) : ICommandHandler<VerifyOtpCommand, SessionResult>
 {
-    public async Task<Result> Handle(VerifyOtpCommand request, CancellationToken ct)
+    public async Task<Result<SessionResult>> Handle(VerifyOtpCommand request, CancellationToken ct)
     {
         await persistence.LockUserAsync(request.Data.UserId, ct);
         var user = await db.Users.SingleOrDefaultAsync(user => user.Id == request.Data.UserId && user.DeletedAt == null, ct);
@@ -22,6 +22,8 @@ public sealed class VerifyOtpCommandHandler(IAppDbContext db, IAuthPersistence p
         user.Activate();
         if (!await db.UserRoles.AnyAsync(role => role.UserId == user.Id && role.RoleId == SystemRoleIds.Buyer, ct))
             db.UserRoles.Add(new UserRole(user.Id, SystemRoleIds.Buyer, clock.UtcNow));
-        return Result.Success();
+        // Persist the Buyer grant within this transaction before IssueAsync queries role claims.
+        await db.SaveChangesAsync(ct);
+        return await sessions.IssueAsync(user, request.IpAddress, request.UserAgent, ct);
     }
 }

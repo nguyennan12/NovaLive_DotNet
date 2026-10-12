@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using NovaLive.Contracts.Common;
 using NovaLive.Domain.Common;
 using NovaLive.Api.Auth;
+using Microsoft.Extensions.Options;
 
 namespace NovaLive.Api.Extensions;
 
@@ -20,6 +21,11 @@ public static class AuthenticationExtensions
         var audience = configuration["Jwt:Audience"];
         if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
             throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience are required.");
+
+        services.AddOptions<SessionCookieOptions>().Bind(configuration.GetSection("Cookies"))
+            .Validate(options => options.IsValid(), "Cookies requires distinct valid names (without __Host- prefix) and SameSite Lax, Strict or None.")
+            .ValidateOnStart();
+        services.AddScoped<SessionCookies>();
 
         services.AddAuthentication(options =>
         {
@@ -49,7 +55,16 @@ public static class AuthenticationExtensions
             {
                 OnMessageReceived = context =>
                 {
-                    // Support WebSocket / SignalR Token Handshake via Query Parameter
+                    // Any explicit Authorization header takes precedence; never fall back to cookies for an invalid header.
+                    if (context.Request.Headers.ContainsKey("Authorization")) return Task.CompletedTask;
+                    var cookies = context.HttpContext.RequestServices.GetRequiredService<IOptions<SessionCookieOptions>>().Value;
+                    var cookie = context.Request.Cookies[cookies.AccessTokenName];
+                    if (!string.IsNullOrEmpty(cookie))
+                    {
+                        context.Token = cookie;
+                        return Task.CompletedTask;
+                    }
+                    // Retain the SignalR query-token fallback, restricted to /hubs.
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
 

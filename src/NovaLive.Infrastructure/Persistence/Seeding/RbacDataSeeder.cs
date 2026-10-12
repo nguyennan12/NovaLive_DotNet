@@ -178,11 +178,9 @@ public sealed class RbacDataSeeder(
             role.Id);
 
         var temporaryName = $"__legacy_{role.Name}_{legacyRole.Id:N}";
-        await dbContext.Roles
-            .Where(existing => existing.Id == legacyRole.Id)
-            .ExecuteUpdateAsync(
-                setters => setters.SetProperty(existing => existing.Name, temporaryName),
-                cancellationToken);
+        // Keep RBAC writes tracked so commit-time cache invalidation also covers legacy migration.
+        dbContext.Entry(legacyRole).Property(role => role.Name).CurrentValue = temporaryName;
+        await dbContext.SaveChangesAsync(cancellationToken);
         dbContext.ChangeTracker.Clear();
 
         fixedRole = await dbContext.Roles

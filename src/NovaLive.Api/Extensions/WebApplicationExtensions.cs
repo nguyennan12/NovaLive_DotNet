@@ -41,7 +41,10 @@ public static class WebApplicationExtensions
         app.MapHub<PaymentNotificationHub>("/hubs/payment");
 
         // 9. Health Checks
-        app.MapHealthChecks("/health");
+        app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+        {
+            ResponseWriter = NovaLive.Api.Health.HealthResponse.WriteAsync
+        });
 
         return app;
     }

@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Services;
 using NovaLive.Infrastructure.Persistence;
 namespace NovaLive.Infrastructure.Auth;
 
-public sealed class PermissionProvider(AppDbContext db, ICacheService cache) : IPermissionProvider
+public sealed class PermissionProvider(AppDbContext db, RolePermissionCache cache) : IPermissionProvider
 {
     public async Task<IReadOnlyCollection<string>> GetPermissionsAsync(
         IReadOnlyCollection<string> roles, CancellationToken cancellationToken = default)
@@ -14,16 +13,19 @@ public sealed class PermissionProvider(AppDbContext db, ICacheService cache) : I
         var permissions = new HashSet<string>(StringComparer.Ordinal);
         foreach (var roleId in roleIds)
         {
-            var codes = await cache.GetOrSetAsync($"rbac:role-perms:{roleId}", async ct =>
+            async Task<string[]> Load(CancellationToken ct) =>
                 await (from grant in db.RolePermissions
                        join permission in db.Permissions on grant.PermissionId equals permission.Id
-                       where grant.RoleId == roleId select permission.Code).ToArrayAsync(ct),
-                TimeSpan.FromMinutes(5), cancellationToken);
+                       where grant.RoleId == roleId select permission.Code).Distinct().ToArrayAsync(ct);
+            // Never publish data read inside an uncommitted transaction to the shared cache.
+            var codes = db.Database.CurrentTransaction is not null
+                ? await Load(cancellationToken)
+                : await cache.GetAsync(roleId, Load, cancellationToken);
             permissions.UnionWith(codes);
         }
         return permissions;
     }
     public Task InvalidateAsync(Guid roleId, CancellationToken cancellationToken = default) =>
-        cache.RemoveAsync($"rbac:role-perms:{roleId}", cancellationToken);
+        cache.InvalidateRoleAsync(roleId, cancellationToken);
 }
 

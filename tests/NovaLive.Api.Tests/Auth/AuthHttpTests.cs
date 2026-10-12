@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -50,7 +51,7 @@ public sealed class AuthHttpTests
     {
         var sender = new Mock<ISender>();
         sender.Setup(s => s.Send(It.IsAny<LoginCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<AuthResponse>.Failure(new Error(type, "Auth.Test", "Rejected.") { RetryAfterSeconds = 300 }));
+            .ReturnsAsync(Result<NovaLive.Application.UseCases.Auth.Common.SessionResult>.Failure(new Error(type, "Auth.Test", "Rejected.") { RetryAfterSeconds = 300 }));
         await using var app = await CreateApp(sender.Object, Mock.Of<ICacheService>());
         using var client = app.GetTestClient();
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("buyer@example.com", "test"));
@@ -95,6 +96,20 @@ public sealed class AuthHttpTests
         (await client.GetAsync("/api/v1/auth/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         sender.Verify(s => s.Send(It.IsAny<GetCurrentUserQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+    [Fact]
+    public async Task QueryAccessToken_IsAcceptedOnlyForHubs()
+    {
+        var clock = new Mock<IDateTimeProvider>();
+        clock.SetupGet(c => c.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var token = new JwtTokenService(Options.Create(new JwtOptions
+            { Secret = new string('s', 32), Issuer = "tests", Audience = "tests" }), clock.Object)
+            .Create(Guid.NewGuid(), "buyer@example.com", ["Buyer"], null);
+        await using var app = await CreateApp(Mock.Of<ISender>(), Mock.Of<ICacheService>());
+        using var client = app.GetTestClient();
+        (await client.GetAsync("/hubs/probe?access_token=" + token.Value)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetAsync("/api/v1/auth/me?access_token=" + token.Value)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     [Fact]
     public async Task AuthExceptions_DoNotExposeSecretsInHttpResponseOrRequestLogs()
     {
@@ -146,6 +161,7 @@ public sealed class AuthHttpTests
         app.UseAuthorization();
         app.UseRateLimiter();
         app.MapControllers();
+        app.MapGet("/hubs/probe", () => Results.Ok()).RequireAuthorization();
         await app.StartAsync();
         return app;
     }

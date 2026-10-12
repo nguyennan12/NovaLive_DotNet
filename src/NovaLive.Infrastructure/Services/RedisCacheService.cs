@@ -65,10 +65,12 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheServ
         foreach (var endpoint in endpoints)
         {
             var server = _redis.GetServer(endpoint);
-            var keys = server.Keys(pattern: $"{prefixKey}*").ToArray();
+            if (server.IsReplica) continue;
+            cancellationToken.ThrowIfCancellationRequested();
+            var keys = server.Keys(database: _database.Database, pattern: $"{prefixKey}*").ToArray();
             if (keys.Length > 0)
             {
-                await _database.KeyDeleteAsync(keys);
+                await _database.KeyDeleteAsync(keys).WaitAsync(cancellationToken);
             }
         }
     }

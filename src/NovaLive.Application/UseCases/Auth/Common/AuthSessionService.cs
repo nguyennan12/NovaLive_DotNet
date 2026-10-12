@@ -32,14 +32,15 @@ public sealed class AuthSessionService(IAppDbContext db, IJwtTokenService jwt, I
             .Select(shop => (Guid?)shop.Id).FirstOrDefaultAsync(ct);
         return (roles, shopId);
     }
-    public async Task<AuthResponse> IssueAsync(User user, string? ip, string? device, CancellationToken ct)
+    public async Task<SessionResult> IssueAsync(User user, string? ip, string? device, CancellationToken ct)
     {
         var (roles, shopId) = await GetContextAsync(user.Id, ct);
         var access = jwt.Create(user.Id, user.Email, roles, shopId);
         var token = refresh.Create();
         db.RefreshTokens.Add(new RefreshToken(user.Id, token.Hash, device, ip, clock.UtcNow));
         return new(access.Value, token.Value, access.ExpiresAt.UtcDateTime,
-            new(user.Id, user.Email, user.Phone ?? "", user.FullName, user.AvatarUrl, user.AccountStatus.ToString(), shopId, roles));
+            new(user.Id, user.Email, user.Phone ?? "", user.FullName, user.AvatarUrl, user.AccountStatus.ToString(), shopId, roles))
+            { AccessTokenTtl = access.ExpiresAt - clock.UtcNow };
     }
     public async Task ResetLoginAsync(string email, CancellationToken ct)
     {
