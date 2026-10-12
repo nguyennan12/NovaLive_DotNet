@@ -78,6 +78,10 @@ services:
       Jwt__Issuer: "NovaLive"
       Jwt__Audience: "NovaLiveClients"
       Otp__Pepper: "${OTP_PEPPER}"
+      Ghn__BaseUrl: "${GHN_BASE_URL}"
+      Ghn__ApiToken: "${GHN_API_TOKEN}"
+      Ghn__ShopId: "${GHN_SHOP_ID}"
+      Ghn__WebhookSecret: "${GHN_WEBHOOK_SECRET}"
     labels:
       project: "novalive-ecommerce"
     volumes:

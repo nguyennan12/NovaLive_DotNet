@@ -12,9 +12,13 @@ using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Persistence.Seeding;
 using NovaLive.Infrastructure.Services;
 using NovaLive.Infrastructure.System;
+using NovaLive.Application.Abstractions.ThirdParty;
+using NovaLive.Infrastructure.Shipping.Ghn;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace NovaLive.Infrastructure;
+
 
 public static class DependencyInjection
 {
@@ -88,6 +92,25 @@ public static class DependencyInjection
         });
         services.AddScoped<IMessageBus, MassTransitMessageBus>();
 
+        // GHN Shipping Provider
+        services.Configure<GhnOptions>(configuration.GetSection(GhnOptions.SectionName));
+        services.AddSingleton<IGhnChecksumValidator, GhnChecksumValidator>();
+        services.AddHttpClient<IShippingProvider, GhnShippingAdapter>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<GhnOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            if (!string.IsNullOrWhiteSpace(options.ApiToken))
+            {
+                client.DefaultRequestHeaders.Add("Token", options.ApiToken);
+            }
+            if (options.ShopId > 0)
+            {
+                client.DefaultRequestHeaders.Add("ShopId", options.ShopId.ToString());
+            }
+        });
+
         return services;
     }
 }
+
