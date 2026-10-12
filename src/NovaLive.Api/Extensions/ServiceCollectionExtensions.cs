@@ -101,7 +101,10 @@ public static class ServiceCollectionExtensions
         services.AddOpenApiDocumentation();
 
         // 8. Health Checks
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddCheck<NovaLive.Api.Health.DatabaseHealthCheck>("database", timeout: TimeSpan.FromSeconds(5))
+            .AddCheck<NovaLive.Api.Health.RedisHealthCheck>("redis", timeout: TimeSpan.FromSeconds(5))
+            .AddCheck<NovaLive.Api.Health.SystemRolesHealthCheck>("systemRoles", timeout: TimeSpan.FromSeconds(5));
 
         return services;
     }
