@@ -55,6 +55,7 @@ public sealed class GlobalExceptionHandler(
                 ? "DATA_CONFLICT"
                 : exception switch
                 {
+                    NovaLive.Domain.Common.Exceptions.BusinessRuleException => "BUSINESS_RULE_VIOLATION",
                     ApplicationException => "APPLICATION_ERROR",
                     UnauthorizedAccessException => "UNAUTHORIZED",
                     KeyNotFoundException => "NOT_FOUND",
@@ -62,7 +63,7 @@ public sealed class GlobalExceptionHandler(
                 },
             Message = isConflict
                 ? "Dữ liệu bị trùng lặp hoặc xảy ra xung đột bản ghi trong hệ thống."
-                : environment.IsDevelopment()
+                : exception is NovaLive.Domain.Common.Exceptions.BusinessRuleException || environment.IsDevelopment()
                     ? exception.Message
                     : "Đã có lỗi xảy ra từ máy chủ.",
             Type = isConflict

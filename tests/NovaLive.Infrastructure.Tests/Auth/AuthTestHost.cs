@@ -92,8 +92,9 @@ internal sealed class AuthTestHost : IAsyncDisposable
         {
             if (postgresConnection is null) await db.Database.EnsureCreatedAsync();
             else await db.Database.MigrateAsync();
-            db.Roles.Add(new Role(SystemRoleIds.Buyer, "Buyer", Clock.UtcNow, isSystem: true));
-            await db.SaveChangesAsync();
+            var seeder = new NovaLive.Infrastructure.Persistence.Seeding.RbacDataSeeder(
+                db, Clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<NovaLive.Infrastructure.Persistence.Seeding.RbacDataSeeder>.Instance);
+            await seeder.SeedAsync();
         });
     }
     public async Task<T> Send<T>(IRequest<T> request)

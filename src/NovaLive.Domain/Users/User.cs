@@ -47,4 +47,13 @@ public sealed class User : AuditableEntity, ISoftDeletable
     {
         IsSeller = true;
     }
+
+    public void UpdateProfile(string fullName, string? phone, DateOnly? birthday, UserGender? gender, string? avatarUrl)
+    {
+        FullName = fullName;
+        Phone = phone;
+        Birthday = birthday;
+        Gender = gender;
+        AvatarUrl = avatarUrl;
+    }
 }
