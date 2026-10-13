@@ -13,7 +13,10 @@ public record ShopResponse(
     string Status,
     double Rating,
     int FollowersCount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? VerificationStatus = null,
+    string? ReviewerNote = null,
+    string? BankAccount = null);
 
 public record ShopDetailResponse(
     Guid Id,
@@ -29,7 +32,10 @@ public record ShopDetailResponse(
     double Rating,
     int FollowersCount,
     DateTime CreatedAt,
-    List<ShopAddressResponse> Warehouses);
+    List<ShopAddressResponse> Warehouses,
+    int RatingCount = 0,
+    int ProductsCount = 0,
+    bool IsFollowing = false);
 
 public record ShopAddressResponse(
     Guid Id,
@@ -41,4 +47,7 @@ public record ShopAddressResponse(
     string WardName,
     string DetailAddress,
     bool IsPrimary,
-    bool IsReturn);
+    bool IsReturn,
+    int? ProvinceId = null,
+    int? DistrictId = null,
+    string? WardCode = null);

@@ -41,6 +41,30 @@ public sealed class Shop : AuditableEntity, ISoftDeletable
 
     public DateTimeOffset? DeletedAt { get; private set; }
 
+    public bool CanManage => DeletedAt is null && Status is ShopStatus.Pending or ShopStatus.Active;
+
+    public static Shop Register(Guid ownerId, string name, string slug, string description,
+        string phone, string email, string? taxCode)
+    {
+        var shop = new Shop(ownerId, name, slug) { TaxCode = taxCode };
+        shop.UpdateInfo(name, description, null, null, phone, email);
+        return shop;
+    }
+
+    public Result UpdateInfo(string name, string description, string? logoUrl, string? bannerUrl,
+        string phone, string email)
+    {
+        if (!CanManage)
+            return Error.Forbidden("Shops.CannotManage", "Gian hàng hiện không cho phép chỉnh sửa.");
+        ShopName = name;
+        Description = description;
+        LogoUrl = logoUrl;
+        BannerUrl = bannerUrl;
+        Phone = phone;
+        Email = email;
+        return Result.Success();
+    }
+
     public void Approve()
     {
         Status = ShopStatus.Active;

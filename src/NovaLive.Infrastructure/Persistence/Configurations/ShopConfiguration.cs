@@ -64,6 +64,10 @@ public sealed class ShopConfiguration :
         builder.Property(addr => addr.DetailAddress).HasMaxLength(300).IsRequired();
 
         builder.HasIndex(addr => addr.ShopId);
+        builder.HasIndex(addr => addr.ShopId, "ix_shop_addresses_primary")
+            .HasDatabaseName("ix_shop_addresses_primary").IsUnique().HasFilter("is_primary = TRUE");
+        builder.HasIndex(addr => addr.ShopId, "ix_shop_addresses_return")
+            .HasDatabaseName("ix_shop_addresses_return").IsUnique().HasFilter("is_return = TRUE");
     }
 
     public void Configure(EntityTypeBuilder<ShopWallet> builder)
