@@ -4,6 +4,14 @@ namespace NovaLive.Domain.Shops;
 
 public sealed class ShopFollower : Entity
 {
+    private ShopFollower() { }
+
+    public ShopFollower(Guid shopId, Guid userId)
+    {
+        ShopId = shopId;
+        UserId = userId;
+    }
+
     public Guid ShopId { get; private set; }
 
     public Guid UserId { get; private set; }

@@ -9,7 +9,11 @@ public record RegisterShopRequest(
     string KycBackUrl,
     string BankAccount,
     string BankName,
-    string BankHolder);
+    string? BankHolder = null,
+    string? Slug = null,
+    string? TaxCode = null,
+    string? BankBranch = null,
+    string? BusinessLicense = null);
 
 public record UpdateShopProfileRequest(
     string ShopName,
@@ -28,7 +32,10 @@ public record CreateShopAddressRequest(
     string WardName,
     string DetailAddress,
     bool IsPrimary,
-    bool IsReturn);
+    bool IsReturn,
+    int? ProvinceId = null,
+    int? DistrictId = null,
+    string? WardCode = null);
 
 public record ApproveShopRequest(
     string? Note);

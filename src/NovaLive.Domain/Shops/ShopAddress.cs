@@ -4,6 +4,36 @@ namespace NovaLive.Domain.Shops;
 
 public sealed class ShopAddress : Entity
 {
+    private ShopAddress() { }
+
+    public ShopAddress(Guid shopId, string warehouseName, string contactName, string contactPhone,
+        int provinceId, string provinceName, int districtId, string districtName,
+        string wardCode, string wardName, string detailAddress)
+    {
+        ShopId = shopId;
+        UpdateInfo(warehouseName, contactName, contactPhone, provinceId, provinceName,
+            districtId, districtName, wardCode, wardName, detailAddress);
+    }
+
+    public void UpdateInfo(string warehouseName, string contactName, string contactPhone,
+        int provinceId, string provinceName, int districtId, string districtName,
+        string wardCode, string wardName, string detailAddress)
+    {
+        WarehouseName = warehouseName;
+        ContactName = contactName;
+        ContactPhone = contactPhone;
+        ProvinceId = provinceId;
+        ProvinceName = provinceName;
+        DistrictId = districtId;
+        DistrictName = districtName;
+        WardCode = wardCode;
+        WardName = wardName;
+        DetailAddress = detailAddress;
+    }
+
+    public void SetPrimary(bool value) => IsPrimary = value;
+    public void SetReturn(bool value) => IsReturn = value;
+
     public Guid ShopId { get; private set; }
 
     public string WarehouseName { get; private set; } = string.Empty;
