@@ -17,8 +17,8 @@ internal sealed class ShopTestContext : DbContext
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     public Mock<IAppDbContext> App { get; } = new();
     public Mock<ICurrentUser> User { get; } = new();
-    public Mock<IShopPersistence> Persistence { get; } = new();
-    public ShopAccess Access => new(App.Object, User.Object, Persistence.Object);
+    public Mock<IShopConcurrencyService> Concurrency { get; } = new();
+    public ShopAccess Access => new(App.Object, User.Object, Concurrency.Object);
     public ShopAddressDefaults Defaults => new(App.Object);
     public Guid UserId { get; } = Guid.NewGuid();
 
@@ -37,13 +37,11 @@ internal sealed class ShopTestContext : DbContext
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
         User.SetupGet(x => x.UserId).Returns(UserId);
         User.SetupGet(x => x.IsAuthenticated).Returns(true);
-        Persistence.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>()))
+        Concurrency.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>()))
             .Returns(async (CancellationToken ct) => { await SaveChangesAsync(ct); return (Error?)null; });
-        Persistence.Setup(x => x.SaveFollowAsync(It.IsAny<CancellationToken>()))
+        Concurrency.Setup(x => x.SaveFollowAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
-        Persistence.Setup(x => x.RemoveFollowAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .Returns((Guid shop, Guid user, CancellationToken ct) => Set<ShopFollower>()
-                .Where(f => f.ShopId == shop && f.UserId == user).ExecuteDeleteAsync(ct));
+
     }
     protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(connection);
     protected override void OnModelCreating(ModelBuilder model)

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Shops;
@@ -12,7 +11,7 @@ public sealed class AddShopAddressCommandHandler(IAppDbContext db, ShopAccess ac
 {
     public async Task<Result<ShopAddressResponse>> Handle(AddShopAddressCommand command, CancellationToken ct)
     {
-        var owned = await access.GetOwnedAsync(true, ct);
+        var owned = await access.GetSellerOwnedAsync(true, ct);
         if (owned.IsFailure) return owned.Error;
         var addresses = await db.ShopAddresses.Where(a => a.ShopId == owned.Value!.Id).ToListAsync(ct);
         var req = command.Request;

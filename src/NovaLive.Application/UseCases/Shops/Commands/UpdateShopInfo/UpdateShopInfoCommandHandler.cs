@@ -1,10 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Contracts.V1.Shops;
 using NovaLive.Domain.Common;
-using NovaLive.Domain.Shops;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.UpdateShopInfo;
 
@@ -12,7 +10,7 @@ public sealed class UpdateShopInfoCommandHandler(IAppDbContext db, ShopAccess ac
 {
     public async Task<Result<ShopResponse>> Handle(UpdateShopInfoCommand command, CancellationToken ct)
     {
-        var owned = await access.GetOwnedAsync(true, ct);
+        var owned = await access.GetSellerOwnedAsync(true, ct);
         if (owned.IsFailure) return owned.Error;
         var shop = owned.Value!;
         var req = command.Request;

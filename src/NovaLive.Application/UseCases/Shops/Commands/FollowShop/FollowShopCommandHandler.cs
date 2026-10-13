@@ -2,13 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Common.Messaging;
-using NovaLive.Contracts.V1.Shops;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Shops;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.FollowShop;
 
-public sealed class FollowShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopPersistence persistence) : ICommandHandler<FollowShopCommand>
+public sealed class FollowShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopConcurrencyService concurrency) : ICommandHandler<FollowShopCommand>
 {
     public async Task<Result> Handle(FollowShopCommand command, CancellationToken ct)
     {
@@ -21,7 +20,7 @@ public sealed class FollowShopCommandHandler(IAppDbContext db, ICurrentUser curr
         if (await db.ShopFollowers.AnyAsync(f => f.ShopId == shop.Id && f.UserId == userId, ct))
             return Result.Success();
         db.ShopFollowers.Add(new ShopFollower(shop.Id, userId));
-        await persistence.SaveFollowAsync(ct);
+        await concurrency.SaveFollowAsync(ct);
         return Result.Success();
     }
 }

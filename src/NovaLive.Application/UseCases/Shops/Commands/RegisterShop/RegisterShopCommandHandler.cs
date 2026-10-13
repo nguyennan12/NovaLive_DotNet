@@ -12,7 +12,7 @@ using System.Text.Json;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.RegisterShop;
 
-public sealed class RegisterShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopPersistence persistence) : ICommandHandler<RegisterShopCommand, ShopResponse>
+public sealed class RegisterShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopConcurrencyService concurrency) : ICommandHandler<RegisterShopCommand, ShopResponse>
 {
     public async Task<Result<ShopResponse>> Handle(RegisterShopCommand command, CancellationToken ct)
     {
@@ -29,14 +29,14 @@ public sealed class RegisterShopCommandHandler(IAppDbContext db, ICurrentUser cu
         if (await db.Shops.IgnoreQueryFilters().AnyAsync(s => s.Slug == slug, ct))
             return ShopErrors.SlugTaken;
         var shop = Shop.Register(userId, req.ShopName, slug, req.Description, req.Phone, req.Email, req.TaxCode);
-        var verification = new ShopVerification(shop.Id, userId, req.KycFrontUrl, req.KycBackUrl,
+        var verification = new ShopVerification(shop.Id, userId, req.IdCardFront, req.IdCardBack,
             req.BusinessLicense, req.BankAccount, req.BankName, req.BankBranch);
         db.Shops.Add(shop);
         db.ShopVerifications.Add(verification);
         db.OutboxMessages.Add(new OutboxMessage(nameof(ShopRegisteredEvent),
             JsonSerializer.Serialize(new ShopRegisteredEvent(shop.Id, userId, shop.CreatedAt))));
         // Save inside the transaction so PostgreSQL unique races become the same business errors.
-        var error = await persistence.SaveRegistrationAsync(ct);
+        var error = await concurrency.SaveRegistrationAsync(ct);
         if (error is not null) return error;
         return shop.ToResponse(0, verification);
     }

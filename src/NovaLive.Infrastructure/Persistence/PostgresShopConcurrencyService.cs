@@ -7,7 +7,7 @@ using NovaLive.Domain.Shops;
 
 namespace NovaLive.Infrastructure.Persistence;
 
-public sealed class ShopPersistence(AppDbContext db) : IShopPersistence
+public sealed class PostgresShopConcurrencyService(AppDbContext db) : IShopConcurrencyService
 {
     public async Task LockOwnerAsync(Guid ownerId, CancellationToken ct)
     {
@@ -51,8 +51,4 @@ public sealed class ShopPersistence(AppDbContext db) : IShopPersistence
                 entry.State = EntityState.Detached;
         }
     }
-
-    public async Task RemoveFollowAsync(Guid shopId, Guid userId, CancellationToken ct) =>
-        // A set-based delete is idempotent even if two unfollows race.
-        await db.ShopFollowers.Where(f => f.ShopId == shopId && f.UserId == userId).ExecuteDeleteAsync(ct);
 }
