@@ -7,6 +7,16 @@ public sealed class KycUrlOptions
     // Empty configuration rejects every KYC URL (fail closed).
     public string[] AllowedPrefixes { get; set; } = [];
 
+    // Public shop images can use other buckets on the configured CDN origins.
+    public bool IsAllowedCdnUrl(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value == value.Trim() && !value.Contains('\\')
+        && Uri.TryCreate(value, UriKind.Absolute, out var url)
+        && url.Scheme is "https" or "http" && url.UserInfo.Length == 0 && url.Fragment.Length == 0
+        && AllowedPrefixes.Any(value => Uri.TryCreate(value, UriKind.Absolute, out var prefix)
+            && prefix.UserInfo.Length == 0 && prefix.Query.Length == 0 && prefix.Fragment.Length == 0
+            && prefix.AbsolutePath.TrimEnd('/').EndsWith("/kyc-docs", StringComparison.Ordinal)
+            && url.Scheme == prefix.Scheme && url.Host == prefix.Host && url.Port == prefix.Port);
+
     public bool IsAllowed(string? value)
     {
         if (string.IsNullOrWhiteSpace(value) || value != value.Trim() || value.Contains('\\')

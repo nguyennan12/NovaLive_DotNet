@@ -49,7 +49,7 @@ public sealed class ShopHttpTests
     }
 
     [Fact]
-    public async Task RegisterAndPendingOwnerRoutes_UseBuyerToken_StoreKyc_EnforceAc002()
+    public async Task Register_PendingTrackingOnly_ThenApprovedSellerCanManage_EnforcesAc002()
     {
         using var factory = Factory(); using var client = factory.CreateClient(); var owner = await Authenticate(factory, client);
         var shop = await Data<ShopResponse>(await client.PostAsJsonAsync("/api/v1/shops/register", Registration), HttpStatusCode.Created);
@@ -60,29 +60,34 @@ public sealed class ShopHttpTests
         duplicateJson.RootElement.GetProperty("error").GetProperty("message").GetString().Should()
             .Be("Mỗi tài khoản chỉ được sở hữu tối đa 1 gian hàng");
         (await Data<ShopResponse>(await client.GetAsync("/api/v1/shops/me"))).VerificationStatus.Should().Be("Pending");
+        {
+            using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var verification = await db.ShopVerifications.SingleAsync(v => v.ShopId == shop.Id);
+        verification.IdCardFront.Should().Be(Registration.IdCardFront);
+        verification.BankAccount.Should().Be(Registration.BankAccount);
+        (await db.Users.SingleAsync(u => u.Id == owner)).IsSeller.Should().BeFalse();
+        (await db.UserRoles.Where(r => r.UserId == owner).Select(r => r.RoleId).ToListAsync()).Should().Equal(SystemRoleIds.Buyer);
+        (await db.ShopWallets.AnyAsync(w => w.ShopId == shop.Id)).Should().BeFalse();
+        }
+        await AssertSellerEndpointsForbidden(client);
+        await GrantSeller(factory, client, owner);
         (await Data<ShopResponse>(await client.GetAsync("/api/v1/seller/shop/me"))).Id.Should().Be(shop.Id);
-        var updated = await Data<ShopResponse>(await client.PutAsJsonAsync("/api/v1/shops/me", new
+        var updated = await Data<ShopResponse>(await client.PutAsJsonAsync("/api/v1/seller/shop/me", new
             { shopName = "Changed", description = "Changed", phone = "0912345678", email = "shop@example.com",
               slug = "hacked", status = "Active", ownerId = Guid.NewGuid(), bankAccount = "hacked" }));
-        updated.Slug.Should().Be(shop.Slug); updated.Status.Should().Be("Pending"); updated.OwnerId.Should().Be(owner);
+        updated.Slug.Should().Be(shop.Slug); updated.Status.Should().Be("Active"); updated.OwnerId.Should().Be(owner);
         var first = await Data<ShopAddressResponse>(await client.PostAsJsonAsync("/api/v1/seller/shop/addresses", Address), HttpStatusCode.Created);
-        var second = await Data<ShopAddressResponse>(await client.PostAsJsonAsync("/api/v1/shops/me/addresses",
+        var second = await Data<ShopAddressResponse>(await client.PostAsJsonAsync("/api/v1/seller/shop/addresses",
             Address with { IsPrimary = true, IsReturn = true }), HttpStatusCode.Created);
-        var list = await Data<List<ShopAddressResponse>>(await client.GetAsync("/api/v1/shops/me/addresses"));
+        var list = await Data<List<ShopAddressResponse>>(await client.GetAsync("/api/v1/seller/shop/addresses"));
         list.Should().ContainSingle(a => a.IsPrimary).Which.Id.Should().Be(second.Id);
         list.Should().ContainSingle(a => a.IsReturn).Which.Id.Should().Be(second.Id);
         var promoted = await Data<ShopAddressResponse>(await client.PutAsJsonAsync($"/api/v1/seller/shop/addresses/{first.Id}",
             Address with { IsPrimary = true, IsReturn = true, DistrictId = 8 }));
         promoted.IsPrimary.Should().BeTrue(); promoted.IsReturn.Should().BeTrue(); promoted.DistrictId.Should().Be(8);
-        (await client.DeleteAsync($"/api/v1/shops/me/addresses/{first.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.DeleteAsync($"/api/v1/shops/me/addresses/{second.Id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var verification = await db.ShopVerifications.SingleAsync(v => v.ShopId == shop.Id);
-        verification.IdCardFront.Should().Be(Registration.KycFrontUrl);
-        verification.BankAccount.Should().Be(Registration.BankAccount);
-        (await db.Users.SingleAsync(u => u.Id == owner)).IsSeller.Should().BeFalse();
-        (await db.UserRoles.Where(r => r.UserId == owner).Select(r => r.RoleId).ToListAsync()).Should().Equal(SystemRoleIds.Buyer);
-        (await db.ShopWallets.AnyAsync(w => w.ShopId == shop.Id)).Should().BeFalse();
+        (await client.DeleteAsync($"/api/v1/seller/shop/addresses/{first.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.DeleteAsync($"/api/v1/seller/shop/addresses/{second.Id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
     }
 
     [Fact]
@@ -91,10 +96,11 @@ public sealed class ShopHttpTests
         using var factory = Factory(); using var client = factory.CreateClient();
         (await client.GetAsync("/api/v1/shops/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await client.GetAsync($"/api/v1/shops/{Guid.NewGuid()}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await Authenticate(factory, client);
-        (await client.PostAsJsonAsync("/api/v1/shops/register", Registration with { KycFrontUrl = "https://evil.example/id.png" }))
+        var owner = await Authenticate(factory, client);
+        (await client.PostAsJsonAsync("/api/v1/shops/register", Registration with { IdCardFront = "https://evil.example/id.png" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await Data<ShopResponse>(await client.PostAsJsonAsync("/api/v1/shops/register", Registration), HttpStatusCode.Created);
+        await GrantSeller(factory, client, owner);
         Guid foreignId;
         using (var scope = factory.Services.CreateScope())
         {
@@ -102,8 +108,8 @@ public sealed class ShopHttpTests
             var foreign = new ShopAddress(Guid.NewGuid(), "Other", "Other", "0912345678", 1, "P", 2, "D", "3", "W", "Street");
             db.ShopAddresses.Add(foreign); await db.SaveChangesAsync(); foreignId = foreign.Id;
         }
-        (await client.PutAsJsonAsync($"/api/v1/shops/me/addresses/{foreignId}", Address)).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await client.DeleteAsync($"/api/v1/shops/me/addresses/{foreignId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.PutAsJsonAsync($"/api/v1/seller/shop/addresses/{foreignId}", Address)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.DeleteAsync($"/api/v1/seller/shop/addresses/{foreignId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -149,15 +155,77 @@ public sealed class ShopHttpTests
     }
 
     [Fact]
-    public async Task OpenApi_DocumentsShopRoutesAliasesAndResponseCodes()
+    public async Task OpenApi_DocumentsSeparatedPortalsAndNoLegacyAliases()
     {
         using var factory = Factory("Development"); using var client = factory.CreateClient();
         var response = await client.GetAsync("/openapi/v1.json");
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); var paths = json.RootElement.GetProperty("paths");
-        foreach (var path in new[] { "/api/v1/shops/register", "/api/v1/shops/me", "/api/v1/shops/me/addresses", "/api/v1/seller/shop/me", "/api/v1/seller/shop/addresses" })
+        foreach (var path in new[] { "/api/v1/shops/register", "/api/v1/shops/me", "/api/v1/shops/{shopId}/products", "/api/v1/seller/shop/me", "/api/v1/seller/shop/addresses" })
             paths.TryGetProperty(path, out _).Should().BeTrue(path);
+        paths.GetProperty("/api/v1/shops/me").TryGetProperty("put", out _).Should().BeFalse();
+        paths.TryGetProperty("/api/v1/shops/me/addresses", out _).Should().BeFalse();
+        paths.TryGetProperty("/api/v1/shops/me/addresses/{id}", out _).Should().BeFalse();
+        var schema = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("RegisterShopRequest").GetProperty("properties");
+        schema.TryGetProperty("idCardFront", out _).Should().BeTrue();
+        schema.TryGetProperty("idCardBack", out _).Should().BeTrue();
+        schema.TryGetProperty("kycFrontUrl", out _).Should().BeFalse();
+        schema.TryGetProperty("bankHolder", out _).Should().BeFalse();
         var responses = paths.GetProperty("/api/v1/shops/register").GetProperty("post").GetProperty("responses");
         foreach (var code in new[] { "201", "400", "401", "403", "404", "409" }) responses.TryGetProperty(code, out _).Should().BeTrue(code);
     }
+    private static async Task GrantSeller(AuthApplicationFactory factory, HttpClient client, Guid owner, bool activateShop = true)
+    {
+        // Test fixture only: simulate already completed T14 approval; no approval endpoint is implemented here.
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (activateShop) (await db.Shops.SingleAsync(s => s.OwnerId == owner)).Approve();
+        db.UserRoles.Add(new UserRole(owner, SystemRoleIds.Seller, DateTimeOffset.UtcNow));
+        await db.SaveChangesAsync();
+        var user = await db.Users.SingleAsync(u => u.Id == owner);
+        var token = scope.ServiceProvider.GetRequiredService<IJwtTokenService>().Create(owner, user.Email, ["Buyer", "Seller"], null);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Value);
+    }
+
+    private static async Task AssertSellerEndpointsForbidden(HttpClient client)
+    {
+        var profile = new UpdateShopProfileRequest("Shop", "Description", null, null, "0912345678", "shop@example.com");
+        var id = Guid.NewGuid();
+        (await client.GetAsync("/api/v1/seller/shop/me")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PutAsJsonAsync("/api/v1/seller/shop/me", profile)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.GetAsync("/api/v1/seller/shop/addresses")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync("/api/v1/seller/shop/addresses", Address)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PutAsJsonAsync($"/api/v1/seller/shop/addresses/{id}", Address)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.DeleteAsync($"/api/v1/seller/shop/addresses/{id}")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task SellerClaimDoesNotBypassPendingStatus_OrManageOwnPermission()
+    {
+        using var factory = Factory(); using var client = factory.CreateClient(); var owner = await Authenticate(factory, client);
+        await Data<ShopResponse>(await client.PostAsJsonAsync("/api/v1/shops/register", Registration), HttpStatusCode.Created);
+        await GrantSeller(factory, client, owner, activateShop: false);
+        await AssertSellerEndpointsForbidden(client);
+        (await Data<ShopResponse>(await client.GetAsync("/api/v1/shops/me"))).Status.Should().Be("Pending");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.Shops.SingleAsync(s => s.OwnerId == owner)).Approve();
+            var permissionId = await db.Permissions.Where(p => p.Code == PermissionCodes.Shops.ManageOwn).Select(p => p.Id).SingleAsync();
+            db.RolePermissions.RemoveRange(await db.RolePermissions.Where(p => p.RoleId == SystemRoleIds.Seller && p.PermissionId == permissionId).ToListAsync());
+            await db.SaveChangesAsync();
+        }
+        await AssertSellerEndpointsForbidden(client);
+    }
+
+    [Fact]
+    public async Task RemovedOwnerAliases_AreUnavailable()
+    {
+        using var factory = Factory(); using var client = factory.CreateClient(); await Authenticate(factory, client);
+        (await client.PutAsJsonAsync("/api/v1/shops/me", new { })).StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
+        (await client.GetAsync("/api/v1/shops/me/addresses")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.PostAsJsonAsync("/api/v1/shops/me/addresses", Address)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.PutAsJsonAsync($"/api/v1/shops/me/addresses/{Guid.NewGuid()}", Address)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.DeleteAsync($"/api/v1/shops/me/addresses/{Guid.NewGuid()}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
 }

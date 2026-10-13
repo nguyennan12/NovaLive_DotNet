@@ -9,7 +9,7 @@ using NovaLive.Domain.Shops;
 using NovaLive.Infrastructure.Persistence;
 namespace NovaLive.Infrastructure.Tests.Shops;
 
-public sealed class ShopPersistenceTests
+public sealed class ShopConcurrencyServiceTests
 {
     [Fact]
     public void MigrationSnapshot_MatchesCurrentPostgresModel_AndOnlyAddsShopIndexes()
@@ -43,7 +43,7 @@ public sealed class ShopPersistenceTests
             await db.SaveChangesAsync();
             db.ShopVerifications.Add(new ShopVerification(Guid.NewGuid(), Guid.NewGuid(), "front", "back", null, "12345", "Bank", null));
             failure.Enabled = true;
-            var error = await new ShopPersistence(db).SaveRegistrationAsync(default);
+            var error = await new PostgresShopConcurrencyService(db).SaveRegistrationAsync(default);
             return error is null ? Result.Success() : Result.Failure(error);
         }, false, default);
         result.Error.Type.Should().Be(type);
@@ -62,7 +62,7 @@ public sealed class ShopPersistenceTests
         await db.Database.EnsureCreatedAsync(); var owner = Guid.NewGuid();
         db.Shops.Add(new Shop(owner, "Shop", "shop")); await db.SaveChangesAsync();
         db.Shops.Add(new Shop(owner, "Shop", "shop")); failure.Enabled = true;
-        (await new ShopPersistence(db).SaveRegistrationAsync(default)).Should().Be(ShopErrors.AlreadyOwned);
+        (await new PostgresShopConcurrencyService(db).SaveRegistrationAsync(default)).Should().Be(ShopErrors.AlreadyOwned);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class ShopPersistenceTests
         var result = await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(async () =>
         {
             db.ShopFollowers.Add(new ShopFollower(shop, user)); failure.Enabled = true;
-            await new ShopPersistence(db).SaveFollowAsync(default); return Result.Success();
+            await new PostgresShopConcurrencyService(db).SaveFollowAsync(default); return Result.Success();
         }, false, default);
         result.IsSuccess.Should().BeTrue();
         (await db.ShopFollowers.CountAsync()).Should().Be(1);
@@ -92,7 +92,7 @@ public sealed class ShopPersistenceTests
         var failure = new FailNextSave("unrelated_constraint") { Enabled = true };
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseSqlite(connection).AddInterceptors(failure).Options);
-        var action = () => new ShopPersistence(db).SaveRegistrationAsync(default);
+        var action = () => new PostgresShopConcurrencyService(db).SaveRegistrationAsync(default);
         await action.Should().ThrowAsync<DbUpdateException>();
     }
 

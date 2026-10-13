@@ -26,7 +26,7 @@ public sealed class ShopWorkflowTests
     internal static CreateShopAddressRequest Address => new("Warehouse", "Owner", "0912345678",
         "Province", "District", "Ward", "123 Street", false, false, 1, 2, "00003");
     private static UpdateShopProfileRequest Profile => new("Updated", "New description", null, null, "0987654321", "new@example.com");
-    private static RegisterShopCommandHandler RegistrationHandler(ShopTestContext db) => new(db.App.Object, db.User.Object, db.Persistence.Object);
+    private static RegisterShopCommandHandler RegistrationHandler(ShopTestContext db) => new(db.App.Object, db.User.Object, db.Concurrency.Object);
     private static AddShopAddressCommandHandler AddressHandler(ShopTestContext db) => new(db.App.Object, db.Access, db.Defaults);
 
     [Fact]
@@ -41,8 +41,8 @@ public sealed class ShopWorkflowTests
         var verification = await db.Set<ShopVerification>().SingleAsync();
         verification.ShopId.Should().Be(result.Value.Id);
         verification.SubmittedBy.Should().Be(db.UserId);
-        verification.IdCardFront.Should().Be(Registration.KycFrontUrl);
-        verification.IdCardBack.Should().Be(Registration.KycBackUrl);
+        verification.IdCardFront.Should().Be(Registration.IdCardFront);
+        verification.IdCardBack.Should().Be(Registration.IdCardBack);
         verification.BankBranch.Should().Be("Branch");
         verification.Status.Should().Be(VerificationStatus.Pending);
         user.IsSeller.Should().BeFalse();
@@ -89,7 +89,7 @@ public sealed class ShopWorkflowTests
     {
         using var db = new ShopTestContext(); await db.AddUser();
         var error = ownerRace ? ShopErrors.AlreadyOwned : ShopErrors.SlugTaken;
-        db.Persistence.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>())).ReturnsAsync(error);
+        db.Concurrency.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>())).ReturnsAsync(error);
         (await RegistrationHandler(db).Handle(new(Registration), default)).Error.Should().Be(error);
     }
 
@@ -110,7 +110,7 @@ public sealed class ShopWorkflowTests
     }
 
     [Theory]
-    [InlineData(ShopStatus.Pending, true)] [InlineData(ShopStatus.Active, true)]
+    [InlineData(ShopStatus.Pending, false)] [InlineData(ShopStatus.Active, true)]
     [InlineData(ShopStatus.Suspended, false)] [InlineData(ShopStatus.Banned, false)] [InlineData(ShopStatus.Closed, false)]
     public async Task Update_RespectsStatus_LeavesSlugOwnerStatusUnchanged(ShopStatus status, bool allowed)
     {
@@ -132,7 +132,7 @@ public sealed class ShopWorkflowTests
     [Fact]
     public async Task Addresses_FirstDefaults_Replacement_UpdateAndDeletePreserveExactlyOneDefault()
     {
-        using var db = new ShopTestContext(); await db.AddShop();
+        using var db = new ShopTestContext(); await db.AddShop(status: ShopStatus.Active);
         var first = (await AddressHandler(db).Handle(new(Address), default)).Value!; await db.SaveChangesAsync();
         first.IsPrimary.Should().BeTrue(); first.IsReturn.Should().BeTrue();
         first.ProvinceId.Should().Be(1); first.DistrictId.Should().Be(2); first.WardCode.Should().Be("00003");
@@ -154,7 +154,7 @@ public sealed class ShopWorkflowTests
     [Fact]
     public async Task Addresses_CrossShopUpdateAndDelete_Return404()
     {
-        using var db = new ShopTestContext(); await db.AddShop();
+        using var db = new ShopTestContext(); await db.AddShop(status: ShopStatus.Active);
         var address = new ShopAddress(Guid.NewGuid(), "Other", "Other", "0912345678", 1, "P", 2, "D", "3", "W", "Street");
         db.Add(address); await db.SaveChangesAsync();
         (await new UpdateShopAddressCommandHandler(db.App.Object, db.Access, db.Defaults)
@@ -169,9 +169,9 @@ public sealed class ShopWorkflowTests
     public async Task FollowAndPublic_InactiveShop_Return404(ShopStatus status)
     {
         using var db = new ShopTestContext(); var shop = await db.AddShop(Guid.NewGuid(), status);
-        (await new FollowShopCommandHandler(db.App.Object, db.User.Object, db.Persistence.Object)
+        (await new FollowShopCommandHandler(db.App.Object, db.User.Object, db.Concurrency.Object)
             .Handle(new(shop.Id), default)).Error.Should().Be(ShopErrors.NotFound);
-        (await new UnfollowShopCommandHandler(db.App.Object, db.User.Object, db.Persistence.Object)
+        (await new UnfollowShopCommandHandler(db.App.Object, db.User.Object)
             .Handle(new(shop.Id), default)).Error.Should().Be(ShopErrors.NotFound);
         (await new GetShopPublicQueryHandler(db.App.Object, db.User.Object)
             .Handle(new(shop.Id), default)).Error.Should().Be(ShopErrors.NotFound);
@@ -181,11 +181,11 @@ public sealed class ShopWorkflowTests
     public async Task FollowUnfollow_AreIdempotent_AndOwnerCannotSelfFollow()
     {
         using var db = new ShopTestContext(); var shop = await db.AddShop(Guid.NewGuid(), ShopStatus.Active);
-        var follow = new FollowShopCommandHandler(db.App.Object, db.User.Object, db.Persistence.Object);
+        var follow = new FollowShopCommandHandler(db.App.Object, db.User.Object, db.Concurrency.Object);
         (await follow.Handle(new(shop.Id), default)).IsSuccess.Should().BeTrue();
         (await follow.Handle(new(shop.Id), default)).IsSuccess.Should().BeTrue();
         (await db.Set<ShopFollower>().CountAsync()).Should().Be(1);
-        var unfollow = new UnfollowShopCommandHandler(db.App.Object, db.User.Object, db.Persistence.Object);
+        var unfollow = new UnfollowShopCommandHandler(db.App.Object, db.User.Object);
         (await unfollow.Handle(new(shop.Id), default)).IsSuccess.Should().BeTrue();
         (await unfollow.Handle(new(shop.Id), default)).IsSuccess.Should().BeTrue();
         (await db.Set<ShopFollower>().CountAsync()).Should().Be(0);

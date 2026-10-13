@@ -22,9 +22,9 @@ public sealed class RegisterShopCommandValidator : AbstractValidator<RegisterSho
             RuleFor(x => x.Request.BankAccount).NotEmpty().MaximumLength(30);
             RuleFor(x => x.Request.BankName).NotEmpty().MaximumLength(100);
             RuleFor(x => x.Request.BankBranch).MaximumLength(200);
-            RuleFor(x => x.Request.KycFrontUrl).NotEmpty().MaximumLength(500).Must(options.Value.IsAllowed)
+            RuleFor(x => x.Request.IdCardFront).NotEmpty().MaximumLength(500).Must(options.Value.IsAllowed)
                 .WithMessage("URL CCCD phải thuộc bucket kyc-docs của hệ thống.");
-            RuleFor(x => x.Request.KycBackUrl).NotEmpty().MaximumLength(500).Must(options.Value.IsAllowed)
+            RuleFor(x => x.Request.IdCardBack).NotEmpty().MaximumLength(500).Must(options.Value.IsAllowed)
                 .WithMessage("URL CCCD phải thuộc bucket kyc-docs của hệ thống.");
             RuleFor(x => x.Request.BusinessLicense).MaximumLength(500).Must(options.Value.IsAllowed)
                 .When(x => x.Request.BusinessLicense is not null)

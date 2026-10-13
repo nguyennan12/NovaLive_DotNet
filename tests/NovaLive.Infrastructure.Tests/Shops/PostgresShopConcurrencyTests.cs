@@ -27,11 +27,11 @@ public sealed class PostgresShopConcurrencyTests
         var barrier = new SaveBarrier();
         async Task<Result<ShopResponse>> Register()
         {
-            await using var db = fixture.Context(); var real = new ShopPersistence(db);
-            var persistence = new Mock<IShopPersistence>();
-            persistence.Setup(p => p.SaveRegistrationAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
+            await using var db = fixture.Context(); var real = new PostgresShopConcurrencyService(db);
+            var concurrency = new Mock<IShopConcurrencyService>();
+            concurrency.Setup(p => p.SaveRegistrationAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); return await real.SaveRegistrationAsync(ct); });
-            var handler = new RegisterShopCommandHandler(db, Current(user.Id), persistence.Object);
+            var handler = new RegisterShopCommandHandler(db, Current(user.Id), concurrency.Object);
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() => handler.Handle(new(new(
                 "Shop", "Description", "0912345678", "shop@example.com", "https://cdn.example/kyc-docs/front.png",
                 "https://cdn.example/kyc-docs/back.png", "12345", "Bank", Slug: Guid.NewGuid().ToString())), default), false, default);
@@ -53,12 +53,12 @@ public sealed class PostgresShopConcurrencyTests
         var barrier = new SaveBarrier(); var userId = Guid.NewGuid();
         async Task<Result> Follow()
         {
-            await using var db = fixture.Context(); var real = new ShopPersistence(db);
-            var persistence = new Mock<IShopPersistence>();
-            persistence.Setup(p => p.SaveFollowAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
+            await using var db = fixture.Context(); var real = new PostgresShopConcurrencyService(db);
+            var concurrency = new Mock<IShopConcurrencyService>();
+            concurrency.Setup(p => p.SaveFollowAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); await real.SaveFollowAsync(ct); });
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() =>
-                new FollowShopCommandHandler(db, Current(userId), persistence.Object).Handle(new(shop.Id), default), false, default);
+                new FollowShopCommandHandler(db, Current(userId), concurrency.Object).Handle(new(shop.Id), default), false, default);
         }
         (await Task.WhenAll(Follow(), Follow())).Should().OnlyContain(r => r.IsSuccess);
         await using var check = fixture.Context(); (await check.ShopFollowers.CountAsync()).Should().Be(1);
@@ -68,11 +68,11 @@ public sealed class PostgresShopConcurrencyTests
     public async Task ConcurrentFirstWarehouses_SerializeAndKeepExactlyOnePrimaryAndReturn()
     {
         await using var fixture = await DatabaseFixture.Create(); var userId = Guid.NewGuid();
-        await using (var db = fixture.Context()) { db.Shops.Add(new Shop(userId, "Shop", "shop")); await db.SaveChangesAsync(); }
+        await using (var db = fixture.Context()) { var shop = new Shop(userId, "Shop", "shop"); shop.Approve(); db.Shops.Add(shop); await db.SaveChangesAsync(); }
         async Task<Result<ShopAddressResponse>> Add()
         {
             await using var db = fixture.Context();
-            var access = new ShopAccess(db, Current(userId), new ShopPersistence(db));
+            var access = new ShopAccess(db, Current(userId), new PostgresShopConcurrencyService(db));
             var handler = new AddShopAddressCommandHandler(db, access, new ShopAddressDefaults(db));
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() => handler.Handle(new(new(
                 "Warehouse", "Contact", "0912345678", "P", "D", "W", "Street", false, false, 1, 2, "3")), default), false, default);
