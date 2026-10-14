@@ -7,6 +7,7 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 // Shop persistence operations, including provider-specific locking and unique-race recovery.
 public interface IShopRepository
 {
+    Task<List<Shop>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Shop?> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default);
     Task<Shop?> GetActiveByIdAsync(Guid shopId, CancellationToken ct = default);
     // Uniqueness checks include soft-deleted shops, matching the database indexes.
