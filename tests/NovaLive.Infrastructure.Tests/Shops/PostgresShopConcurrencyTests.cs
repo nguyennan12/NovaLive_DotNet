@@ -14,6 +14,7 @@ using NovaLive.Contracts.V1.Shops;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Shops;
 using NovaLive.Domain.Users;
+using NovaLive.Domain.System;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Tests.Auth;
 namespace NovaLive.Infrastructure.Tests.Shops;
@@ -30,10 +31,10 @@ public sealed class PostgresShopConcurrencyTests
         async Task<Result<ShopResponse>> Register()
         {
             await using var db = fixture.Context(); var real = new ShopRepository(db);
-            var concurrency = new Mock<IShopRepository>();
+            var concurrency = ForwardTo(real);
             concurrency.Setup(p => p.SaveRegistrationAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); return await real.SaveRegistrationAsync(ct); });
-            var handler = new RegisterShopCommandHandler(db, Current(user.Id), concurrency.Object);
+            var handler = new RegisterShopCommandHandler(concurrency.Object, new UserRepository(db), Current(user.Id));
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() => handler.Handle(new(new(
                 "Shop", "Description", "0912345678", "shop@example.com", "https://cdn.example/kyc-docs/front.png",
                 "https://cdn.example/kyc-docs/back.png", "12345", "Bank", Slug: Guid.NewGuid().ToString())), default), false, default);
@@ -56,11 +57,11 @@ public sealed class PostgresShopConcurrencyTests
         async Task<Result> Follow()
         {
             await using var db = fixture.Context(); var real = new ShopRepository(db);
-            var concurrency = new Mock<IShopRepository>();
+            var concurrency = ForwardTo(real);
             concurrency.Setup(p => p.SaveFollowAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); await real.SaveFollowAsync(ct); });
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() =>
-                new FollowShopCommandHandler(db, Current(userId), concurrency.Object).Handle(new(shop.Id), default), false, default);
+                new FollowShopCommandHandler(concurrency.Object, Current(userId)).Handle(new(shop.Id), default), false, default);
         }
         (await Task.WhenAll(Follow(), Follow())).Should().OnlyContain(r => r.IsSuccess);
         await using var check = fixture.Context(); (await check.ShopFollowers.CountAsync()).Should().Be(1);
@@ -74,14 +75,37 @@ public sealed class PostgresShopConcurrencyTests
         async Task<Result<ShopAddressResponse>> Add()
         {
             await using var db = fixture.Context();
-            var access = new ShopAccess(db, Current(userId), new ShopRepository(db));
-            var handler = new AddShopAddressCommandHandler(db, access, new ShopAddressDefaults(db));
+            var repository = new ShopRepository(db);
+            var access = new ShopAccess(repository, Current(userId));
+            var handler = new AddShopAddressCommandHandler(repository, access, new ShopAddressDefaults(db));
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() => handler.Handle(new(new(
                 "Warehouse", "Contact", "0912345678", "P", "D", "W", "Street", false, false, 1, 2, "3")), default), false, default);
         }
         (await Task.WhenAll(Add(), Add())).Should().OnlyContain(r => r.IsSuccess);
         await using var check = fixture.Context(); var addresses = await check.ShopAddresses.ToListAsync();
         addresses.Should().HaveCount(2).And.ContainSingle(a => a.IsPrimary).And.ContainSingle(a => a.IsReturn);
+    }
+
+    private static Mock<IShopRepository> ForwardTo(ShopRepository real)
+    {
+        var repository = new Mock<IShopRepository>(MockBehavior.Strict);
+        repository.Setup(r => r.ExistsByOwnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => real.ExistsByOwnerAsync(id, ct));
+        repository.Setup(r => r.ExistsBySlugAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string slug, CancellationToken ct) => real.ExistsBySlugAsync(slug, ct));
+        repository.Setup(r => r.AddAsync(It.IsAny<Shop>(), It.IsAny<CancellationToken>()))
+            .Returns((Shop shop, CancellationToken ct) => real.AddAsync(shop, ct));
+        repository.Setup(r => r.AddVerificationAsync(It.IsAny<ShopVerification>(), It.IsAny<CancellationToken>()))
+            .Returns((ShopVerification verification, CancellationToken ct) => real.AddVerificationAsync(verification, ct));
+        repository.Setup(r => r.AddRegistrationOutboxAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Returns((OutboxMessage message, CancellationToken ct) => real.AddRegistrationOutboxAsync(message, ct));
+        repository.Setup(r => r.GetActiveByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => real.GetActiveByIdAsync(id, ct));
+        repository.Setup(r => r.IsFollowingAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, Guid? userId, CancellationToken ct) => real.IsFollowingAsync(id, userId, ct));
+        repository.Setup(r => r.AddFollowerAsync(It.IsAny<ShopFollower>(), It.IsAny<CancellationToken>()))
+            .Returns((ShopFollower follower, CancellationToken ct) => real.AddFollowerAsync(follower, ct));
+        return repository;
     }
 
     private static ICurrentUser Current(Guid id)

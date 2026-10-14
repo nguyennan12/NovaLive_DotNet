@@ -48,7 +48,6 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<IAuthPersistence, AuthPersistence>();
-        services.AddScoped<IShopRepository, ShopRepository>();
         services.Configure<NovaLive.Application.UseCases.Shops.KycUrlOptions>(
             configuration.GetSection(NovaLive.Application.UseCases.Shops.KycUrlOptions.SectionName));
         services.AddScoped<IAfterCommitActions, AfterCommitActions>();
@@ -56,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
         // Repositories
+        services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<IUserRepository, NovaLive.Infrastructure.Persistence.Repositories.UserRepository>();
         services.AddScoped<IPermissionRepository, NovaLive.Infrastructure.Persistence.Repositories.PermissionRepository>();
         services.AddScoped<ISpuRepository, NovaLive.Infrastructure.Persistence.Repositories.SpuRepository>();

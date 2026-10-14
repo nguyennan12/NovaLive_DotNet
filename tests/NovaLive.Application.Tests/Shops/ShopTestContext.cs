@@ -16,31 +16,69 @@ namespace NovaLive.Application.Tests.Shops;
 internal sealed class ShopTestContext : DbContext
 {
     private readonly SqliteConnection connection = new("Data Source=:memory:");
-    public Mock<IAppDbContext> App { get; } = new();
+    public Mock<IUnitOfWork> UnitOfWork { get; } = new();
+    public Mock<IUserRepository> Users { get; } = new();
+    public Mock<ISpuRepository> Products { get; } = new();
     public Mock<ICurrentUser> User { get; } = new();
-    public Mock<IShopRepository> Concurrency { get; } = new();
-    public ShopAccess Access => new(App.Object, User.Object, Concurrency.Object);
-    public ShopAddressDefaults Defaults => new(App.Object);
+    public Mock<IShopRepository> Repository { get; } = new();
+    public ShopAccess Access => new(Repository.Object, User.Object);
+    public ShopAddressDefaults Defaults => new(UnitOfWork.Object);
     public Guid UserId { get; } = Guid.NewGuid();
 
     public ShopTestContext()
     {
         connection.Open();
         Database.EnsureCreated();
-        App.SetupGet(x => x.Users).Returns(Set<User>());
-        App.SetupGet(x => x.Shops).Returns(Set<Shop>());
-        App.SetupGet(x => x.ShopVerifications).Returns(Set<ShopVerification>());
-        App.SetupGet(x => x.ShopFollowers).Returns(Set<ShopFollower>());
-        App.SetupGet(x => x.ShopAddresses).Returns(Set<ShopAddress>());
-        App.SetupGet(x => x.Spus).Returns(Set<Spu>());
-        App.SetupGet(x => x.OutboxMessages).Returns(Set<OutboxMessage>());
-        App.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        UnitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
+        Users.Setup(x => x.GetTrackedByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<User>().SingleOrDefaultAsync(u => u.Id == id, ct));
+        Products.Setup(x => x.CountActiveByShopAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<Spu>().CountAsync(p => p.ShopId == id && p.Status == ProductStatus.Active && p.DeletedAt == null, ct));
+        Repository.Setup(x => x.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<Shop>().SingleOrDefaultAsync(s => s.OwnerId == id && s.DeletedAt == null, ct));
+        Repository.Setup(x => x.GetActiveByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<Shop>().AsNoTracking().SingleOrDefaultAsync(s => s.Id == id && s.Status == ShopStatus.Active && s.DeletedAt == null, ct));
+        Repository.Setup(x => x.ExistsByOwnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<Shop>().IgnoreQueryFilters().AnyAsync(s => s.OwnerId == id, ct));
+        Repository.Setup(x => x.ExistsBySlugAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string slug, CancellationToken ct) => Set<Shop>().IgnoreQueryFilters().AnyAsync(s => s.Slug == slug, ct));
+        Repository.Setup(x => x.AddAsync(It.IsAny<Shop>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Shop shop, CancellationToken ct) => { await Set<Shop>().AddAsync(shop, ct); });
+        Repository.Setup(x => x.AddVerificationAsync(It.IsAny<ShopVerification>(), It.IsAny<CancellationToken>()))
+            .Returns(async (ShopVerification verification, CancellationToken ct) => { await Set<ShopVerification>().AddAsync(verification, ct); });
+        Repository.Setup(x => x.AddRegistrationOutboxAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(async (OutboxMessage message, CancellationToken ct) => { await Set<OutboxMessage>().AddAsync(message, ct); });
+        Repository.Setup(x => x.GetLatestVerificationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopVerification>().AsNoTracking().Where(v => v.ShopId == id)
+                .OrderByDescending(v => v.SubmittedAt).ThenByDescending(v => v.Id).FirstOrDefaultAsync(ct));
+        Repository.Setup(x => x.GetAddressesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopAddress>().Where(a => a.ShopId == id).ToListAsync(ct));
+        Repository.Setup(x => x.GetAddressesForDeletionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopAddress>().Where(a => a.ShopId == id)
+                .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).ToListAsync(ct));
+        Repository.Setup(x => x.GetSellerAddressesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopAddress>().AsNoTracking().Where(a => a.ShopId == id)
+                .OrderByDescending(a => a.IsPrimary).ThenBy(a => a.CreatedAt).ThenBy(a => a.Id).ToListAsync(ct));
+        Repository.Setup(x => x.GetPublicAddressesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopAddress>().AsNoTracking().Where(a => a.ShopId == id)
+                .OrderByDescending(a => a.IsPrimary).ThenBy(a => a.Id).ToListAsync(ct));
+        Repository.Setup(x => x.AddAddressAsync(It.IsAny<ShopAddress>(), It.IsAny<CancellationToken>()))
+            .Returns(async (ShopAddress address, CancellationToken ct) => { await Set<ShopAddress>().AddAsync(address, ct); });
+        Repository.Setup(x => x.DeleteAddress(It.IsAny<ShopAddress>())).Callback((ShopAddress address) => Set<ShopAddress>().Remove(address));
+        Repository.Setup(x => x.CountFollowersAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopFollower>().CountAsync(f => f.ShopId == id, ct));
+        Repository.Setup(x => x.IsFollowingAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, Guid? userId, CancellationToken ct) => Set<ShopFollower>().AnyAsync(f => f.ShopId == id && f.UserId == userId, ct));
+        Repository.Setup(x => x.AddFollowerAsync(It.IsAny<ShopFollower>(), It.IsAny<CancellationToken>()))
+            .Returns(async (ShopFollower follower, CancellationToken ct) => { await Set<ShopFollower>().AddAsync(follower, ct); });
+        Repository.Setup(x => x.RemoveFollowerAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, Guid userId, CancellationToken ct) => Set<ShopFollower>().Where(f => f.ShopId == id && f.UserId == userId).ExecuteDeleteAsync(ct));
         User.SetupGet(x => x.UserId).Returns(UserId);
         User.SetupGet(x => x.IsAuthenticated).Returns(true);
-        Concurrency.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>()))
+        Repository.Setup(x => x.SaveRegistrationAsync(It.IsAny<CancellationToken>()))
             .Returns(async (CancellationToken ct) => { await SaveChangesAsync(ct); return (Error?)null; });
-        Concurrency.Setup(x => x.SaveFollowAsync(It.IsAny<CancellationToken>()))
+        Repository.Setup(x => x.SaveFollowAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
 
     }

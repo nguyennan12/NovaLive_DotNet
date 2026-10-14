@@ -1,13 +1,11 @@
 using NovaLive.Application.Abstractions.Persistence.Repositories;
-using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
-using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Shops;
 
 namespace NovaLive.Application.UseCases.Shops;
 
-public sealed class ShopAccess(IAppDbContext db, ICurrentUser currentUser, IShopRepository concurrency)
+public sealed class ShopAccess(IShopRepository shops, ICurrentUser currentUser)
 {
     public async Task<Result<Shop>> GetSellerOwnedAsync(bool forMutation, CancellationToken ct)
     {
@@ -22,9 +20,9 @@ public sealed class ShopAccess(IAppDbContext db, ICurrentUser currentUser, IShop
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId is not { } userId || userId == Guid.Empty)
             return ShopErrors.Unauthorized;
-        if (forMutation) await concurrency.LockOwnerAsync(userId, ct);
+        if (forMutation) await shops.LockOwnerAsync(userId, ct);
         // Ownership comes from the database, including Pending shops whose tokens have no shop_id.
-        var shop = await db.Shops.SingleOrDefaultAsync(s => s.OwnerId == userId && s.DeletedAt == null, ct);
+        var shop = await shops.GetByOwnerIdAsync(userId, ct);
         if (shop is null) return ShopErrors.NotFound;
         if (forMutation && !shop.CanManage) return ShopErrors.CannotManage;
         return shop;

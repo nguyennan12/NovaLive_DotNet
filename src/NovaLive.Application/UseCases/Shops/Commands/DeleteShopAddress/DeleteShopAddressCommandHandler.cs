@@ -1,26 +1,25 @@
-using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.DeleteShopAddress;
 
-public sealed class DeleteShopAddressCommandHandler(IAppDbContext db, ShopAccess access) : ICommandHandler<DeleteShopAddressCommand>
+public sealed class DeleteShopAddressCommandHandler(IShopRepository shops, ShopAccess access, IUnitOfWork unitOfWork) : ICommandHandler<DeleteShopAddressCommand>
 {
     public async Task<Result> Handle(DeleteShopAddressCommand command, CancellationToken ct)
     {
         var owned = await access.GetSellerOwnedAsync(true, ct);
         if (owned.IsFailure) return owned.Error;
-        var addresses = await db.ShopAddresses.Where(a => a.ShopId == owned.Value!.Id)
-            .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).ToListAsync(ct);
+        var addresses = await shops.GetAddressesForDeletionAsync(owned.Value!.Id, ct);
         var address = addresses.SingleOrDefault(a => a.Id == command.Id);
         if (address is null) return ShopErrors.AddressNotFound;
         if (addresses.Count == 1 && address.IsPrimary) return ShopErrors.LastPrimary;
         var wasPrimary = address.IsPrimary;
         var wasReturn = address.IsReturn;
-        db.ShopAddresses.Remove(address);
+        shops.DeleteAddress(address);
         // Delete first to free the unique default indexes, still in the same transaction.
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         var remaining = addresses.Where(a => a.Id != address.Id).ToList();
         if (wasPrimary && remaining.Count > 0) remaining[0].SetPrimary(true);
         // Default returns fall back to the primary warehouse when the selected return warehouse is deleted.

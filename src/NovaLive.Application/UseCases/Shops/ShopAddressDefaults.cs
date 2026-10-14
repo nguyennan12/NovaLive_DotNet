@@ -2,7 +2,7 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Domain.Shops;
 namespace NovaLive.Application.UseCases.Shops;
 
-public sealed class ShopAddressDefaults(IAppDbContext db)
+public sealed class ShopAddressDefaults(IUnitOfWork unitOfWork)
 {
     public async Task SelectAsync(List<ShopAddress> addresses, ShopAddress selected,
         bool primary, bool returns, CancellationToken ct)
@@ -18,7 +18,7 @@ public sealed class ShopAddressDefaults(IAppDbContext db)
         }
         // Flush removals before promotions; unique partial indexes are checked per SQL statement.
         // The owner lock and ITransactionalCommand protect both saves as one atomic operation.
-        await db.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
         if (primary) selected.SetPrimary(true);
         returnTarget.SetReturn(true);
     }
