@@ -75,4 +75,22 @@ public sealed class SpuRepository(IAppDbContext dbContext) : ISpuRepository
     {
         dbContext.Spus.Remove(spu);
     }
+
+    public async Task<bool> ExistsByCategoryIdAsync(Guid categoryId, CancellationToken ct = default)
+    {
+        return await dbContext.Spus
+            .AsNoTracking()
+            .AnyAsync(s => s.CategoryId == categoryId && s.DeletedAt == null, ct);
+    }
+
+    public async Task<Dictionary<Guid, int>> GetProductCountsByCategoryIdsAsync(IEnumerable<Guid> categoryIds, CancellationToken ct = default)
+    {
+        var idList = categoryIds.ToList();
+        return await dbContext.Spus
+            .AsNoTracking()
+            .Where(s => idList.Contains(s.CategoryId) && s.DeletedAt == null)
+            .GroupBy(s => s.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Count, ct);
+    }
 }
