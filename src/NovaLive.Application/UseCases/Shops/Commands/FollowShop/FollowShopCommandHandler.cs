@@ -1,3 +1,4 @@
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
@@ -7,7 +8,7 @@ using NovaLive.Domain.Shops;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.FollowShop;
 
-public sealed class FollowShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopConcurrencyService concurrency) : ICommandHandler<FollowShopCommand>
+public sealed class FollowShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopRepository concurrency) : ICommandHandler<FollowShopCommand>
 {
     public async Task<Result> Handle(FollowShopCommand command, CancellationToken ct)
     {

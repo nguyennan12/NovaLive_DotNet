@@ -1,3 +1,4 @@
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
@@ -12,7 +13,7 @@ using System.Text.Json;
 
 namespace NovaLive.Application.UseCases.Shops.Commands.RegisterShop;
 
-public sealed class RegisterShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopConcurrencyService concurrency) : ICommandHandler<RegisterShopCommand, ShopResponse>
+public sealed class RegisterShopCommandHandler(IAppDbContext db, ICurrentUser currentUser, IShopRepository concurrency) : ICommandHandler<RegisterShopCommand, ShopResponse>
 {
     public async Task<Result<ShopResponse>> Handle(RegisterShopCommand command, CancellationToken ct)
     {

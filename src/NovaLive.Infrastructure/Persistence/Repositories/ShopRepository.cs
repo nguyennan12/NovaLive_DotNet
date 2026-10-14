@@ -1,3 +1,4 @@
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NovaLive.Application.Abstractions.Persistence;
@@ -5,18 +6,18 @@ using NovaLive.Application.UseCases.Shops;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Shops;
 
-namespace NovaLive.Infrastructure.Persistence;
+namespace NovaLive.Infrastructure.Persistence.Repositories;
 
-public sealed class PostgresShopConcurrencyService(AppDbContext db) : IShopConcurrencyService
+public sealed class ShopRepository(AppDbContext db) : IShopRepository
 {
-    public async Task LockOwnerAsync(Guid ownerId, CancellationToken ct)
+    public async Task LockOwnerAsync(Guid ownerId, CancellationToken ct = default)
     {
         if (db.Database.IsNpgsql())
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"SELECT pg_advisory_xact_lock(hashtextextended({ownerId.ToString()}, 811));", ct);
     }
 
-    public async Task<Error?> SaveRegistrationAsync(CancellationToken ct)
+    public async Task<Error?> SaveRegistrationAsync(CancellationToken ct = default)
     {
         var ownerId = db.ChangeTracker.Entries<Shop>()
             .SingleOrDefault(entry => entry.State == EntityState.Added)?.Entity.OwnerId;
@@ -39,7 +40,7 @@ public sealed class PostgresShopConcurrencyService(AppDbContext db) : IShopConcu
         }
     }
 
-    public async Task SaveFollowAsync(CancellationToken ct)
+    public async Task SaveFollowAsync(CancellationToken ct = default)
     {
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException

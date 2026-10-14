@@ -1,3 +1,5 @@
+using NovaLive.Infrastructure.Persistence.Repositories;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -27,8 +29,8 @@ public sealed class PostgresShopConcurrencyTests
         var barrier = new SaveBarrier();
         async Task<Result<ShopResponse>> Register()
         {
-            await using var db = fixture.Context(); var real = new PostgresShopConcurrencyService(db);
-            var concurrency = new Mock<IShopConcurrencyService>();
+            await using var db = fixture.Context(); var real = new ShopRepository(db);
+            var concurrency = new Mock<IShopRepository>();
             concurrency.Setup(p => p.SaveRegistrationAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); return await real.SaveRegistrationAsync(ct); });
             var handler = new RegisterShopCommandHandler(db, Current(user.Id), concurrency.Object);
@@ -53,8 +55,8 @@ public sealed class PostgresShopConcurrencyTests
         var barrier = new SaveBarrier(); var userId = Guid.NewGuid();
         async Task<Result> Follow()
         {
-            await using var db = fixture.Context(); var real = new PostgresShopConcurrencyService(db);
-            var concurrency = new Mock<IShopConcurrencyService>();
+            await using var db = fixture.Context(); var real = new ShopRepository(db);
+            var concurrency = new Mock<IShopRepository>();
             concurrency.Setup(p => p.SaveFollowAsync(It.IsAny<CancellationToken>())).Returns(async (CancellationToken ct) =>
                 { await barrier.Wait(); await real.SaveFollowAsync(ct); });
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() =>
@@ -72,7 +74,7 @@ public sealed class PostgresShopConcurrencyTests
         async Task<Result<ShopAddressResponse>> Add()
         {
             await using var db = fixture.Context();
-            var access = new ShopAccess(db, Current(userId), new PostgresShopConcurrencyService(db));
+            var access = new ShopAccess(db, Current(userId), new ShopRepository(db));
             var handler = new AddShopAddressCommandHandler(db, access, new ShopAddressDefaults(db));
             return await new TransactionManager(db, new AfterCommitActions()).ExecuteAsync(() => handler.Handle(new(new(
                 "Warehouse", "Contact", "0912345678", "P", "D", "W", "Street", false, false, 1, 2, "3")), default), false, default);

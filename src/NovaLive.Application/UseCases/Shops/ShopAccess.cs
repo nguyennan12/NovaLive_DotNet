@@ -1,3 +1,4 @@
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
@@ -6,7 +7,7 @@ using NovaLive.Domain.Shops;
 
 namespace NovaLive.Application.UseCases.Shops;
 
-public sealed class ShopAccess(IAppDbContext db, ICurrentUser currentUser, IShopConcurrencyService concurrency)
+public sealed class ShopAccess(IAppDbContext db, ICurrentUser currentUser, IShopRepository concurrency)
 {
     public async Task<Result<Shop>> GetSellerOwnedAsync(bool forMutation, CancellationToken ct)
     {

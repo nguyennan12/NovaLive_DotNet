@@ -1,3 +1,4 @@
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -17,7 +18,7 @@ internal sealed class ShopTestContext : DbContext
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     public Mock<IAppDbContext> App { get; } = new();
     public Mock<ICurrentUser> User { get; } = new();
-    public Mock<IShopConcurrencyService> Concurrency { get; } = new();
+    public Mock<IShopRepository> Concurrency { get; } = new();
     public ShopAccess Access => new(App.Object, User.Object, Concurrency.Object);
     public ShopAddressDefaults Defaults => new(App.Object);
     public Guid UserId { get; } = Guid.NewGuid();
