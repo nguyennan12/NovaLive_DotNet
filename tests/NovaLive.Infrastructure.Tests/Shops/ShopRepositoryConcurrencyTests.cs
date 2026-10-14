@@ -1,5 +1,4 @@
 using NovaLive.Infrastructure.Persistence.Repositories;
-using NovaLive.Application.Abstractions.Persistence.Repositories;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +10,7 @@ using NovaLive.Domain.Shops;
 using NovaLive.Infrastructure.Persistence;
 namespace NovaLive.Infrastructure.Tests.Shops;
 
-public sealed class ShopConcurrencyServiceTests
+public sealed class ShopRepositoryConcurrencyTests
 {
     [Fact]
     public void MigrationSnapshot_MatchesCurrentPostgresModel_AndOnlyAddsShopIndexes()
