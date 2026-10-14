@@ -5,11 +5,14 @@ public record RegisterShopRequest(
     string Description,
     string Phone,
     string Email,
-    string KycFrontUrl,
-    string KycBackUrl,
+    string IdCardFront,
+    string IdCardBack,
     string BankAccount,
     string BankName,
-    string BankHolder);
+    string? Slug = null,
+    string? TaxCode = null,
+    string? BankBranch = null,
+    string? BusinessLicense = null);
 
 public record UpdateShopProfileRequest(
     string ShopName,
@@ -28,7 +31,10 @@ public record CreateShopAddressRequest(
     string WardName,
     string DetailAddress,
     bool IsPrimary,
-    bool IsReturn);
+    bool IsReturn,
+    int? ProvinceId = null,
+    int? DistrictId = null,
+    string? WardCode = null);
 
 public record ApproveShopRequest(
     string? Note);

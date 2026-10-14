@@ -2,11 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Domain.Products;
+using NovaLive.Domain.Common;
 
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class SpuRepository(IAppDbContext dbContext) : ISpuRepository
 {
+    public Task<int> CountActiveByShopAsync(Guid shopId, CancellationToken ct = default) =>
+        dbContext.Spus.CountAsync(p => p.ShopId == shopId
+            && p.Status == ProductStatus.Active && p.DeletedAt == null, ct);
+
     public async Task<Spu?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await dbContext.Spus
