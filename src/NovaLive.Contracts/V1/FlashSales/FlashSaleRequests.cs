@@ -2,15 +2,21 @@ namespace NovaLive.Contracts.V1.FlashSales;
 
 public record CreateFlashSaleCampaignRequest(
     string Name,
-    DateTime StartAt,
-    DateTime EndAt,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
     string? BannerUrl);
+
+public record RegisterFlashSaleSkuRequest(
+    Guid SkuId,
+    decimal FlashPrice,
+    int Quantity,
+    int PerUserLimit);
 
 public record RegisterFlashSaleItemRequest(
     Guid SkuId,
     decimal FlashPrice,
     int Quantity,
-    int PerUserLimit);
+    int PerUserLimit) : RegisterFlashSaleSkuRequest(SkuId, FlashPrice, Quantity, PerUserLimit);
 
 public record RejectFlashSaleItemRequest(
     string Reason);

@@ -350,6 +350,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
                     b.Property<int>("ReservedQty")
                         .HasColumnType("integer")
                         .HasColumnName("reserved_qty");

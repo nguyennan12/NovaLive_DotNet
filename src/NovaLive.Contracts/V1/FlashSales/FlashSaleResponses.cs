@@ -3,8 +3,8 @@ namespace NovaLive.Contracts.V1.FlashSales;
 public record FlashSaleCampaignResponse(
     Guid Id,
     string Name,
-    DateTime StartAt,
-    DateTime EndAt,
+    DateTimeOffset StartAt,
+    DateTimeOffset EndAt,
     string? BannerUrl,
     string Status);
 
@@ -22,4 +22,5 @@ public record FlashSaleItemResponse(
     int SoldQty,
     int ReservedQty,
     int PerUserLimit,
-    string Status);
+    string Status,
+    string? RejectionReason = null);

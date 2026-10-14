@@ -27,6 +27,7 @@ public sealed class FlashSaleConfiguration :
 
         builder.Property(item => item.FlashPrice).HasPrecision(18, 2);
         builder.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(item => item.RejectionReason).HasMaxLength(500);
 
         builder.HasIndex(item => new { item.CampaignId, item.SkuId }).IsUnique();
         builder.HasIndex(item => new { item.CampaignId, item.Status });
