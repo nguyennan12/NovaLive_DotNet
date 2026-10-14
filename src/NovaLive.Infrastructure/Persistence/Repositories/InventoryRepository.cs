@@ -130,6 +130,9 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
     public Task<Result<InventoryStockResult>> ReserveStockAsync(
         Guid skuId, Guid shopId, int qty, string refType, Guid refId, Guid operationId, Guid? userId, CancellationToken ct = default)
     {
+        if (qty > 0 && dbContext is DbContext db && db.Database.IsNpgsql())
+            return PostgresInventoryReservation.ReserveAsync(db, skuId, shopId, qty, refType, refId, operationId, userId, ct);
+
         return qty <= 0
             ? Task.FromResult<Result<InventoryStockResult>>(InventoryErrors.InvalidQtyChange)
             : ExecuteStockTransitionAsync(
