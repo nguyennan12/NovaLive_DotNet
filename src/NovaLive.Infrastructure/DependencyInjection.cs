@@ -1,5 +1,6 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NovaLive.Application.Abstractions.Persistence;
@@ -16,6 +17,8 @@ using NovaLive.Infrastructure.System;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
+using Minio;
+using NovaLive.Infrastructure.Storage;
 using StackExchange.Redis;
 
 namespace NovaLive.Infrastructure;
@@ -37,6 +40,7 @@ public static class DependencyInjection
         {
             options.UseNpgsql(connectionString);
             options.UseSnakeCaseNamingConvention();
+            options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
 
             options.AddInterceptors(
                 serviceProvider.GetRequiredService<AuditableEntityInterceptor>(),
@@ -122,6 +126,50 @@ public static class DependencyInjection
                 client.DefaultRequestHeaders.Add("ShopId", options.ShopId.ToString());
             }
         });
+
+        // MinIO File Storage
+        services.Configure<MinioOptions>(options =>
+        {
+            var section = configuration.GetSection(MinioOptions.SectionName);
+            section.Bind(options);
+
+            var envEndpoint = configuration["MINIO_ENDPOINT"];
+            if (!string.IsNullOrWhiteSpace(envEndpoint))
+            {
+                options.Endpoint = envEndpoint;
+            }
+
+            var rootUser = configuration["MINIO_ROOT_USER"];
+            if (!string.IsNullOrWhiteSpace(rootUser) && options.AccessKey == "minio_admin")
+            {
+                options.AccessKey = rootUser;
+            }
+
+            var rootPass = configuration["MINIO_ROOT_PASSWORD"];
+            if (!string.IsNullOrWhiteSpace(rootPass) && options.SecretKey == "SuperPass@123")
+            {
+                options.SecretKey = rootPass;
+            }
+        });
+
+        services.AddSingleton<IMinioClient>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MinioOptions>>().Value;
+            var client = new MinioClient()
+                .WithEndpoint(options.Endpoint)
+                .WithCredentials(options.AccessKey, options.SecretKey);
+
+            if (options.UseSsl)
+            {
+                client = client.WithSSL();
+            }
+
+            return client.Build();
+        });
+
+        services.AddSingleton<MinioFileStorageService>();
+        services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
+        services.AddHostedService<MinioBucketInitializer>();
 
         return services;
     }

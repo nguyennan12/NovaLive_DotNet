@@ -7,7 +7,8 @@ public record CategoryResponse(
     Guid? ParentId,
     string? IconUrl,
     int DisplayOrder,
-    bool IsVisible);
+    bool IsVisible,
+    int ProductCount = 0);
 
 public record CategoryNodeDto(
     Guid Id,
@@ -16,4 +17,5 @@ public record CategoryNodeDto(
     Guid? ParentId,
     string? IconUrl,
     int DisplayOrder,
+    int ProductCount,
     List<CategoryNodeDto> Children);

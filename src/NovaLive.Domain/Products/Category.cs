@@ -38,4 +38,20 @@ public sealed class Category : Entity
     public bool IsVisible { get; private set; } = true;
 
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void Update(
+        string name,
+        string slug,
+        Guid? parentId,
+        string? iconUrl,
+        int displayOrder,
+        bool isVisible)
+    {
+        Name = name;
+        Slug = slug;
+        ParentId = parentId;
+        IconUrl = iconUrl;
+        DisplayOrder = displayOrder;
+        IsVisible = isVisible;
+    }
 }

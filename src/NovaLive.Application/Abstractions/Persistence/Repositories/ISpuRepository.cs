@@ -19,4 +19,7 @@ public interface ISpuRepository
     Task AddAsync(Spu spu, CancellationToken ct = default);
     void Update(Spu spu);
     void Delete(Spu spu);
+
+    Task<bool> ExistsByCategoryIdAsync(Guid categoryId, CancellationToken ct = default);
+    Task<Dictionary<Guid, int>> GetProductCountsByCategoryIdsAsync(IEnumerable<Guid> categoryIds, CancellationToken ct = default);
 }
