@@ -4,6 +4,21 @@ namespace NovaLive.Domain.Shops;
 
 public sealed class ShopVerification : Entity
 {
+    private ShopVerification() { }
+
+    public ShopVerification(Guid shopId, Guid submittedBy, string idCardFront, string idCardBack,
+        string? businessLicense, string bankAccount, string bankName, string? bankBranch)
+    {
+        ShopId = shopId;
+        SubmittedBy = submittedBy;
+        IdCardFront = idCardFront;
+        IdCardBack = idCardBack;
+        BusinessLicense = businessLicense;
+        BankAccount = bankAccount;
+        BankName = bankName;
+        BankBranch = bankBranch;
+    }
+
     public Guid ShopId { get; private set; }
 
     public Guid SubmittedBy { get; private set; }

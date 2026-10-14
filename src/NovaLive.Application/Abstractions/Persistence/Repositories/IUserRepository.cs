@@ -4,5 +4,6 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
 public interface IUserRepository
 {
+    Task<User?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

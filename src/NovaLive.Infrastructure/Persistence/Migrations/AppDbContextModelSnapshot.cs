@@ -2271,6 +2271,16 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasIndex("ShopId")
                         .HasDatabaseName("ix_shop_addresses_shop_id");
 
+                    b.HasIndex(new[] { "ShopId" }, "ix_shop_addresses_primary")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shop_addresses_primary")
+                        .HasFilter("is_primary = TRUE");
+
+                    b.HasIndex(new[] { "ShopId" }, "ix_shop_addresses_return")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shop_addresses_return")
+                        .HasFilter("is_return = TRUE");
+
                     b.ToTable("shop_addresses", "public");
                 });
 

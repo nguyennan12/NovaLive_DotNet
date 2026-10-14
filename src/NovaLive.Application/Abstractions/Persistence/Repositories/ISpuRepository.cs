@@ -4,6 +4,7 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
 public interface ISpuRepository
 {
+    Task<int> CountActiveByShopAsync(Guid shopId, CancellationToken ct = default);
     Task<Spu?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Spu>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Spu?> GetByIdAndShopAsync(Guid id, Guid shopId, CancellationToken ct = default);
@@ -18,4 +19,7 @@ public interface ISpuRepository
     Task AddAsync(Spu spu, CancellationToken ct = default);
     void Update(Spu spu);
     void Delete(Spu spu);
+
+    Task<bool> ExistsByCategoryIdAsync(Guid categoryId, CancellationToken ct = default);
+    Task<Dictionary<Guid, int>> GetProductCountsByCategoryIdsAsync(IEnumerable<Guid> categoryIds, CancellationToken ct = default);
 }

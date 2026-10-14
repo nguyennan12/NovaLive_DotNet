@@ -4,6 +4,9 @@ namespace NovaLive.Application.UseCases.Inventory;
 
 public static class InventoryErrors
 {
+    public static readonly Error PendingChanges = Error.Conflict(
+        "Inventory.PendingChanges", "Cần lưu thay đổi tồn kho hiện tại trong transaction trước khi giữ chỗ.");
+
     public static readonly Error NotFound = Error.NotFound(
         "Inventory.NotFound",
         "Không tìm thấy thông tin tồn kho của sản phẩm.");

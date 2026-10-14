@@ -87,6 +87,11 @@ services:
       Ghn__ApiToken: "${GHN_API_TOKEN}"
       Ghn__ShopId: "${GHN_SHOP_ID}"
       Ghn__WebhookSecret: "${GHN_WEBHOOK_SECRET}"
+      Minio__Endpoint: "minio:9000"
+      Minio__AccessKey: "${MINIO_ROOT_USER}"
+      Minio__SecretKey: "${MINIO_ROOT_PASSWORD}"
+      Minio__UseSsl: "false"
+      Minio__CdnBaseUrl: "https://cdn.novalive.vn"
     labels:
       project: "novalive-ecommerce"
     volumes:
