@@ -10,6 +10,12 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class ShopRepository(AppDbContext db) : IShopRepository
 {
+    public Task<List<Shop>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        return db.Shops.AsNoTracking().Where(s => idList.Contains(s.Id) && s.DeletedAt == null).ToListAsync(ct);
+    }
+
     public Task<Shop?> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default) =>
         db.Shops.SingleOrDefaultAsync(s => s.OwnerId == ownerId && s.DeletedAt == null, ct);
 
