@@ -86,4 +86,35 @@ public class GetCategoriesTreeQueryHandlerTests
         secondRoot.ProductCount.Should().Be(2);
         secondRoot.Children.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task Handle_WhenParentIsInvisible_ShouldNotPromoteChildToRootInPublicTree()
+    {
+        // Arrange: Parent is invisible (so omitted by repository when IncludeInvisible = false),
+        // but child is visible with ParentId set.
+        var invisibleParentId = Guid.NewGuid();
+        var visibleChild = new Category(Guid.NewGuid(), "Phones", "phones", invisibleParentId, null, 1, true);
+        var visibleRoot = new Category(Guid.NewGuid(), "Fashion", "fashion", null, null, 1, true);
+
+        var categories = new List<Category> { visibleChild, visibleRoot };
+
+        _categoryRepositoryMock
+            .Setup(r => r.GetAllAsync(false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(categories);
+
+        _spuRepositoryMock
+            .Setup(r => r.GetProductCountsByCategoryIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
+
+        var query = new GetCategoriesTreeQuery(IncludeInvisible: false);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert: visibleChild should NOT be promoted to root.
+        result.IsSuccess.Should().BeTrue();
+        var tree = result.Value;
+        tree.Should().HaveCount(1);
+        tree![0].Id.Should().Be(visibleRoot.Id);
+    }
 }

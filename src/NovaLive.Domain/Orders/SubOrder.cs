@@ -95,5 +95,15 @@ public sealed class SubOrder : AuditableEntity
         // Keep Confirmed: T35 requires this status to create a shipment.
         return Result.Success();
     }
+
+    public void ConfirmPayment(DateTimeOffset now)
+    {
+        if (Status == SubOrderStatus.PendingPayment)
+        {
+            Status = SubOrderStatus.Confirmed;
+            ConfirmedAt = now;
+            UpdatedAt = now;
+        }
+    }
 }
 

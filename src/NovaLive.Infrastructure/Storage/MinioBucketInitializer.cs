@@ -4,11 +4,19 @@ using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Infrastructure.Storage;
 
+/// <summary>
+/// Hosted Service chạy khi ứng dụng khởi động để kiểm tra và tự động khởi tạo các bucket S3 trên MinIO.
+/// </summary>
 public sealed class MinioBucketInitializer : IHostedService
 {
     private readonly MinioFileStorageService _storageService;
     private readonly ILogger<MinioBucketInitializer> _logger;
 
+    /// <summary>
+    /// Khởi tạo MinioBucketInitializer.
+    /// </summary>
+    /// <param name="storageService">Dịch vụ lưu trữ MinioFileStorageService.</param>
+    /// <param name="logger">Logger ghi nhận tiến trình khởi tạo.</param>
     public MinioBucketInitializer(
         MinioFileStorageService storageService,
         ILogger<MinioBucketInitializer> logger)
@@ -17,6 +25,9 @@ public sealed class MinioBucketInitializer : IHostedService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Thực hiện duyệt qua toàn bộ các bucket hệ thống (StorageBuckets.All), tạo mới nếu chưa có và áp dụng policy đọc công khai nếu là bucket public.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
@@ -40,5 +51,8 @@ public sealed class MinioBucketInitializer : IHostedService
         }
     }
 
+    /// <summary>
+    /// Xử lý khi ứng dụng dừng.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
