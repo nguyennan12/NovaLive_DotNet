@@ -16,13 +16,17 @@ public static class DependencyInjection
             // MediatR Pipeline Behaviors registered in execution order:
             configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
             configuration.AddOpenBehavior(typeof(PerformanceBehavior<,>));
-            configuration.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
             configuration.AddOpenBehavior(typeof(ValidationBehavior<,>));
             configuration.AddOpenBehavior(typeof(AuthorizationBehavior<,>));
+            configuration.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
             configuration.AddOpenBehavior(typeof(TransactionBehavior<,>));
         });
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+        services.AddScoped<UseCases.Orders.CheckoutDraftBuilder>();
+        services.AddScoped<UseCases.Orders.OrderDetailsReader>();
+        services.AddScoped<UseCases.Orders.OrderShopAccess>();
+        services.AddScoped<UseCases.Orders.OrderReservationReleaser>();
         services.AddScoped<UseCases.Auth.Common.AuthSessionService>();
         services.AddScoped<UseCases.Auth.Common.OtpFlowService>();
         services.AddOptions<UseCases.Shops.KycUrlOptions>();

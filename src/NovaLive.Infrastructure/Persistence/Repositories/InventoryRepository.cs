@@ -10,6 +10,15 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRepository
 {
+    public Task<List<Inventory>> GetByIdsForUpdateAsync(IEnumerable<Guid> skuIds, CancellationToken ct)
+    {
+        var ids = skuIds.Distinct().Order().ToArray();
+        if (dbContext is DbContext db && db.Database.IsNpgsql())
+            return dbContext.Inventories.FromSqlInterpolated(
+                $"SELECT * FROM public.inventories WHERE sku_id = ANY({ids}) ORDER BY sku_id FOR UPDATE").ToListAsync(ct);
+        return dbContext.Inventories.Where(i => ids.Contains(i.SkuId)).OrderBy(i => i.SkuId).ToListAsync(ct);
+    }
+
     public async Task<Inventory?> GetBySkuIdAndShopAsync(Guid skuId, Guid shopId, CancellationToken ct = default)
     {
         return await dbContext.Inventories

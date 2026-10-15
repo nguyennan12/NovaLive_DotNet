@@ -7,6 +7,20 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class DiscountRepository(IAppDbContext dbContext) : IDiscountRepository
 {
+    public async Task<bool> TryConsumeAsync(Guid discountId, Guid userId, DateTimeOffset now, CancellationToken ct)
+    {
+        // Serializes all consumers of this voucher, including per-user usage checks.
+        if (dbContext is DbContext db && db.Database.IsNpgsql())
+            await dbContext.Discounts.FromSqlInterpolated(
+                $"SELECT * FROM public.discounts WHERE id = {discountId} FOR UPDATE").AsNoTracking().ToListAsync(ct);
+        var voucher = await dbContext.Discounts.AsNoTracking().SingleOrDefaultAsync(d => d.Id == discountId, ct);
+        if (voucher is null || await GetUserUsageCountAsync(discountId, userId, ct) >= voucher.PerUserLimit) return false;
+        return await dbContext.Discounts.Where(d => d.Id == discountId && d.IsActive
+                && d.ValidFrom <= now && d.ValidTo >= now && (d.MaxUses == null || d.UsedCount < d.MaxUses))
+            .ExecuteUpdateAsync(u => u.SetProperty(d => d.UsedCount, d => d.UsedCount + 1), ct) == 1;
+    }
+    public async Task AddUsageAsync(DiscountUsage usage, CancellationToken ct) => await dbContext.DiscountUsages.AddAsync(usage, ct);
+
     public async Task<bool> ExistsCodeAsync(string code, CancellationToken ct = default)
     {
         return await dbContext.Discounts

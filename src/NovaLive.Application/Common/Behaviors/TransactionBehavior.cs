@@ -14,7 +14,7 @@ public sealed class TransactionBehavior<TRequest, TResponse>(IUnitOfWork unitOfW
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        if (request is not IBaseCommand)
+        if (request is not IBaseCommand || request is IManagesTransactionCommand)
         {
             return await next(cancellationToken);
         }

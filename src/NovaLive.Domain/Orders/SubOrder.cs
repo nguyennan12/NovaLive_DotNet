@@ -4,6 +4,18 @@ namespace NovaLive.Domain.Orders;
 
 public sealed class SubOrder : AuditableEntity
 {
+    private SubOrder() { }
+    public static SubOrder Create(Guid parentId, string code, Guid warehouseId,
+        NovaLive.Domain.Pricing.ShopCalculationResult price, bool cod, DateTimeOffset now) => new()
+    {
+        ParentOrderId = parentId, SubOrderCode = code, ShopId = price.ShopId, WarehouseAddressId = warehouseId,
+        ItemAmount = price.ItemsSubtotal, ShippingFee = price.ShippingFee, ShopDiscountAmount = price.ShopDiscountAmount,
+        PlatformDiscountAmount = price.PlatformDiscountAmount, ShippingDiscountAmount = price.ShippingDiscountAmount,
+        SubTotal = price.ShopTotal, Status = cod ? SubOrderStatus.Confirmed : SubOrderStatus.PendingPayment,
+        ConfirmedAt = cod ? now : null, CreatedAt = now, UpdatedAt = now
+        // T32: calculate SellerEarnings using the configured commission policy at settlement.
+    };
+
     public Guid ParentOrderId { get; private set; }
 
     public Guid ShopId { get; private set; }
@@ -60,6 +72,28 @@ public sealed class SubOrder : AuditableEntity
             Status = SubOrderStatus.Delivered;
             DeliveredAt = deliveredAt ?? DateTimeOffset.UtcNow;
         }
+    }
+    public Result Cancel(Guid actor, OrderRole role, string reason, DateTimeOffset now)
+    {
+        if (Status == SubOrderStatus.Cancelled) return Result.Failure(OrderStateErrors.AlreadyCancelled);
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length > 500) return Result.Failure(OrderStateErrors.InvalidReason);
+        if (role == OrderRole.Buyer && Status != SubOrderStatus.PendingPayment)
+            return Result.Failure(OrderStateErrors.CannotCancelConfirmedOrder);
+        if (role is not (OrderRole.Buyer or OrderRole.Seller)
+            || Status is not (SubOrderStatus.PendingPayment or SubOrderStatus.Confirmed or SubOrderStatus.Processing))
+            return Result.Failure(OrderStateErrors.InvalidStatusTransition);
+        Status = SubOrderStatus.Cancelled; CancelReason = reason.Trim(); CancelledBy = actor;
+        CancelledAt = now; UpdatedAt = now;
+        return Result.Success();
+    }
+    public Result AssignWarehouse(Guid warehouseId, DateTimeOffset now)
+    {
+        if (warehouseId == Guid.Empty) return Result.Failure(OrderStateErrors.InvalidWarehouse);
+        if (Status == SubOrderStatus.PendingPayment) return Result.Failure(OrderStateErrors.SubOrderNotPaid);
+        if (Status != SubOrderStatus.Confirmed) return Result.Failure(OrderStateErrors.InvalidStatusTransition);
+        WarehouseAddressId = warehouseId; UpdatedAt = now;
+        // Keep Confirmed: T35 requires this status to create a shipment.
+        return Result.Success();
     }
 }
 
