@@ -68,10 +68,20 @@ public sealed class PaymentsController(
         [FromBody] VietQrWebhookRequest request,
         CancellationToken ct)
     {
+        if (request is null)
+        {
+            return BadRequest(new VietQrWebhookResponse(false, "Dữ liệu webhook không được để trống."));
+        }
+
         var signature = Request.Headers["X-Webhook-Signature"].ToString();
         if (string.IsNullOrWhiteSpace(signature))
         {
             signature = Request.Headers["X-Signature"].ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(signature))
+        {
+            signature = request?.Signature;
         }
 
         string rawBody = string.Empty;

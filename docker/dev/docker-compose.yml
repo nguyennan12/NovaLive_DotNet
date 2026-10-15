@@ -92,6 +92,16 @@ services:
       Minio__SecretKey: "${MINIO_ROOT_PASSWORD}"
       Minio__UseSsl: "false"
       Minio__CdnBaseUrl: "https://cdn.novalive.vn"
+      Momo__PartnerCode: "${MOMO_PARTNER_CODE:-MOMO}"
+      Momo__AccessKey: "${MOMO_ACCESS_KEY:-}"
+      Momo__SecretKey: "${MOMO_SECRET_KEY:-}"
+      VietQr__WebhookSecret: "${VIETQR_WEBHOOK_SECRET:-}"
+      VietQr__AccountNumber: "${VIETQR_ACCOUNT_NUMBER:-0000123456789}"
+      VietQr__BankBin: "${VIETQR_BANK_BIN:-970422}"
+      VietQr__AccountName: "${VIETQR_ACCOUNT_NAME:-CONG TY NOVALIVE}"
+      VietQr__ClientId: "${VIETQR_USERNAME:-${VIETQR_CLIENT_ID:-}}"
+      VietQr__ApiKey: "${VIETQR_PASSWORD:-${VIETQR_API_KEY:-}}"
+      VietQr__BaseUrl: "${VIETQR_API_BASE_URL:-${VIETQR_BASE_URL:-https://api.vietqr.vn}}"
     labels:
       project: "novalive-ecommerce"
     volumes:

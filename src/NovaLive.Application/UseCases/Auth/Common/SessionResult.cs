@@ -6,5 +6,5 @@ namespace NovaLive.Application.UseCases.Auth.Common;
 public sealed record SessionResult(string AccessToken, string RefreshToken, DateTime ExpiresAt, UserSummaryDto User)
 {
     public TimeSpan AccessTokenTtl { get; init; }
-    public AuthResponse Response => new(ExpiresAt, User);
+    public AuthResponse Response => new(ExpiresAt, User, AccessToken);
 }

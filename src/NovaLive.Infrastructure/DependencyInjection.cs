@@ -254,17 +254,17 @@ public static class DependencyInjection
             var accountName = configuration["VIETQR_ACCOUNT_NAME"];
             if (!string.IsNullOrWhiteSpace(accountName)) options.AccountName = accountName;
 
-            var clientId = configuration["VIETQR_CLIENT_ID"];
-            if (!string.IsNullOrWhiteSpace(clientId)) options.ClientId = clientId;
+            var clientId = configuration["VIETQR_CLIENT_ID"] ?? configuration["VIETQR_USERNAME"];
+            if (!string.IsNullOrWhiteSpace(clientId)) options.ClientId = clientId.Trim();
 
-            var apiKey = configuration["VIETQR_API_KEY"];
-            if (!string.IsNullOrWhiteSpace(apiKey)) options.ApiKey = apiKey;
+            var apiKey = configuration["VIETQR_API_KEY"] ?? configuration["VIETQR_PASSWORD"];
+            if (!string.IsNullOrWhiteSpace(apiKey)) options.ApiKey = apiKey.Trim();
 
             var webhookSecret = configuration["VIETQR_WEBHOOK_SECRET"];
-            if (!string.IsNullOrWhiteSpace(webhookSecret)) options.WebhookSecret = webhookSecret;
+            if (!string.IsNullOrWhiteSpace(webhookSecret)) options.WebhookSecret = webhookSecret.Trim();
 
-            var baseUrl = configuration["VIETQR_BASE_URL"];
-            if (!string.IsNullOrWhiteSpace(baseUrl)) options.BaseUrl = baseUrl;
+            var baseUrl = configuration["VIETQR_BASE_URL"] ?? configuration["VIETQR_API_BASE_URL"];
+            if (!string.IsNullOrWhiteSpace(baseUrl)) options.BaseUrl = baseUrl.Trim();
         });
 
         services.AddSingleton<IVietQrPaymentAdapter, VietQrPaymentAdapter>();
