@@ -5,6 +5,34 @@ namespace NovaLive.Domain.Pricing;
 
 public static class VoucherEligibilityEvaluator
 {
+    // Persistence supplies usage counts; eligibility remains a pure, read-only domain decision.
+    public static Result<VoucherSnapshot> EvaluateAvailability(
+        Discount discount, int userUsageCount, Guid? expectedShopId,
+        bool isShippingVoucher, DateTimeOffset currentTime)
+    {
+        if (discount.ShopId != expectedShopId)
+            return expectedShopId.HasValue ? PricingErrors.ShopMismatch : PricingErrors.PlatformScopeMismatch;
+
+        var validType = isShippingVoucher
+            ? discount.DiscountType is DiscountType.FreeShip or DiscountType.PercentShip
+            : discount.DiscountType is DiscountType.FixedCart or DiscountType.PercentCart;
+        if (!validType)
+            return PricingErrors.InvalidVoucherTypeForSlot;
+
+        var snapshot = discount.ToSnapshot();
+        if (!snapshot.HasIntegerAmounts())
+            return PricingErrors.NonIntegerAmount;
+        var (isValid, errorCode, errorMessage) = snapshot.CheckValidity(currentTime);
+        if (!isValid)
+            return PricingErrors.InvalidVoucher(errorCode!, errorMessage);
+        if (discount.MaxUses.HasValue && discount.UsedCount >= discount.MaxUses.Value)
+            return PricingErrors.VoucherUsesExhausted;
+        if (userUsageCount >= discount.PerUserLimit)
+            return PricingErrors.VoucherUserLimitReached;
+
+        return snapshot;
+    }
+
     public static (decimal Discount, VoucherEvaluationResult Evaluation) EvaluateShopVoucher(
         ShopCalculationInput shop,
         DateTimeOffset currentTime)
@@ -102,12 +130,6 @@ public static class VoucherEligibilityEvaluator
         VoucherSnapshot voucher,
         DateTimeOffset currentTime)
     {
-        if (totalShippingFee == 0)
-        {
-            return (0m, new VoucherEvaluationResult(
-                voucher.Code, voucher.DiscountType, null, true, 0m, null, null));
-        }
-
         var (isValid, errorCode, errorMessage) = voucher.CheckValidity(currentTime);
         if (!isValid)
         {
