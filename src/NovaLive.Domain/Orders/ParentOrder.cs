@@ -39,4 +39,12 @@ public sealed class ParentOrder : AuditableEntity
         PaymentStatus = ParentOrderPaymentStatus.Cancelled; UpdatedAt = now;
         return Result.Success();
     }
+
+    public Result MarkPaid(DateTimeOffset now)
+    {
+        if (PaymentStatus == ParentOrderPaymentStatus.Paid) return Result.Success();
+        PaymentStatus = ParentOrderPaymentStatus.Paid;
+        UpdatedAt = now;
+        return Result.Success();
+    }
 }

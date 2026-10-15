@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Domain.Orders;
 using Npgsql;
+
 namespace NovaLive.Infrastructure.Persistence.Repositories;
+
 public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderRepository
 {
     public async Task<bool> TryAddAsync(ParentOrder order, CancellationToken ct)
@@ -17,8 +19,10 @@ public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderReposit
             return false;
         }
     }
+
     public Task<ParentOrder?> FindAsync(Guid id, Guid? buyerId, CancellationToken ct) =>
         db.ParentOrders.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && (buyerId == null || p.BuyerId == buyerId), ct);
+
     public async Task<ParentOrder?> GetForUpdateAsync(Guid id, CancellationToken ct)
     {
         if (db.Database.IsNpgsql())
@@ -26,6 +30,15 @@ public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderReposit
                 $"SELECT * FROM public.parent_orders WHERE id = {id} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
         return await db.ParentOrders.SingleOrDefaultAsync(p => p.Id == id, ct);
     }
+
+    public async Task<ParentOrder?> GetByOrderCodeForUpdateAsync(string orderCode, CancellationToken ct)
+    {
+        if (db.Database.IsNpgsql())
+            return (await db.ParentOrders.FromSqlInterpolated(
+                $"SELECT * FROM public.parent_orders WHERE order_code = {orderCode} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
+        return await db.ParentOrders.SingleOrDefaultAsync(p => p.OrderCode == orderCode, ct);
+    }
+
     public async Task<(IReadOnlyList<ParentOrder> Items, long Total)> GetMinePagedAsync(Guid buyerId,
         NovaLive.Domain.Common.ParentOrderPaymentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct)
     {

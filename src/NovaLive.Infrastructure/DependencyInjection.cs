@@ -19,6 +19,8 @@ using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
 using Minio;
 using NovaLive.Infrastructure.Storage;
+using NovaLive.Infrastructure.Payments.Momo;
+using NovaLive.Infrastructure.Payments.VietQr;
 using StackExchange.Redis;
 
 namespace NovaLive.Infrastructure;
@@ -77,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IShopAddressRepository, ShopAddressRepository>();
         services.AddScoped<ICategoryRepository, NovaLive.Infrastructure.Persistence.Repositories.CategoryRepository>();
         services.AddScoped<IFlashSaleRepository, NovaLive.Infrastructure.Persistence.Repositories.FlashSaleRepository>();
+        services.AddScoped<IShopWalletRepository, ShopWalletRepository>();
 
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
@@ -179,6 +182,65 @@ public static class DependencyInjection
         services.AddSingleton<MinioFileStorageService>();
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
         services.AddHostedService<MinioBucketInitializer>();
+
+        // MoMo Payment Gateway
+        services.Configure<MomoOptions>(options =>
+        {
+            var section = configuration.GetSection(MomoOptions.SectionName);
+            section.Bind(options);
+
+            var partnerCode = configuration["MOMO_PARTNER_CODE"];
+            if (!string.IsNullOrWhiteSpace(partnerCode)) options.PartnerCode = partnerCode;
+
+            var accessKey = configuration["MOMO_ACCESS_KEY"];
+            if (!string.IsNullOrWhiteSpace(accessKey)) options.AccessKey = accessKey;
+
+            var secretKey = configuration["MOMO_SECRET_KEY"];
+            if (!string.IsNullOrWhiteSpace(secretKey)) options.SecretKey = secretKey;
+
+            var endpoint = configuration["MOMO_ENDPOINT"];
+            if (!string.IsNullOrWhiteSpace(endpoint)) options.Endpoint = endpoint;
+
+            var redirectUrl = configuration["MOMO_REDIRECT_URL"];
+            if (!string.IsNullOrWhiteSpace(redirectUrl)) options.RedirectUrl = redirectUrl;
+
+            var ipnUrl = configuration["MOMO_IPN_URL"];
+            if (!string.IsNullOrWhiteSpace(ipnUrl)) options.IpnUrl = ipnUrl;
+        });
+
+        services.AddHttpClient<IMomoPaymentAdapter, MomoPaymentAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IMomoPaymentAdapter>());
+
+        // VietQR Payment Gateway
+        services.Configure<VietQrOptions>(options =>
+        {
+            var section = configuration.GetSection(VietQrOptions.SectionName);
+            section.Bind(options);
+
+            var bankBin = configuration["VIETQR_BANK_BIN"];
+            if (!string.IsNullOrWhiteSpace(bankBin)) options.BankBin = bankBin;
+
+            var accountNumber = configuration["VIETQR_ACCOUNT_NUMBER"];
+            if (!string.IsNullOrWhiteSpace(accountNumber)) options.AccountNumber = accountNumber;
+
+            var accountName = configuration["VIETQR_ACCOUNT_NAME"];
+            if (!string.IsNullOrWhiteSpace(accountName)) options.AccountName = accountName;
+
+            var clientId = configuration["VIETQR_CLIENT_ID"];
+            if (!string.IsNullOrWhiteSpace(clientId)) options.ClientId = clientId;
+
+            var apiKey = configuration["VIETQR_API_KEY"];
+            if (!string.IsNullOrWhiteSpace(apiKey)) options.ApiKey = apiKey;
+
+            var webhookSecret = configuration["VIETQR_WEBHOOK_SECRET"];
+            if (!string.IsNullOrWhiteSpace(webhookSecret)) options.WebhookSecret = webhookSecret;
+
+            var baseUrl = configuration["VIETQR_BASE_URL"];
+            if (!string.IsNullOrWhiteSpace(baseUrl)) options.BaseUrl = baseUrl;
+        });
+
+        services.AddSingleton<IVietQrPaymentAdapter, VietQrPaymentAdapter>();
+        services.AddSingleton<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
 
         return services;
     }
