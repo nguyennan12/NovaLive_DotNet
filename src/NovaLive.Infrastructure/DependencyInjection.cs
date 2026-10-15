@@ -19,6 +19,7 @@ using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
 using Minio;
 using NovaLive.Infrastructure.Storage;
+using NovaLive.Infrastructure.Livestreams.Agora;
 using StackExchange.Redis;
 
 namespace NovaLive.Infrastructure;
@@ -173,6 +174,30 @@ public static class DependencyInjection
         services.AddSingleton<MinioFileStorageService>();
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
         services.AddHostedService<MinioBucketInitializer>();
+
+        services.Configure<AgoraOptions>(options =>
+        {
+            configuration.GetSection(AgoraOptions.SectionName).Bind(options);
+
+            var envAppId = configuration["AGORA_APP_ID"];
+            if (!string.IsNullOrWhiteSpace(envAppId))
+            {
+                options.AppId = envAppId;
+            }
+
+            var envAppCert = configuration["AGORA_APP_CERTIFICATE"];
+            if (!string.IsNullOrWhiteSpace(envAppCert))
+            {
+                options.AppCertificate = envAppCert;
+            }
+
+            var envTtlStr = configuration["AGORA_TOKEN_TTL_SECONDS"];
+            if (int.TryParse(envTtlStr, out var envTtl) && envTtl > 0)
+            {
+                options.TokenTtlSeconds = envTtl;
+            }
+        });
+        services.AddSingleton<IAgoraTokenService, AgoraTokenService>();
 
         return services;
     }
