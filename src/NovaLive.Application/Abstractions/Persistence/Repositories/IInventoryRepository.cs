@@ -16,6 +16,8 @@ public sealed record InventoryStockResult(
 
 public interface IInventoryRepository
 {
+    Task<List<Inventory>> GetByIdsForUpdateAsync(IEnumerable<Guid> skuIds, CancellationToken ct);
+
     // Queries & Read
     Task<Inventory?> GetBySkuIdAndShopAsync(Guid skuId, Guid shopId, CancellationToken ct = default);
     Task<Dictionary<Guid, Inventory>> GetBySkuIdsAsync(IEnumerable<Guid> skuIds, CancellationToken ct = default);

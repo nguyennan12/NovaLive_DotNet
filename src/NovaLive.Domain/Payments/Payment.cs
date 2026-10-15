@@ -2,8 +2,26 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Payments;
 
+/// <summary>
+/// Thực thể thanh toán cho đơn hàng tổng (ParentOrder).
+/// </summary>
 public sealed class Payment : AuditableEntity
 {
+    private Payment() { }
+
+    /// <summary>
+    /// Khởi tạo bản ghi thanh toán cho đơn hàng.
+    /// </summary>
+    public static Payment Create(Guid parentId, PaymentMethod method, decimal amount, DateTimeOffset now) => new()
+    {
+        ParentOrderId = parentId,
+        Method = method,
+        Amount = amount,
+        ExpiredAt = method == PaymentMethod.COD ? null : now.AddMinutes(15),
+        CreatedAt = now,
+        UpdatedAt = now
+    };
+
     public Guid ParentOrderId { get; private set; }
 
     public PaymentMethod Method { get; private set; }
@@ -19,4 +37,63 @@ public sealed class Payment : AuditableEntity
     public DateTimeOffset? PaidAt { get; private set; }
 
     public DateTimeOffset? ExpiredAt { get; private set; }
+
+    /// <summary>
+    /// Chuyển trạng thái thanh toán sang Hết hạn (Expired) nếu đang ở trạng thái Chờ (Pending).
+    /// </summary>
+    public void ExpirePending(DateTimeOffset now)
+    {
+        if (Status != PaymentStatus.Pending) return;
+        Status = PaymentStatus.Expired;
+        ExpiredAt = now;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Đánh dấu thanh toán thành công khi nhận IPN/Webhook từ cổng thanh toán.
+    /// </summary>
+    /// <param name="transactionRef">Mã giao dịch từ cổng thanh toán (MoMo transId, mã giao dịch ngân hàng).</param>
+    /// <param name="paidAt">Thời điểm thanh toán thành công.</param>
+    /// <param name="gatewayResponse">Payload phản hồi lưu log từ cổng thanh toán.</param>
+    public Result MarkSuccess(string transactionRef, DateTimeOffset paidAt, string? gatewayResponse = null)
+    {
+        if (Status == PaymentStatus.Success) return Result.Success();
+        if (Status is PaymentStatus.Expired or PaymentStatus.Failed or PaymentStatus.Refunded)
+        {
+            return Result.Failure(Error.Conflict("Payment.TerminalState",
+                $"Không thể chuyển giao dịch sang trạng thái thành công khi đang ở trạng thái {Status}."));
+        }
+
+        Status = PaymentStatus.Success;
+        TransactionRef = transactionRef;
+        PaidAt = paidAt;
+        if (!string.IsNullOrWhiteSpace(gatewayResponse))
+        {
+            GatewayResponse = gatewayResponse;
+        }
+        UpdatedAt = paidAt;
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Đánh dấu giao dịch thanh toán thất bại.
+    /// </summary>
+    public Result MarkFailed(string? gatewayResponse, DateTimeOffset now)
+    {
+        if (Status == PaymentStatus.Success)
+        {
+            return Result.Failure(Error.Conflict("Payment.AlreadySuccess",
+                "Không thể đánh dấu thất bại khi giao dịch đã thanh toán thành công."));
+        }
+
+        if (Status == PaymentStatus.Failed) return Result.Success();
+
+        Status = PaymentStatus.Failed;
+        if (!string.IsNullOrWhiteSpace(gatewayResponse))
+        {
+            GatewayResponse = gatewayResponse;
+        }
+        UpdatedAt = now;
+        return Result.Success();
+    }
 }

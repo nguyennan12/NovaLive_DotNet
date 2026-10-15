@@ -4,6 +4,9 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
 public interface IDiscountRepository
 {
+    Task<bool> TryConsumeAsync(Guid discountId, Guid userId, DateTimeOffset now, CancellationToken ct);
+    Task AddUsageAsync(DiscountUsage usage, CancellationToken ct);
+
     Task<bool> ExistsCodeAsync(string code, CancellationToken ct = default);
 
     Task<Discount?> GetByIdAsync(Guid id, CancellationToken ct = default);

@@ -7,6 +7,7 @@ public sealed class TransactionManager(AppDbContext db, IAfterCommitActions afte
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> action, bool commitOnFailure, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var committed = false;
         try
         {
             var result = await action();
@@ -18,9 +19,16 @@ public sealed class TransactionManager(AppDbContext db, IAfterCommitActions afte
             }
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            committed = true;
             // Delivery errors are handled by the queued action; a failed email cannot undo registration.
             await afterCommit.RunAsync(cancellationToken);
             return result;
+        }
+        catch when (!committed)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            db.ChangeTracker.Clear();
+            throw;
         }
         finally { afterCommit.Clear(); }
     }

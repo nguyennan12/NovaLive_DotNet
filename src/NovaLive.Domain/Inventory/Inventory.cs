@@ -175,4 +175,18 @@ public sealed class Inventory : Entity
         Version++;
         LastUpdated = DateTimeOffset.UtcNow;
     }
+    public Result TryReserve(int quantity)
+    {
+        if (quantity <= 0 || AvailableQty < quantity)
+            return Result.Failure(InventoryReservationErrors.InsufficientStock(SkuId));
+        Reserve(quantity);
+        return Result.Success();
+    }
+    public Result TryRelease(int quantity)
+    {
+        if (quantity <= 0 || ReservedQty < quantity)
+            return Result.Failure(InventoryReservationErrors.InvalidRelease(SkuId));
+        ReleaseReservation(quantity);
+        return Result.Success();
+    }
 }
