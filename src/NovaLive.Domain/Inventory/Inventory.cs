@@ -43,9 +43,6 @@ public sealed class Inventory : Entity
 
     public DateTimeOffset LastUpdated { get; private set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>
-    /// Điều chỉnh số lượng tồn kho vật lý (Seller kiểm kê hoặc nhập hàng)
-    /// </summary>
     public void AdjustOnHand(int qtyChange)
     {
         if (QtyOnHand + qtyChange < ReservedQty)
@@ -63,9 +60,6 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>
-    /// Giữ chỗ kho khi người mua tạo đơn hàng (Checkout / Flash Sale Reserve)
-    /// </summary>
     public void Reserve(int qty)
     {
         if (qty <= 0)
@@ -83,9 +77,6 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>
-    /// Giải phóng giữ chỗ khi đơn hàng bị hủy hoặc timeout thanh toán
-    /// </summary>
     public void ReleaseReservation(int qty)
     {
         if (qty <= 0)
@@ -103,9 +94,6 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>
-    /// Xác nhận bán và xuất kho khi thanh toán thành công hoặc bàn giao vận chuyển
-    /// </summary>
     public void ConfirmSale(int qty)
     {
         if (qty <= 0)
@@ -129,9 +117,6 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>
-    /// Khách hoàn trả hàng về kho sau khi nhận
-    /// </summary>
     public void Return(int qty)
     {
         if (qty <= 0)
@@ -144,9 +129,6 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>
-    /// Hủy đơn hàng đã xác nhận bán trước khi xuất giao (hoàn lại tồn kho vật lý)
-    /// </summary>
     public void CancelSale(int qty)
     {
         if (qty <= 0)

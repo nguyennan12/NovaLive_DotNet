@@ -14,9 +14,6 @@ using NovaLive.Domain.System;
 
 namespace NovaLive.Application.UseCases.Payments.Commands.HandleVietQrWebhook;
 
-/// <summary>
-/// Command Handler xử lý webhook VietQR: trích xuất orderCode, kiểm tra số tiền khớp, cập nhật thanh toán và cộng ví Shop.
-/// </summary>
 public sealed class HandleVietQrWebhookCommandHandler(
     IVietQrPaymentAdapter vietQrAdapter,
     IPaymentRepository paymentRepository,

@@ -8,9 +8,6 @@ using NovaLive.Contracts.V1.Payments;
 
 namespace NovaLive.Infrastructure.Payments.VietQr;
 
-/// <summary>
-/// Bộ điều hợp thanh toán VietQR: sinh mã QR động chuẩn NAPAS 247 và xử lý đối soát webhook.
-/// </summary>
 public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
 {
     private readonly VietQrOptions _options;
@@ -30,9 +27,6 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
         _logger = logger;
     }
 
-    /// <summary>
-    /// Sinh chuỗi mã VietQR chuẩn NAPAS 247 theo cú pháp nội dung chuyển khoản NOVA {order_code}.
-    /// </summary>
     public VietQrResponse GenerateDynamicQr(string orderCode, decimal amount, string? description = null)
     {
         var cleanOrderCode = orderCode.Trim();
@@ -64,10 +58,6 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
             Description: content);
     }
 
-    /// <summary>
-    /// Trích xuất mã đơn hàng orderCode từ nội dung chuyển khoản ngân hàng.
-    /// Ví dụ: "NOVA ORD-12345" -> "ORD-12345", "VQR12345" -> "12345".
-    /// </summary>
     public string? ExtractOrderCode(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -91,9 +81,6 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
         return null;
     }
 
-    /// <summary>
-    /// Xác thực chữ ký webhook (nếu đối tác gửi kèm chữ ký HMAC hoặc secret token).
-    /// </summary>
     public bool VerifyWebhookSignature(string rawPayload, string? signature)
     {
         if (string.IsNullOrWhiteSpace(_options.WebhookSecret))
@@ -124,9 +111,6 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
         return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
-    /// <summary>
-    /// Tạo PaymentIntent chuẩn IPaymentGatewayAdapter.
-    /// </summary>
     public Task<PaymentIntentResult> CreatePaymentIntentAsync(
         PaymentIntentRequest request,
         CancellationToken cancellationToken = default)

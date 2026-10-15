@@ -1,8 +1,5 @@
 namespace NovaLive.Infrastructure.Payments.Momo;
 
-/// <summary>
-/// Các cấu hình kết nối tới cổng thanh toán MoMo.
-/// </summary>
 public sealed class MomoOptions
 {
     public const string SectionName = "Momo";

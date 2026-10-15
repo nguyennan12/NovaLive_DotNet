@@ -20,9 +20,6 @@ using NovaLive.Domain.Orders;
 
 namespace NovaLive.Api.Controllers.Payments;
 
-/// <summary>
-/// API Controller quản lý cổng thanh toán trực tuyến (MoMo API v2, VietQR NAPAS 247) và tiếp nhận IPN/Webhook.
-/// </summary>
 [Route("api/v1/payments")]
 public sealed class PaymentsController(
     ISender sender,
@@ -35,9 +32,6 @@ public sealed class PaymentsController(
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    /// <summary>
-    /// IPN Webhook từ cổng MoMo sau khi khách hàng hoàn tất giao dịch.
-    /// </summary>
     [HttpPost("webhook/momo")]
     [HttpPost("/payments/webhook/momo")]
     [AllowAnonymous]
@@ -64,10 +58,6 @@ public sealed class PaymentsController(
         return Ok(result.Value);
     }
 
-    /// <summary>
-    /// Webhook tiếp nhận biến động số dư chuyển khoản VietQR NAPAS 247 (SePAY / Casso / VietQR).
-    /// Hỗ trợ cả suffix /vqr (theo URL callback VietQR).
-    /// </summary>
     [HttpPost("webhook/vietqr")]
     [HttpPost("/payments/webhook/vietqr")]
     [HttpPost("/vqr")]
@@ -115,9 +105,6 @@ public sealed class PaymentsController(
         return Ok(result.Value);
     }
 
-    /// <summary>
-    /// Endpoint ping kiểm tra kết nối liveness cho cổng VietQR Webhook (hỗ trợ /vqr).
-    /// </summary>
     [HttpGet("webhook/vietqr")]
     [HttpGet("/payments/webhook/vietqr")]
     [HttpGet("/vqr")]
@@ -132,10 +119,6 @@ public sealed class PaymentsController(
         });
     }
 
-    /// <summary>
-    /// Tạo liên kết thanh toán MoMo (QR Code / Deeplink App) cho đơn hàng của người dùng hiện tại.
-    /// Số tiền được tải trực tiếp từ Payment trên hệ thống để ngăn ngừa giả mạo giá trị thanh toán.
-    /// </summary>
     [HttpPost("momo/create")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<MomoCreatePaymentResponse>), StatusCodes.Status200OK)]
@@ -191,10 +174,6 @@ public sealed class PaymentsController(
         return Ok(ApiResponse<MomoCreatePaymentResponse>.Ok(response, "Khởi tạo thanh toán MoMo thành công."));
     }
 
-    /// <summary>
-    /// Sinh chuỗi mã VietQR chuẩn NAPAS 247 và QuickLink ảnh QR theo cú pháp NOVA {orderCode}.
-    /// Số tiền thanh toán được tải trực tiếp từ Payment trên hệ thống của người dùng hiện tại.
-    /// </summary>
     [HttpGet("vietqr/generate/{orderCode}")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VietQrResponse>), StatusCodes.Status200OK)]

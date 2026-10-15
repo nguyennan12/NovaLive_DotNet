@@ -2,9 +2,6 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Shops;
 
-/// <summary>
-/// Thực thể ghi nhận lịch sử biến động số dư (sổ cái giao dịch) của ví Shop.
-/// </summary>
 public sealed class ShopWalletTransaction : Entity
 {
     public Guid WalletId { get; private set; }

@@ -7,9 +7,6 @@ using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Infrastructure.Storage;
 
-/// <summary>
-/// Dịch vụ lưu trữ tập tin sử dụng MinIO S3 Object Storage tương thích AWS S3.
-/// </summary>
 public sealed class MinioFileStorageService : IFileStorageService
 {
     private readonly IMinioClient _minioClient;
@@ -30,9 +27,6 @@ public sealed class MinioFileStorageService : IFileStorageService
     private const long MaxImageSize = 10 * 1024 * 1024;   // 10MB
     private const long MaxVideoSize = 100 * 1024 * 1024;  // 100MB
 
-    /// <summary>
-    /// Khởi tạo MinioFileStorageService với MinIO client và options.
-    /// </summary>
     public MinioFileStorageService(
         IMinioClient minioClient,
         IOptions<MinioOptions> options,
@@ -43,15 +37,6 @@ public sealed class MinioFileStorageService : IFileStorageService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Upload file stream lên MinIO bucket và trả về CDN URL đầy đủ.
-    /// </summary>
-    /// <param name="fileStream">Stream dữ liệu file cần upload.</param>
-    /// <param name="fileName">Tên file gốc bao gồm phần mở rộng.</param>
-    /// <param name="contentType">MIME type của file.</param>
-    /// <param name="bucketName">Tên bucket đích (mặc định: products).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>URL CDN đầy đủ để truy cập file.</returns>
     public async Task<string> UploadAsync(
         Stream fileStream,
         string fileName,
@@ -158,9 +143,6 @@ public sealed class MinioFileStorageService : IFileStorageService
         }
     }
 
-    /// <summary>
-    /// Upload file stream với tên file xác định lên bucket chỉ định.
-    /// </summary>
     public async Task<string> UploadAsync(
         Stream content,
         string objectName,
@@ -170,12 +152,6 @@ public sealed class MinioFileStorageService : IFileStorageService
         return await UploadAsync(content, objectName, contentType, StorageBuckets.Products, cancellationToken);
     }
 
-    /// <summary>
-    /// Kiểm tra bucket đã tồn tại hay chưa, nếu chưa thì tạo mới và áp dụng chính sách đọc công khai nếu là public bucket.
-    /// Luôn đảm bảo chính sách public-read được cập nhật cho cả bucket mới và bucket đã tồn tại.
-    /// </summary>
-    /// <param name="bucketName">Tên bucket cần kiểm tra.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task EnsureBucketExistsAsync(string bucketName, CancellationToken cancellationToken = default)
     {
         if (_initializedBuckets.ContainsKey(bucketName))
@@ -209,12 +185,6 @@ public sealed class MinioFileStorageService : IFileStorageService
         }
     }
 
-    /// <summary>
-    /// Cấu hình chính sách truy cập công khai (Public Read) cho bucket.
-    /// Chỉ cấp quyền s3:GetObject và loại bỏ s3:ListBucket để tránh việc người dùng ẩn danh quét danh sách đối tượng.
-    /// </summary>
-    /// <param name="bucketName">Tên bucket cần cấu hình.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task SetPublicReadPolicyAsync(string bucketName, CancellationToken cancellationToken = default)
     {
         try

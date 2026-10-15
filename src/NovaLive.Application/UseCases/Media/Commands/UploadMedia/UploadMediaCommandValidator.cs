@@ -3,9 +3,6 @@ using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Application.UseCases.Media.Commands.UploadMedia;
 
-/// <summary>
-/// Validator kiểm tra tính hợp lệ của lệnh tải lên media: tên file, kích thước, định dạng và bucket đích.
-/// </summary>
 public class UploadMediaCommandValidator : AbstractValidator<UploadMediaCommand>
 {
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -21,9 +18,6 @@ public class UploadMediaCommandValidator : AbstractValidator<UploadMediaCommand>
     private const long MaxImageSize = 10 * 1024 * 1024;   // 10MB
     private const long MaxVideoSize = 100 * 1024 * 1024;  // 100MB
 
-    /// <summary>
-    /// Khởi tạo các luật xác thực cho UploadMediaCommand.
-    /// </summary>
     public UploadMediaCommandValidator()
     {
         RuleFor(x => x.FileName)

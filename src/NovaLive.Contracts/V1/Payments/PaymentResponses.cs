@@ -2,9 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace NovaLive.Contracts.V1.Payments;
 
-/// <summary>
-/// Phản hồi khởi tạo giao dịch thanh toán.
-/// </summary>
 public record PaymentInitiateResponse(
     Guid PaymentId,
     string PaymentMethod,
@@ -14,9 +11,6 @@ public record PaymentInitiateResponse(
     string? QrCodeUrl,
     DateTime ExpiresAt);
 
-/// <summary>
-/// Phản hồi trạng thái thanh toán.
-/// </summary>
 public record PaymentStatusResponse(
     Guid PaymentId,
     Guid OrderId,
@@ -25,9 +19,6 @@ public record PaymentStatusResponse(
     string Status,
     DateTime? PaidAt);
 
-/// <summary>
-/// Phản hồi từ MoMo API khi tạo link thanh toán.
-/// </summary>
 public record MomoCreatePaymentResponse
 {
     [JsonPropertyName("partnerCode")]
@@ -64,16 +55,10 @@ public record MomoCreatePaymentResponse
     public string? DeeplinkMiniApp { get; init; }
 }
 
-/// <summary>
-/// Phản hồi trả về cho MoMo khi nhận IPN.
-/// </summary>
 public record MomoIpnResponse(
     [property: JsonPropertyName("resultCode")] int ResultCode,
     [property: JsonPropertyName("message")] string Message);
 
-/// <summary>
-/// Phản hồi sinh mã thanh toán VietQR.
-/// </summary>
 public record VietQrResponse(
     string QrCode,
     string QrDataUrl,
@@ -83,17 +68,11 @@ public record VietQrResponse(
     decimal Amount,
     string Description);
 
-/// <summary>
-/// Phản hồi xử lý webhook VietQR.
-/// </summary>
 public record VietQrWebhookResponse(
     bool Success,
     string Message,
     string? OrderCode = null);
 
-/// <summary>
-/// Integration Event thông báo thanh toán đơn hàng thành công, dùng cho Outbox và realtime push.
-/// </summary>
 public record PaymentSuccessEvent(
     Guid PaymentId,
     Guid ParentOrderId,

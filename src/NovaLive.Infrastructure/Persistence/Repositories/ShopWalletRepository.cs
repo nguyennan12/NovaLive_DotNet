@@ -4,9 +4,6 @@ using NovaLive.Domain.Shops;
 
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 
-/// <summary>
-/// Triển khai repository quản lý ví Shop sử dụng AppDbContext.
-/// </summary>
 public sealed class ShopWalletRepository(AppDbContext dbContext) : IShopWalletRepository
 {
     /// <inheritdoc />

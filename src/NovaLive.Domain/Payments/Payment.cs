@@ -2,16 +2,10 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Domain.Payments;
 
-/// <summary>
-/// Thực thể thanh toán cho đơn hàng tổng (ParentOrder).
-/// </summary>
 public sealed class Payment : AuditableEntity
 {
     private Payment() { }
 
-    /// <summary>
-    /// Khởi tạo bản ghi thanh toán cho đơn hàng.
-    /// </summary>
     public static Payment Create(Guid parentId, PaymentMethod method, decimal amount, DateTimeOffset now) => new()
     {
         ParentOrderId = parentId,
@@ -38,9 +32,6 @@ public sealed class Payment : AuditableEntity
 
     public DateTimeOffset? ExpiredAt { get; private set; }
 
-    /// <summary>
-    /// Chuyển trạng thái thanh toán sang Hết hạn (Expired) nếu đang ở trạng thái Chờ (Pending).
-    /// </summary>
     public void ExpirePending(DateTimeOffset now)
     {
         if (Status != PaymentStatus.Pending) return;
@@ -49,12 +40,6 @@ public sealed class Payment : AuditableEntity
         UpdatedAt = now;
     }
 
-    /// <summary>
-    /// Đánh dấu thanh toán thành công khi nhận IPN/Webhook từ cổng thanh toán.
-    /// </summary>
-    /// <param name="transactionRef">Mã giao dịch từ cổng thanh toán (MoMo transId, mã giao dịch ngân hàng).</param>
-    /// <param name="paidAt">Thời điểm thanh toán thành công.</param>
-    /// <param name="gatewayResponse">Payload phản hồi lưu log từ cổng thanh toán.</param>
     public Result MarkSuccess(string transactionRef, DateTimeOffset paidAt, string? gatewayResponse = null)
     {
         if (Status == PaymentStatus.Success) return Result.Success();
@@ -75,9 +60,6 @@ public sealed class Payment : AuditableEntity
         return Result.Success();
     }
 
-    /// <summary>
-    /// Đánh dấu giao dịch thanh toán thất bại.
-    /// </summary>
     public Result MarkFailed(string? gatewayResponse, DateTimeOffset now)
     {
         if (Status == PaymentStatus.Success)

@@ -2,16 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace NovaLive.Contracts.V1.Payments;
 
-/// <summary>
-/// Yêu cầu khởi tạo giao dịch thanh toán trực tuyến.
-/// </summary>
 public record InitiatePaymentRequest(
     Guid OrderId,
     string PaymentMethod);
 
-/// <summary>
-/// DTO chứa dữ liệu IPN gửi từ cổng thanh toán MoMo.
-/// </summary>
 public record MomoIpnRequest
 {
     [JsonPropertyName("partnerCode")]
@@ -54,20 +48,11 @@ public record MomoIpnRequest
     public string Signature { get; init; } = string.Empty;
 }
 
-/// <summary>
-/// Yêu cầu tạo link thanh toán MoMo cho đơn hàng từ client (số tiền sẽ được hệ thống tự tính toán dựa trên đơn hàng).
-/// </summary>
-/// <param name="OrderId">Mã đơn hàng (OrderCode) hoặc ParentOrderId của khách hàng.</param>
-/// <param name="OrderInfo">Ghi chú hoặc thông tin đơn hàng tuỳ chọn.</param>
-/// <param name="ExtraData">Dữ liệu mở rộng MoMo (tuỳ chọn).</param>
 public record CreateMomoPaymentUrlRequest(
     string OrderId,
     string? OrderInfo = null,
     string? ExtraData = null);
 
-/// <summary>
-/// DTO gửi sang MoMo API để tạo giao dịch thanh toán.
-/// </summary>
 public record MomoCreatePaymentRequest(
     string PartnerCode,
     string RequestId,
@@ -81,9 +66,6 @@ public record MomoCreatePaymentRequest(
     string Lang,
     string Signature);
 
-/// <summary>
-/// Payload webhook đối soát biến động số dư VietQR / SePAY / Casso / Ngân hàng.
-/// </summary>
 public record VietQrWebhookRequest
 {
     [JsonPropertyName("transactionId")]
@@ -119,18 +101,12 @@ public record VietQrWebhookRequest
     [JsonPropertyName("transactionDate")]
     public string? TransactionDate { get; init; }
 
-    /// <summary>
-    /// Lấy ID giao dịch hợp nhất từ nhà cung cấp / ngân hàng. Trả về null nếu không có mã định danh nào.
-    /// </summary>
     [JsonIgnore]
     public string? ResolvedTransactionId =>
         !string.IsNullOrWhiteSpace(TransactionId)
             ? TransactionId
             : Id?.ToString() ?? (!string.IsNullOrWhiteSpace(ReferenceCode) ? ReferenceCode : null);
 
-    /// <summary>
-    /// Lấy nội dung chuyển khoản hợp nhất.
-    /// </summary>
     [JsonIgnore]
     public string ResolvedContent =>
         !string.IsNullOrWhiteSpace(Content)

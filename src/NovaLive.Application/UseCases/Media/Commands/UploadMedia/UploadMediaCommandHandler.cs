@@ -6,22 +6,11 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.UseCases.Media.Commands.UploadMedia;
 
-/// <summary>
-/// Command handler xử lý tải tập tin media lên MinIO S3 storage và trả về thông tin CDN URL.
-/// </summary>
-/// <param name="fileStorageService">Service giao tiếp với kho lưu trữ đối tượng MinIO S3.</param>
-/// <param name="logger">Logger ghi vết quá trình tải tập tin.</param>
 public sealed class UploadMediaCommandHandler(
     IFileStorageService fileStorageService,
     ILogger<UploadMediaCommandHandler> logger)
     : ICommandHandler<UploadMediaCommand, UploadMediaResponse>
 {
-    /// <summary>
-    /// Xử lý lưu trữ tập tin media vào bucket chỉ định và tạo phản hồi chứa đường dẫn CDN.
-    /// </summary>
-    /// <param name="command">Command chứa luồng dữ liệu tập tin, tên file, content-type và bucket đích.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Kết quả chứa UploadMediaResponse hoặc mã lỗi tương ứng.</returns>
     public async Task<Result<UploadMediaResponse>> Handle(
         UploadMediaCommand command,
         CancellationToken cancellationToken)

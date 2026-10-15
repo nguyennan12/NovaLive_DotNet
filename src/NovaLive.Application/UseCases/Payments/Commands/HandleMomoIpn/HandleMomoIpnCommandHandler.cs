@@ -14,9 +14,6 @@ using NovaLive.Domain.System;
 
 namespace NovaLive.Application.UseCases.Payments.Commands.HandleMomoIpn;
 
-/// <summary>
-/// Command Handler xử lý xác thực chữ ký MoMo, đảm bảo Idempotent, cập nhật thanh toán và ghi nhận doanh thu ví Shop.
-/// </summary>
 public sealed class HandleMomoIpnCommandHandler(
     IMomoPaymentAdapter momoAdapter,
     IPaymentRepository paymentRepository,

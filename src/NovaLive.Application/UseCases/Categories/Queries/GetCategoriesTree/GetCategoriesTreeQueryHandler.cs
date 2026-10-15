@@ -5,22 +5,11 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.UseCases.Categories.Queries.GetCategoriesTree;
 
-/// <summary>
-/// Query handler xử lý việc truy vấn và xây dựng toàn bộ cây danh mục sản phẩm đa cấp (Parent-Child tree).
-/// </summary>
-/// <param name="categoryRepository">Repository danh mục.</param>
-/// <param name="spuRepository">Repository SPU sản phẩm để tổng hợp ProductCount.</param>
 public sealed class GetCategoriesTreeQueryHandler(
     ICategoryRepository categoryRepository,
     ISpuRepository spuRepository)
     : IQueryHandler<GetCategoriesTreeQuery, IReadOnlyList<CategoryNodeDto>>
 {
-    /// <summary>
-    /// Xử lý lấy danh sách danh mục và xây dựng cây phân cấp JSON n-cấp trong bộ nhớ.
-    /// </summary>
-    /// <param name="request">Yêu cầu lấy cây danh mục, bao gồm cờ IncludeInvisible.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Danh sách các nút gốc của cây danh mục.</returns>
     public async Task<Result<IReadOnlyList<CategoryNodeDto>>> Handle(
         GetCategoriesTreeQuery request,
         CancellationToken cancellationToken)
@@ -75,9 +64,6 @@ public sealed class GetCategoriesTreeQueryHandler(
         return tree;
     }
 
-    /// <summary>
-    /// Đệ quy xây dựng các nút con và tính tổng rollup ProductCount của cả nhánh con.
-    /// </summary>
     private static CategoryNodeDto BuildNodeWithRollup(
         CategoryNodeDto node,
         ILookup<Guid?, CategoryNodeDto> lookup)

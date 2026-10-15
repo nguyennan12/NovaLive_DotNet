@@ -9,9 +9,6 @@ using NovaLive.Contracts.V1.Payments;
 
 namespace NovaLive.Infrastructure.Payments.Momo;
 
-/// <summary>
-/// Bộ điều hợp thanh toán tích hợp cổng MoMo API v2 và xác thực chữ ký IPN HMAC-SHA256.
-/// </summary>
 public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
 {
     private readonly HttpClient _httpClient;
@@ -30,9 +27,6 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         _logger = logger;
     }
 
-    /// <summary>
-    /// Sinh chữ ký HMAC-SHA256 và gửi yêu cầu tạo link thanh toán tới MoMo API.
-    /// </summary>
     public async Task<MomoCreatePaymentResponse> CreatePaymentUrlAsync(
         string orderId,
         long amount,
@@ -88,9 +82,6 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         return result;
     }
 
-    /// <summary>
-    /// Kiểm tra tính hợp lệ của chữ ký HMAC-SHA256 gửi trong IPN từ MoMo.
-    /// </summary>
     public bool VerifySignature(MomoIpnRequest ipnRequest)
     {
         if (string.IsNullOrWhiteSpace(ipnRequest.Signature))
@@ -116,9 +107,6 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
-    /// <summary>
-    /// Tạo PaymentIntent chuẩn IPaymentGatewayAdapter.
-    /// </summary>
     public async Task<PaymentIntentResult> CreatePaymentIntentAsync(
         PaymentIntentRequest request,
         CancellationToken cancellationToken = default)
@@ -133,9 +121,6 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         return new PaymentIntentResult(response.OrderId, response.PayUrl, response.QrCodeUrl);
     }
 
-    /// <summary>
-    /// Hàm tiện ích tính mã băm HMAC-SHA256 ra chuỗi Hex chữ thường.
-    /// </summary>
     public static string ComputeHmacSha256(string message, string secretKey)
     {
         var keyBytes = Encoding.UTF8.GetBytes(secretKey);
