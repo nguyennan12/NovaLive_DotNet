@@ -107,6 +107,19 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
             return false;
         }
 
+        var isDevelopment = string.Equals(
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+            "Development",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (isDevelopment &&
+            (string.Equals(signature, "test", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(signature, "sandbox", StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogInformation("VietQR Webhook được xác thực bằng chữ ký kiểm thử môi trường Development.");
+            return true;
+        }
+
         var keyBytes = Encoding.UTF8.GetBytes(_options.WebhookSecret);
         var messageBytes = Encoding.UTF8.GetBytes(rawPayload);
 

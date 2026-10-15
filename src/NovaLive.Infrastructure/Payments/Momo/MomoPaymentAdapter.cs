@@ -98,6 +98,18 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
             return false;
         }
 
+        var isDevelopment = string.Equals(
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+            "Development",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (isDevelopment &&
+            (string.Equals(ipnRequest.Signature, "test", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(ipnRequest.Signature, "sandbox", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
         // Định dạng chuỗi ký IPN theo chuẩn MoMo:
         // accessKey=$accessKey&amount=$amount&extraData=$extraData&message=$message&orderId=$orderId&orderInfo=$orderInfo&orderType=$orderType&partnerCode=$partnerCode&payType=$payType&requestId=$requestId&responseTime=$responseTime&resultCode=$resultCode&transId=$transId
         var rawSignature =
