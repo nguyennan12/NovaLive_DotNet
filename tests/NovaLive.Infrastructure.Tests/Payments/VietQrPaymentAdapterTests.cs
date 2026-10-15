@@ -108,4 +108,20 @@ public class VietQrPaymentAdapterTests
         // Assert
         isValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void VerifyWebhookSignature_WhenWebhookSecretNotConfigured_ReturnsFalse()
+    {
+        // Arrange
+        var unconfiguredOptions = new VietQrOptions { WebhookSecret = "" };
+        var adapter = new VietQrPaymentAdapter(Options.Create(unconfiguredOptions), NullLogger<VietQrPaymentAdapter>.Instance);
+
+        // Act
+        var isValid = adapter.VerifyWebhookSignature("{}", "any_sig");
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
 }
+
+

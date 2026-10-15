@@ -23,6 +23,9 @@ public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderReposit
     public Task<ParentOrder?> FindAsync(Guid id, Guid? buyerId, CancellationToken ct) =>
         db.ParentOrders.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && (buyerId == null || p.BuyerId == buyerId), ct);
 
+    public Task<ParentOrder?> FindByOrderCodeAsync(string orderCode, Guid? buyerId, CancellationToken ct) =>
+        db.ParentOrders.AsNoTracking().SingleOrDefaultAsync(p => p.OrderCode == orderCode && (buyerId == null || p.BuyerId == buyerId), ct);
+
     public async Task<ParentOrder?> GetForUpdateAsync(Guid id, CancellationToken ct)
     {
         if (db.Database.IsNpgsql())

@@ -55,12 +55,14 @@ public record MomoIpnRequest
 }
 
 /// <summary>
-/// Yêu cầu tạo link thanh toán MoMo cho đơn hàng từ client.
+/// Yêu cầu tạo link thanh toán MoMo cho đơn hàng từ client (số tiền sẽ được hệ thống tự tính toán dựa trên đơn hàng).
 /// </summary>
+/// <param name="OrderId">Mã đơn hàng (OrderCode) hoặc ParentOrderId của khách hàng.</param>
+/// <param name="OrderInfo">Ghi chú hoặc thông tin đơn hàng tuỳ chọn.</param>
+/// <param name="ExtraData">Dữ liệu mở rộng MoMo (tuỳ chọn).</param>
 public record CreateMomoPaymentUrlRequest(
     string OrderId,
-    long Amount,
-    string OrderInfo,
+    string? OrderInfo = null,
     string? ExtraData = null);
 
 /// <summary>
@@ -118,13 +120,13 @@ public record VietQrWebhookRequest
     public string? TransactionDate { get; init; }
 
     /// <summary>
-    /// Lấy ID giao dịch hợp nhất.
+    /// Lấy ID giao dịch hợp nhất từ nhà cung cấp / ngân hàng. Trả về null nếu không có mã định danh nào.
     /// </summary>
     [JsonIgnore]
-    public string ResolvedTransactionId =>
+    public string? ResolvedTransactionId =>
         !string.IsNullOrWhiteSpace(TransactionId)
             ? TransactionId
-            : Id?.ToString() ?? ReferenceCode ?? Guid.NewGuid().ToString("N");
+            : Id?.ToString() ?? (!string.IsNullOrWhiteSpace(ReferenceCode) ? ReferenceCode : null);
 
     /// <summary>
     /// Lấy nội dung chuyển khoản hợp nhất.

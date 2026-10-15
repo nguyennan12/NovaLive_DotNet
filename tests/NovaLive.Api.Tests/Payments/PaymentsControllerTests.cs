@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NovaLive.Api.Controllers.Payments;
+using NovaLive.Application.Abstractions.Auth;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Application.UseCases.Payments;
 using NovaLive.Application.UseCases.Payments.Commands.HandleMomoIpn;
@@ -12,6 +14,8 @@ using NovaLive.Application.UseCases.Payments.Commands.HandleVietQrWebhook;
 using NovaLive.Contracts.Common;
 using NovaLive.Contracts.V1.Payments;
 using NovaLive.Domain.Common;
+using NovaLive.Domain.Orders;
+using NovaLive.Domain.Payments;
 using Xunit;
 
 namespace NovaLive.Api.Tests.Payments;
@@ -21,14 +25,23 @@ public class PaymentsControllerTests
     private readonly Mock<ISender> _senderMock = new();
     private readonly Mock<IMomoPaymentAdapter> _momoAdapterMock = new();
     private readonly Mock<IVietQrPaymentAdapter> _vietQrAdapterMock = new();
+    private readonly Mock<ICurrentUser> _currentUserMock = new();
+    private readonly Mock<IParentOrderRepository> _parentOrderRepositoryMock = new();
+    private readonly Mock<IPaymentRepository> _paymentRepositoryMock = new();
     private readonly PaymentsController _controller;
+    private readonly Guid _currentUserId = Guid.NewGuid();
 
     public PaymentsControllerTests()
     {
+        _currentUserMock.SetupGet(c => c.UserId).Returns(_currentUserId);
+
         _controller = new PaymentsController(
             _senderMock.Object,
             _momoAdapterMock.Object,
             _vietQrAdapterMock.Object,
+            _currentUserMock.Object,
+            _parentOrderRepositoryMock.Object,
+            _paymentRepositoryMock.Object,
             NullLogger<PaymentsController>.Instance)
         {
             ControllerContext = new ControllerContext
@@ -148,12 +161,20 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public async Task CreateMomoPayment_CallsAdapterAndReturnsOk()
+    public async Task CreateMomoPayment_WhenOrderValid_LoadsServerAmountAndReturnsOk()
     {
         // Arrange
+        var now = DateTimeOffset.UtcNow;
+        var parentOrder = ParentOrder.Create(_currentUserId, "ORD-001", "{}", 100000m, 0m, 0m, 100000m, null, now);
+        var payment = Payment.Create(parentOrder.Id, PaymentMethod.MoMo, 100000m, now);
+
+        _parentOrderRepositoryMock.Setup(p => p.FindByOrderCodeAsync("ORD-001", _currentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(parentOrder);
+        _paymentRepositoryMock.Setup(p => p.GetByParentOrderIdAsync(parentOrder.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(payment);
+
         var request = new CreateMomoPaymentUrlRequest(
             OrderId: "ORD-001",
-            Amount: 100000,
             OrderInfo: "Thanh toan ORD-001");
 
         var momoResponse = new MomoCreatePaymentResponse
@@ -180,9 +201,35 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public void GenerateVietQr_CallsAdapterAndReturnsOk()
+    public async Task CreateMomoPayment_WhenOrderNotFound_ReturnsNotFound()
     {
         // Arrange
+        _parentOrderRepositoryMock.Setup(p => p.FindByOrderCodeAsync("NON-EXISTENT", _currentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ParentOrder?)null);
+
+        var request = new CreateMomoPaymentUrlRequest(OrderId: "NON-EXISTENT");
+
+        // Act
+        var result = await _controller.CreateMomoPayment(request, CancellationToken.None);
+
+        // Assert
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task GenerateVietQr_WhenOrderValid_LoadsServerAmountAndReturnsOk()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow;
+        var parentOrder = ParentOrder.Create(_currentUserId, "ORD-001", "{}", 150000m, 0m, 0m, 150000m, null, now);
+        var payment = Payment.Create(parentOrder.Id, PaymentMethod.VietQR, 150000m, now);
+
+        _parentOrderRepositoryMock.Setup(p => p.FindByOrderCodeAsync("ORD-001", _currentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(parentOrder);
+        _paymentRepositoryMock.Setup(p => p.GetByParentOrderIdAsync(parentOrder.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(payment);
+
         var qrResponse = new VietQrResponse(
             QrCode: "000201...",
             QrDataUrl: "https://img.vietqr.io/...",
@@ -196,12 +243,27 @@ public class PaymentsControllerTests
             .Returns(qrResponse);
 
         // Act
-        var result = _controller.GenerateVietQr("ORD-001", 150000, null);
+        var result = await _controller.GenerateVietQr("ORD-001", null, CancellationToken.None);
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         var apiResponse = okResult.Value.Should().BeAssignableTo<ApiResponse<VietQrResponse>>().Subject;
         apiResponse.Data.Should().NotBeNull();
         apiResponse.Data!.Description.Should().Be("NOVA ORD-001");
+    }
+
+    [Fact]
+    public async Task GenerateVietQr_WhenOrderNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        _parentOrderRepositoryMock.Setup(p => p.FindByOrderCodeAsync("NON-EXISTENT", _currentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ParentOrder?)null);
+
+        // Act
+        var result = await _controller.GenerateVietQr("NON-EXISTENT", null, CancellationToken.None);
+
+        // Assert
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
 }

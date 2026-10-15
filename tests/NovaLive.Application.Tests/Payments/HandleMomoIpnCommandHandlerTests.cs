@@ -86,7 +86,7 @@ public class HandleMomoIpnCommandHandlerTests
             .ReturnsAsync([subOrder]);
 
         var wallet = new ShopWallet(shopId);
-        _shopWalletRepositoryMock.Setup(w => w.GetByShopIdAsync(shopId, It.IsAny<CancellationToken>()))
+        _shopWalletRepositoryMock.Setup(w => w.GetByShopIdForUpdateAsync(shopId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(wallet);
 
         // Act
@@ -111,6 +111,47 @@ public class HandleMomoIpnCommandHandlerTests
         _outboxRepositoryMock.Verify(o => o.AddAsync(
             It.Is<OutboxMessage>(m => m.EventType == "PaymentSuccessEvent"),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenAmountDoesNotMatchPayment_ReturnsInvalidAmountError()
+    {
+        // Arrange
+        var orderCode = "ORD-MOMO-TAMPERED";
+        var expectedAmount = 200000m;
+        var paidAmount = 1000L; // Giả mạo chỉ trả 1,000 VND
+        var transId = 123456L;
+
+        var request = new MomoIpnRequest
+        {
+            PartnerCode = "MOMO",
+            OrderId = orderCode,
+            TransId = transId,
+            ResultCode = 0,
+            Amount = paidAmount,
+            Signature = "valid_sig"
+        };
+
+        _momoAdapterMock.Setup(m => m.VerifySignature(request)).Returns(true);
+        _paymentRepositoryMock.Setup(p => p.GetByTransactionRefAsync(transId.ToString(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Payment?)null);
+
+        var parentOrder = CreateTestParentOrder(orderCode, expectedAmount, _now.AddMinutes(-5));
+        var payment = Payment.Create(parentOrder.Id, PaymentMethod.MoMo, expectedAmount, _now.AddMinutes(-5));
+
+        _parentOrderRepositoryMock.Setup(p => p.GetByOrderCodeForUpdateAsync(orderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(parentOrder);
+        _paymentRepositoryMock.Setup(p => p.GetForUpdateAsync(parentOrder.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(payment);
+
+        // Act
+        var result = await _handler.Handle(new HandleMomoIpnCommand(request), CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(PaymentErrors.InvalidAmount);
+        payment.Status.Should().Be(PaymentStatus.Pending);
+        _shopWalletRepositoryMock.Verify(w => w.AddTransactionAsync(It.IsAny<ShopWalletTransaction>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

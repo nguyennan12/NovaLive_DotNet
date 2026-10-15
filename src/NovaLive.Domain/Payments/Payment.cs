@@ -55,8 +55,15 @@ public sealed class Payment : AuditableEntity
     /// <param name="transactionRef">Mã giao dịch từ cổng thanh toán (MoMo transId, mã giao dịch ngân hàng).</param>
     /// <param name="paidAt">Thời điểm thanh toán thành công.</param>
     /// <param name="gatewayResponse">Payload phản hồi lưu log từ cổng thanh toán.</param>
-    public void MarkSuccess(string transactionRef, DateTimeOffset paidAt, string? gatewayResponse = null)
+    public Result MarkSuccess(string transactionRef, DateTimeOffset paidAt, string? gatewayResponse = null)
     {
+        if (Status == PaymentStatus.Success) return Result.Success();
+        if (Status is PaymentStatus.Expired or PaymentStatus.Failed or PaymentStatus.Refunded)
+        {
+            return Result.Failure(Error.Conflict("Payment.TerminalState",
+                $"Không thể chuyển giao dịch sang trạng thái thành công khi đang ở trạng thái {Status}."));
+        }
+
         Status = PaymentStatus.Success;
         TransactionRef = transactionRef;
         PaidAt = paidAt;
@@ -65,19 +72,28 @@ public sealed class Payment : AuditableEntity
             GatewayResponse = gatewayResponse;
         }
         UpdatedAt = paidAt;
+        return Result.Success();
     }
 
     /// <summary>
     /// Đánh dấu giao dịch thanh toán thất bại.
     /// </summary>
-    public void MarkFailed(string? gatewayResponse, DateTimeOffset now)
+    public Result MarkFailed(string? gatewayResponse, DateTimeOffset now)
     {
-        if (Status == PaymentStatus.Success) return;
+        if (Status == PaymentStatus.Success)
+        {
+            return Result.Failure(Error.Conflict("Payment.AlreadySuccess",
+                "Không thể đánh dấu thất bại khi giao dịch đã thanh toán thành công."));
+        }
+
+        if (Status == PaymentStatus.Failed) return Result.Success();
+
         Status = PaymentStatus.Failed;
         if (!string.IsNullOrWhiteSpace(gatewayResponse))
         {
             GatewayResponse = gatewayResponse;
         }
         UpdatedAt = now;
+        return Result.Success();
     }
 }

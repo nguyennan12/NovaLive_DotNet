@@ -43,6 +43,8 @@ public sealed class ParentOrder : AuditableEntity
     public Result MarkPaid(DateTimeOffset now)
     {
         if (PaymentStatus == ParentOrderPaymentStatus.Paid) return Result.Success();
+        if (PaymentStatus == ParentOrderPaymentStatus.Cancelled)
+            return Result.Failure(Error.Conflict("Order.Cancelled", "Không thể thanh toán đơn hàng đã bị huỷ."));
         PaymentStatus = ParentOrderPaymentStatus.Paid;
         UpdatedAt = now;
         return Result.Success();

@@ -88,16 +88,35 @@ public sealed class HandleMomoIpnCommandHandler(
             return new MomoIpnResponse(0, "Order already paid");
         }
 
+        // Kiểm tra số tiền thanh toán từ MoMo khớp chính xác với số tiền của Payment
+        var expectedAmount = (long)Math.Round(payment.Amount, MidpointRounding.AwayFromZero);
+        if (request.Amount != expectedAmount)
+        {
+            logger.LogWarning("Số tiền MoMo IPN ({ReceivedAmount}) không khớp với số tiền đơn hàng ({RequiredAmount}) cho OrderId: {OrderId}",
+                request.Amount, expectedAmount, request.OrderId);
+            return PaymentErrors.InvalidAmount;
+        }
+
         var rawJson = JsonSerializer.Serialize(request);
 
         // 4. Nếu ResultCode == 0: Thanh toán MoMo thành công
         if (request.ResultCode == 0)
         {
             // Cập nhật Payments
-            payment.MarkSuccess(transIdStr, now, rawJson);
+            var paymentResult = payment.MarkSuccess(transIdStr, now, rawJson);
+            if (paymentResult.IsFailure)
+            {
+                logger.LogWarning("Cập nhật Payment thất bại: {Error}", paymentResult.Error.Description);
+                return paymentResult.Error;
+            }
 
             // Cập nhật ParentOrders
-            parentOrder.MarkPaid(now);
+            var orderPaidResult = parentOrder.MarkPaid(now);
+            if (orderPaidResult.IsFailure)
+            {
+                logger.LogWarning("Cập nhật ParentOrder thất bại: {Error}", orderPaidResult.Error.Description);
+                return orderPaidResult.Error;
+            }
 
             // Lấy danh sách SubOrders để chuyển sang Confirmed và kết chuyển doanh thu ví Shop
             var subOrders = await subOrderRepository.GetByParentIdsAsync([parentOrder.Id], tracked: true, cancellationToken);
@@ -107,8 +126,8 @@ public sealed class HandleMomoIpnCommandHandler(
                 // Chuyển trạng thái SubOrder sang Confirmed
                 subOrder.ConfirmPayment(now);
 
-                // Ghi nhận doanh thu trực tiếp vào ShopWallets.balance của Shop
-                var wallet = await shopWalletRepository.GetByShopIdAsync(subOrder.ShopId, cancellationToken);
+                // Ghi nhận doanh thu trực tiếp vào ShopWallets.balance của Shop (khoá dòng bảo vệ race condition)
+                var wallet = await shopWalletRepository.GetByShopIdForUpdateAsync(subOrder.ShopId, cancellationToken);
 
                 if (wallet is null)
                 {

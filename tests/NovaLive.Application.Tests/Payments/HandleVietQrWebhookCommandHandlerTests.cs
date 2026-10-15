@@ -33,6 +33,7 @@ public class HandleVietQrWebhookCommandHandlerTests
     public HandleVietQrWebhookCommandHandlerTests()
     {
         _clockMock.SetupGet(c => c.UtcNow).Returns(_now);
+        _vietQrAdapterMock.Setup(v => v.VerifyWebhookSignature(It.IsAny<string>(), It.IsAny<string?>())).Returns(true);
 
         _handler = new HandleVietQrWebhookCommandHandler(
             _vietQrAdapterMock.Object,
@@ -77,11 +78,11 @@ public class HandleVietQrWebhookCommandHandlerTests
             .ReturnsAsync([subOrder]);
 
         var wallet = new ShopWallet(shopId);
-        _shopWalletRepositoryMock.Setup(w => w.GetByShopIdAsync(shopId, It.IsAny<CancellationToken>()))
+        _shopWalletRepositoryMock.Setup(w => w.GetByShopIdForUpdateAsync(shopId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(wallet);
 
         // Act
-        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request), CancellationToken.None);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -106,6 +107,48 @@ public class HandleVietQrWebhookCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenSignatureInvalid_ReturnsInvalidSignatureError()
+    {
+        // Arrange
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = "TXN_001",
+            Amount = 100000,
+            Content = "NOVA ORD-001"
+        };
+
+        _vietQrAdapterMock.Setup(v => v.VerifyWebhookSignature(It.IsAny<string>(), "invalid_sig")).Returns(false);
+
+        // Act
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "invalid_sig"), CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(PaymentErrors.InvalidSignature);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTransactionIdMissing_ReturnsMissingTransactionIdError()
+    {
+        // Arrange
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = null,
+            Id = null,
+            ReferenceCode = null,
+            Amount = 100000,
+            Content = "NOVA ORD-001"
+        };
+
+        // Act
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(PaymentErrors.MissingTransactionId);
+    }
+
+    [Fact]
     public async Task Handle_WhenCannotParseOrderCode_ReturnsCannotParseOrderCodeError()
     {
         // Arrange
@@ -119,7 +162,7 @@ public class HandleVietQrWebhookCommandHandlerTests
         _vietQrAdapterMock.Setup(v => v.ExtractOrderCode(request.Content)).Returns((string?)null);
 
         // Act
-        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request), CancellationToken.None);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -142,7 +185,7 @@ public class HandleVietQrWebhookCommandHandlerTests
             .ReturnsAsync((ParentOrder?)null);
 
         // Act
-        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request), CancellationToken.None);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -174,7 +217,7 @@ public class HandleVietQrWebhookCommandHandlerTests
             .ReturnsAsync(payment);
 
         // Act
-        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request), CancellationToken.None);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -211,7 +254,7 @@ public class HandleVietQrWebhookCommandHandlerTests
             .ReturnsAsync(payment);
 
         // Act
-        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request), CancellationToken.None);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();

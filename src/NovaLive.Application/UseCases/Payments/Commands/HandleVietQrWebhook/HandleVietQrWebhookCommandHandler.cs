@@ -33,7 +33,21 @@ public sealed class HandleVietQrWebhookCommandHandler(
         CancellationToken cancellationToken)
     {
         var request = command.Request;
+
+        // 0. Xác thực chữ ký Webhook (fail-closed nếu sai chữ ký hoặc chưa cấu hình Secret)
+        if (!vietQrAdapter.VerifyWebhookSignature(command.RawBody, command.Signature))
+        {
+            logger.LogWarning("Chữ ký Webhook VietQR không hợp lệ hoặc cấu hình WebhookSecret chưa hợp lệ.");
+            return PaymentErrors.InvalidSignature;
+        }
+
         var transId = request.ResolvedTransactionId;
+        if (string.IsNullOrWhiteSpace(transId))
+        {
+            logger.LogWarning("Webhook VietQR bị từ chối vì thiếu mã định danh giao dịch (TransactionId/Id/ReferenceCode).");
+            return PaymentErrors.MissingTransactionId;
+        }
+
         var content = request.ResolvedContent;
 
         logger.LogInformation(
@@ -86,10 +100,20 @@ public sealed class HandleVietQrWebhookCommandHandler(
         var rawJson = JsonSerializer.Serialize(request);
 
         // 6. Cập nhật Payments.status = Success, transaction_ref = bankRefId, paid_at = NOW()
-        payment.MarkSuccess(transId, now, rawJson);
+        var paymentResult = payment.MarkSuccess(transId, now, rawJson);
+        if (paymentResult.IsFailure)
+        {
+            logger.LogWarning("Cập nhật Payment thất bại: {Error}", paymentResult.Error.Description);
+            return paymentResult.Error;
+        }
 
         // 7. Cập nhật ParentOrders.payment_status = Paid
-        parentOrder.MarkPaid(now);
+        var orderPaidResult = parentOrder.MarkPaid(now);
+        if (orderPaidResult.IsFailure)
+        {
+            logger.LogWarning("Cập nhật ParentOrder thất bại: {Error}", orderPaidResult.Error.Description);
+            return orderPaidResult.Error;
+        }
 
         // 8. Chuyển trạng thái các SubOrders sang Confirmed và cộng doanh thu vào ví Shop
         var subOrders = await subOrderRepository.GetByParentIdsAsync([parentOrder.Id], tracked: true, cancellationToken);
@@ -98,8 +122,8 @@ public sealed class HandleVietQrWebhookCommandHandler(
         {
             subOrder.ConfirmPayment(now);
 
-            // Ghi nhận doanh thu trực tiếp vào ShopWallets.balance của Shop
-            var wallet = await shopWalletRepository.GetByShopIdAsync(subOrder.ShopId, cancellationToken);
+            // Ghi nhận doanh thu trực tiếp vào ShopWallets.balance của Shop (khoá dòng bảo vệ race condition)
+            var wallet = await shopWalletRepository.GetByShopIdForUpdateAsync(subOrder.ShopId, cancellationToken);
 
             if (wallet is null)
             {

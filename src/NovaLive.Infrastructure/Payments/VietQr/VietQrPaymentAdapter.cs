@@ -98,8 +98,8 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
     {
         if (string.IsNullOrWhiteSpace(_options.WebhookSecret))
         {
-            // Nếu không cấu hình WebhookSecret thì chấp nhận (dùng IP whitelist hoặc bảo mật qua nội dung đối soát)
-            return true;
+            _logger.LogError("VietQR WebhookSecret chưa được cấu hình. Từ chối xác thực để đảm bảo an toàn.");
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(signature))
