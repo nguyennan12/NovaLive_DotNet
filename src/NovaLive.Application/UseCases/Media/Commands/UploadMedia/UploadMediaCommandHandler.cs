@@ -6,11 +6,22 @@ using NovaLive.Domain.Common;
 
 namespace NovaLive.Application.UseCases.Media.Commands.UploadMedia;
 
+/// <summary>
+/// Command handler xử lý tải tập tin media lên MinIO S3 storage và trả về thông tin CDN URL.
+/// </summary>
+/// <param name="fileStorageService">Service giao tiếp với kho lưu trữ đối tượng MinIO S3.</param>
+/// <param name="logger">Logger ghi vết quá trình tải tập tin.</param>
 public sealed class UploadMediaCommandHandler(
     IFileStorageService fileStorageService,
     ILogger<UploadMediaCommandHandler> logger)
     : ICommandHandler<UploadMediaCommand, UploadMediaResponse>
 {
+    /// <summary>
+    /// Xử lý lưu trữ tập tin media vào bucket chỉ định và tạo phản hồi chứa đường dẫn CDN.
+    /// </summary>
+    /// <param name="command">Command chứa luồng dữ liệu tập tin, tên file, content-type và bucket đích.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Kết quả chứa UploadMediaResponse hoặc mã lỗi tương ứng.</returns>
     public async Task<Result<UploadMediaResponse>> Handle(
         UploadMediaCommand command,
         CancellationToken cancellationToken)
@@ -40,15 +51,37 @@ public sealed class UploadMediaCommandHandler(
                 Bucket: bucket,
                 Size: command.Length);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Tham số upload file không hợp lệ: {Message}", ex.Message);
+            if (ex.Message.Contains("rỗng", StringComparison.OrdinalIgnoreCase) ||
+                (ex.ParamName == "fileStream" && ex.Message.Contains("không hợp lệ", StringComparison.OrdinalIgnoreCase)))
+            {
+                return MediaErrors.Empty;
+            }
+
+            if (ex.Message.Contains("ảnh", StringComparison.OrdinalIgnoreCase) &&
+                ex.Message.Contains("vượt quá", StringComparison.OrdinalIgnoreCase))
+            {
+                return MediaErrors.ImageExceedsLimit;
+            }
+
+            if (ex.Message.Contains("video", StringComparison.OrdinalIgnoreCase) &&
+                ex.Message.Contains("vượt quá", StringComparison.OrdinalIgnoreCase))
+            {
+                return MediaErrors.VideoExceedsLimit;
+            }
+
             return MediaErrors.InvalidExtension;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Lỗi khi upload file lên MinIO: {FileName}", command.FileName);
-            return MediaErrors.UploadFailed(ex.Message);
+            return MediaErrors.UploadFailed();
         }
     }
 }

@@ -135,4 +135,10 @@ public class UploadControllerTests
         apiResponse.Success.Should().BeFalse();
         apiResponse.Error!.Code.Should().Be("File.ExceedsLimit");
     }
+
+    [Fact]
+    public void UploadController_ShouldBeDecoratedWithAuthorizeAttribute()
+    {
+        typeof(UploadController).Should().BeDecoratedWith<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>();
+    }
 }

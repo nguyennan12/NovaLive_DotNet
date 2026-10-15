@@ -140,29 +140,32 @@ public static class DependencyInjection
         });
 
         // MinIO File Storage
-        services.Configure<MinioOptions>(options =>
-        {
-            var section = configuration.GetSection(MinioOptions.SectionName);
-            section.Bind(options);
-
-            var envEndpoint = configuration["MINIO_ENDPOINT"];
-            if (!string.IsNullOrWhiteSpace(envEndpoint))
+        services.AddOptions<MinioOptions>()
+            .Bind(configuration.GetSection(MinioOptions.SectionName))
+            .PostConfigure(options =>
             {
-                options.Endpoint = envEndpoint;
-            }
+                var envEndpoint = configuration["MINIO_ENDPOINT"];
+                if (!string.IsNullOrWhiteSpace(envEndpoint))
+                {
+                    options.Endpoint = envEndpoint;
+                }
 
-            var rootUser = configuration["MINIO_ROOT_USER"];
-            if (!string.IsNullOrWhiteSpace(rootUser) && options.AccessKey == "minio_admin")
-            {
-                options.AccessKey = rootUser;
-            }
+                var rootUser = configuration["MINIO_ROOT_USER"];
+                if (!string.IsNullOrWhiteSpace(rootUser) && string.IsNullOrWhiteSpace(options.AccessKey))
+                {
+                    options.AccessKey = rootUser;
+                }
 
-            var rootPass = configuration["MINIO_ROOT_PASSWORD"];
-            if (!string.IsNullOrWhiteSpace(rootPass) && options.SecretKey == "SuperPass@123")
-            {
-                options.SecretKey = rootPass;
-            }
-        });
+                var rootPass = configuration["MINIO_ROOT_PASSWORD"];
+                if (!string.IsNullOrWhiteSpace(rootPass) && string.IsNullOrWhiteSpace(options.SecretKey))
+                {
+                    options.SecretKey = rootPass;
+                }
+            })
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Endpoint), "Minio:Endpoint must be configured.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.AccessKey), "Minio:AccessKey must be configured.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.SecretKey), "Minio:SecretKey must be configured.")
+            .ValidateOnStart();
 
         services.AddSingleton<IMinioClient>(sp =>
         {

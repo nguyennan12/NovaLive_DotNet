@@ -56,7 +56,9 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
         ["Jwt:Secret"] = new string('s', 32), ["Jwt:Issuer"] = "tests", ["Jwt:Audience"] = "tests",
         ["Otp:Pepper"] = new string('p', 32), ["Email:Provider"] = "Both",
         ["Email:ApiKey"] = TestApiKey, ["Email:FromAddress"] = "test@example.com", ["Email:LogOtp"] = "false",
-        ["Redis:ConnectionString"] = "test-redis:6379"
+        ["Redis:ConnectionString"] = "test-redis:6379",
+        ["Minio:AccessKey"] = "test-access-key",
+        ["Minio:SecretKey"] = "test-secret-key"
     };
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
