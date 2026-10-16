@@ -633,6 +633,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_livestream_products");
 
+                    b.HasIndex("SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_livestream_products_session_id")
+                        .HasFilter("is_pinned = true");
+
                     b.HasIndex("SessionId", "DisplayOrder")
                         .HasDatabaseName("ix_livestream_products_session_id_display_order");
 
@@ -728,6 +733,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasIndex("AgoraChannelName")
                         .IsUnique()
                         .HasDatabaseName("ix_livestream_sessions_agora_channel_name");
+
+                    b.HasIndex("ShopId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_livestream_sessions_shop_id")
+                        .HasFilter("status = 'Live'");
 
                     b.HasIndex("ShopId", "Status")
                         .HasDatabaseName("ix_livestream_sessions_shop_id_status");
