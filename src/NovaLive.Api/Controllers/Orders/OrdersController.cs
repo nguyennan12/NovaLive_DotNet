@@ -8,6 +8,7 @@ using NovaLive.Application.UseCases.Orders.Queries.CalculateCheckoutDraft;
 using NovaLive.Application.UseCases.Orders.Queries.GetMyOrders;
 using NovaLive.Application.UseCases.Orders.Queries.GetOrderDetail;
 using NovaLive.Contracts.V1.Orders;
+using NovaLive.Application.UseCases.Shipping.Queries.GetOrderTracking;
 namespace NovaLive.Api.Controllers.Orders;
 [Authorize]
 [Route("api/v1/orders")]
@@ -36,4 +37,8 @@ public sealed class OrdersController(ISender sender) : ApiControllerBase(sender)
     [HttpPost("{orderId:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid orderId, [FromBody] CancelOrderRequest request, CancellationToken ct) =>
         Respond(await Sender.Send(new CancelOrderCommand(orderId, request), ct));
+
+    [HttpGet("{orderId:guid}/tracking")]
+    public async Task<IActionResult> GetTracking(Guid orderId, CancellationToken ct) =>
+        Respond(await Sender.Send(new GetOrderTrackingQuery(orderId), ct));
 }

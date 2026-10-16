@@ -57,13 +57,15 @@ public sealed class SubOrder : AuditableEntity
 
     public DateTimeOffset? CancelledAt { get; private set; }
 
-    public void MarkAsShipping(DateTimeOffset? shippedAt = null)
+    public Result MarkAsShipping(DateTimeOffset? shippedAt = null)
     {
-        if (Status == SubOrderStatus.Confirmed || Status == SubOrderStatus.Processing)
-        {
-            Status = SubOrderStatus.Shipping;
-            ShippedAt = shippedAt ?? DateTimeOffset.UtcNow;
-        }
+        if (Status != SubOrderStatus.Confirmed)
+            return Result.Failure(OrderStateErrors.InvalidStatusTransition);
+
+        Status = SubOrderStatus.Shipping;
+        ShippedAt = shippedAt ?? DateTimeOffset.UtcNow;
+        UpdatedAt = ShippedAt.Value;
+        return Result.Success();
     }
 
     public void MarkAsDelivered(DateTimeOffset? deliveredAt = null)

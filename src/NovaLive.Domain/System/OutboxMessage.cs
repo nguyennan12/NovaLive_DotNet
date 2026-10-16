@@ -6,11 +6,11 @@ public sealed class OutboxMessage : Entity
 {
     private OutboxMessage() { }
 
-    public OutboxMessage(string eventType, string payload)
+    public OutboxMessage(string eventType, string payload, DateTimeOffset? createdAt = null)
     {
         EventType = eventType;
         Payload = payload;
-        CreatedAt = DateTimeOffset.UtcNow;
+        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
     }
 
     public string EventType { get; private set; } = string.Empty;

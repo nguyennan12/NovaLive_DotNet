@@ -4,6 +4,27 @@ namespace NovaLive.Application.UseCases.Shipping;
 
 public static class ShippingErrors
 {
+    public static readonly Error SubOrderNotFound =
+        Error.NotFound("Shipping.SubOrderNotFound", "Không tìm thấy đơn hàng của gian hàng.");
+    public static readonly Error ShipmentNotFound =
+        Error.NotFound("Shipping.ShipmentNotFound", "Đơn hàng chưa có vận đơn.");
+    public static readonly Error ShipmentAlreadyCreated =
+        Error.Conflict("Shipping.ShipmentAlreadyCreated", "Đơn hàng đã có vận đơn.");
+    public static readonly Error InvalidOrderStatus =
+        Error.Conflict("Shipping.InvalidOrderStatus", "Chỉ có thể tạo vận đơn cho đơn hàng Confirmed.");
+    public static readonly Error InvalidServiceCode =
+        Error.Validation("Shipping.InvalidServiceCode", "Mã dịch vụ vận chuyển không hợp lệ.");
+    public static readonly Error InvalidItems =
+        Error.Validation("Shipping.InvalidItems", "Sản phẩm hoặc tổng khối lượng vận chuyển không hợp lệ.");
+    public static readonly Error PaymentNotFound =
+        Error.Conflict("Shipping.PaymentNotFound", "Không tìm thấy phương thức thanh toán của đơn hàng.");
+    public static readonly Error Unauthorized =
+        Error.Unauthorized("Shipping.Unauthorized", "Vui lòng đăng nhập.");
+    public static readonly Error UnsupportedProvider =
+        Error.Validation("Shipping.UnsupportedProvider", "Đơn vị vận chuyển không được hỗ trợ.");
+    public static readonly Error ProviderNotAvailable =
+        Error.Conflict("Shipping.ProviderNotAvailable", "Đơn vị vận chuyển chưa được tích hợp.");
+
     public static readonly Error WarehouseNotFound =
         Error.NotFound("Shipping.WarehouseNotFound", "Không tìm thấy thông tin kho xuất hàng.");
 

@@ -20,6 +20,10 @@ public sealed class GhnShippingAdapter(
 
     public string ProviderCode => "GHN";
 
+    public Task<Result<ShippingTrackingResult>> GetTrackingAsync(
+        string trackingCode, CancellationToken cancellationToken = default) =>
+        GhnTrackingReader.GetAsync(httpClient, trackingCode, cancellationToken);
+
     public async Task<Result<ShippingFeeQuote>> CalculateFeeAsync(
         ShippingFeeCalculationModel request,
         CancellationToken cancellationToken = default)
