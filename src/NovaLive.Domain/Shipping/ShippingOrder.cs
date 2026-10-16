@@ -18,7 +18,9 @@ public sealed class ShippingOrder : AuditableEntity
         decimal shippingFee,
         int weightGram,
         string? trackingCode = null,
-        string? providerOrderId = null)
+        string? providerOrderId = null,
+        DateTimeOffset? createdAt = null,
+        DateTime? estimatedAt = null)
     {
         SubOrderId = subOrderId;
         Provider = provider;
@@ -31,6 +33,11 @@ public sealed class ShippingOrder : AuditableEntity
         TrackingCode = trackingCode;
         ProviderOrderId = providerOrderId;
         Status = ShippingStatus.ReadyToPick;
+        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
+        UpdatedAt = CreatedAt;
+        EstimatedAt = estimatedAt.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(estimatedAt.Value.ToUniversalTime(), DateTimeKind.Utc))
+            : null;
     }
 
     public Guid SubOrderId { get; private set; }

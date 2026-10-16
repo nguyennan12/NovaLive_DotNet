@@ -79,6 +79,8 @@ public static class DependencyInjection
         services.AddScoped<ICartRepository, NovaLive.Infrastructure.Persistence.Repositories.CartRepository>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IShopAddressRepository, ShopAddressRepository>();
+        services.AddScoped<IShippingOrderRepository, ShippingOrderRepository>();
+        services.AddScoped<IShippingProviderResolver, NovaLive.Infrastructure.Shipping.ShippingProviderResolver>();
         services.AddScoped<ICategoryRepository, NovaLive.Infrastructure.Persistence.Repositories.CategoryRepository>();
         services.AddScoped<IFlashSaleRepository, NovaLive.Infrastructure.Persistence.Repositories.FlashSaleRepository>();
         services.AddScoped<IShopWalletRepository, ShopWalletRepository>();
