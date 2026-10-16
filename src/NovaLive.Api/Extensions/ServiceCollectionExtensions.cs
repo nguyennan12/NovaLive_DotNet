@@ -94,6 +94,8 @@ public static class ServiceCollectionExtensions
             });
         }
 
+        services.AddScoped<NovaLive.Application.Abstractions.Services.ILivestreamNotificationService, NovaLive.Api.Services.LivestreamNotificationService>();
+
         // 6. Controllers & JSON Options
         services.AddControllers()
             .AddJsonOptions(options =>

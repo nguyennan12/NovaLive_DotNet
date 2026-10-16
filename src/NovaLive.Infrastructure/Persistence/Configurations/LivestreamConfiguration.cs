@@ -22,6 +22,7 @@ public sealed class LivestreamConfiguration :
 
         builder.HasIndex(s => s.AgoraChannelName).IsUnique();
         builder.HasIndex(s => new { s.ShopId, s.Status });
+        builder.HasIndex(s => s.ShopId).HasFilter("status = 'Live'").IsUnique();
     }
 
     public void Configure(EntityTypeBuilder<LivestreamProduct> builder)
@@ -33,6 +34,7 @@ public sealed class LivestreamConfiguration :
 
         builder.HasIndex(p => new { p.SessionId, p.SkuId }).IsUnique();
         builder.HasIndex(p => new { p.SessionId, p.DisplayOrder });
+        builder.HasIndex(p => p.SessionId).HasFilter("is_pinned = true").IsUnique();
     }
 
     public void Configure(EntityTypeBuilder<LivestreamComment> builder)
