@@ -40,15 +40,37 @@ public sealed class UploadMediaCommandHandler(
                 Bucket: bucket,
                 Size: command.Length);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Tham số upload file không hợp lệ: {Message}", ex.Message);
+            if (ex.Message.Contains("rỗng", StringComparison.OrdinalIgnoreCase) ||
+                (ex.ParamName == "fileStream" && ex.Message.Contains("không hợp lệ", StringComparison.OrdinalIgnoreCase)))
+            {
+                return MediaErrors.Empty;
+            }
+
+            if (ex.Message.Contains("ảnh", StringComparison.OrdinalIgnoreCase) &&
+                ex.Message.Contains("vượt quá", StringComparison.OrdinalIgnoreCase))
+            {
+                return MediaErrors.ImageExceedsLimit;
+            }
+
+            if (ex.Message.Contains("video", StringComparison.OrdinalIgnoreCase) &&
+                ex.Message.Contains("vượt quá", StringComparison.OrdinalIgnoreCase))
+            {
+                return MediaErrors.VideoExceedsLimit;
+            }
+
             return MediaErrors.InvalidExtension;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Lỗi khi upload file lên MinIO: {FileName}", command.FileName);
-            return MediaErrors.UploadFailed(ex.Message);
+            return MediaErrors.UploadFailed();
         }
     }
 }

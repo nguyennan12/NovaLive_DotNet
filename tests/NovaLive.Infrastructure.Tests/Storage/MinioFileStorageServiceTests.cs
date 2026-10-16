@@ -103,6 +103,10 @@ public class MinioFileStorageServiceTests
             .Setup(m => m.PutObjectAsync(It.IsAny<PutObjectArgs>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PutObjectResponse)null!);
 
+        _minioClientMock
+            .Setup(m => m.SetPolicyAsync(It.IsAny<SetPolicyArgs>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         // Act
         var cdnUrl = await _service.UploadAsync(stream, "avatar.png", "image/png", StorageBuckets.Products);
 
@@ -161,5 +165,38 @@ public class MinioFileStorageServiceTests
         // Assert
         _minioClientMock.Verify(m => m.MakeBucketAsync(It.IsAny<MakeBucketArgs>(), It.IsAny<CancellationToken>()), Times.Once);
         _minioClientMock.Verify(m => m.SetPolicyAsync(It.IsAny<SetPolicyArgs>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EnsureBucketExistsAsync_ShouldApplyPolicy_EvenWhenBucketAlreadyExists()
+    {
+        // Arrange: bucket exists in MinIO
+        _minioClientMock
+            .Setup(m => m.BucketExistsAsync(It.IsAny<BucketExistsArgs>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _minioClientMock
+            .Setup(m => m.SetPolicyAsync(It.IsAny<SetPolicyArgs>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _service.EnsureBucketExistsAsync(StorageBuckets.Reviews);
+
+        // Assert: MakeBucket should NOT be called, but SetPolicy SHOULD be called
+        _minioClientMock.Verify(m => m.MakeBucketAsync(It.IsAny<MakeBucketArgs>(), It.IsAny<CancellationToken>()), Times.Never);
+        _minioClientMock.Verify(m => m.SetPolicyAsync(It.IsAny<SetPolicyArgs>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetPublicReadPolicyAsync_WhenFails_ShouldThrowException()
+    {
+        // Arrange
+        _minioClientMock
+            .Setup(m => m.SetPolicyAsync(It.IsAny<SetPolicyArgs>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("MinIO policy error"));
+
+        // Act & Assert
+        var act = () => _service.SetPublicReadPolicyAsync(StorageBuckets.Products);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

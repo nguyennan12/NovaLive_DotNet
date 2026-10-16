@@ -103,6 +103,18 @@ public class UploadMediaTests
     }
 
     [Fact]
+    public async Task Validator_ShouldFail_WhenBucketIsKycDocs()
+    {
+        using var stream = new MemoryStream(new byte[10]);
+        var command = new UploadMediaCommand(stream, "id_front.jpg", "image/jpeg", 1024, StorageBuckets.KycDocs);
+
+        var result = await _validator.ValidateAsync(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Bucket");
+    }
+
+    [Fact]
     public async Task Handler_ShouldReturnSuccess_WithCdnUrl()
     {
         // Arrange
@@ -129,5 +141,41 @@ public class UploadMediaTests
         result.Value.FileName.Should().Be("test.jpg");
         result.Value.Bucket.Should().Be(StorageBuckets.Products);
         result.Value.Size.Should().Be(100);
+    }
+
+    [Fact]
+    public async Task Handler_WhenCancelled_ShouldRethrowOperationCanceledException()
+    {
+        using var stream = new MemoryStream(new byte[100]);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        _fileStorageMock
+            .Setup(s => s.UploadAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        var command = new UploadMediaCommand(stream, "test.jpg", "image/jpeg", 100, StorageBuckets.Products);
+
+        var act = async () => await _handler.Handle(command, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Handler_WhenUnhandledException_ShouldReturnGenericUploadFailedWithoutRawMessage()
+    {
+        using var stream = new MemoryStream(new byte[100]);
+        _fileStorageMock
+            .Setup(s => s.UploadAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Internal MinIO host 10.0.0.5 connection timed out"));
+
+        var command = new UploadMediaCommand(stream, "test.jpg", "image/jpeg", 100, StorageBuckets.Products);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Media.UploadFailed");
+        result.Error.Description.Should().NotContain("10.0.0.5");
+        result.Error.Description.Should().Be("Không thể tải file lên hệ thống lưu trữ MinIO.");
     }
 }

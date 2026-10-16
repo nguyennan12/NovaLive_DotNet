@@ -2,14 +2,17 @@ namespace NovaLive.Contracts.V1.Livestreams;
 
 public record StartLivestreamRequest(
     string Title,
-    string? Description,
-    string? BannerUrl,
-    Guid WarehouseAddressId);
+    string? ThumbnailUrl,
+    Guid? WarehouseAddressId);
 
-public record PinLivestreamProductRequest(
+public record PinProductRequest(
     Guid SkuId,
     decimal? FlashPrice,
-    int? QuantityLimit);
+    int? QuantityLimit,
+    int? DurationSeconds = 120);
+
+public record JoinLiveSessionRequest(
+    string? GuestId = null);
 
 public record QuickBuyCheckoutRequest(
     Guid SessionId,

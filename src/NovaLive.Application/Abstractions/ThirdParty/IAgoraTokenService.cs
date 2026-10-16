@@ -2,5 +2,7 @@ namespace NovaLive.Application.Abstractions.ThirdParty;
 
 public interface IAgoraTokenService
 {
-    string CreateRtcToken(string channelName, Guid userId, string role, TimeSpan ttl);
+    string GeneratePublisherToken(string channelName, string userId, TimeSpan? ttl = null);
+    string GenerateSubscriberToken(string channelName, string userId, TimeSpan? ttl = null);
+    string GenerateToken(string channelName, string userId, AgoraRtcRole role, TimeSpan? ttl = null);
 }

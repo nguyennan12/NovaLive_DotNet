@@ -4,6 +4,12 @@ namespace NovaLive.Domain.Pricing;
 
 public static class PricingErrors
 {
+    public static readonly Error VoucherUsesExhausted = Error.Validation(
+        "Voucher.UsesExhausted", "Voucher đã hết lượt sử dụng trên hệ thống.");
+    public static readonly Error VoucherUserLimitReached = Error.Validation(
+        "Voucher.UserLimitReached", "Bạn đã sử dụng hết lượt cho phép của voucher.");
+    public static Error InvalidVoucher(string code, string? reason) => Error.Validation(code, reason);
+
     // Input validation errors (returns Result.Failure)
     public static readonly Error EmptyShops = Error.Validation(
         "Pricing.EmptyShops", "Danh sách shop tính toán không được để trống.");

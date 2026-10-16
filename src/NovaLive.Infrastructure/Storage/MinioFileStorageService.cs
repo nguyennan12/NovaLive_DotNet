@@ -168,11 +168,12 @@ public sealed class MinioFileStorageService : IFileStorageService
                 var mbArgs = new MakeBucketArgs().WithBucket(bucketName);
                 await _minioClient.MakeBucketAsync(mbArgs, cancellationToken);
                 _logger.LogInformation("Khởi tạo mới S3 Bucket: {Bucket}", bucketName);
+            }
 
-                if (StorageBuckets.IsPublic(bucketName))
-                {
-                    await SetPublicReadPolicyAsync(bucketName, cancellationToken);
-                }
+            // Áp dụng public-read policy cho cả bucket mới tạo lẫn bucket đã tồn tại từ trước
+            if (StorageBuckets.IsPublic(bucketName))
+            {
+                await SetPublicReadPolicyAsync(bucketName, cancellationToken);
             }
 
             _initializedBuckets.TryAdd(bucketName, true);
@@ -196,17 +197,6 @@ public sealed class MinioFileStorageService : IFileStorageService
                   "Effect": "Allow",
                   "Principal": "*",
                   "Action": [
-                    "s3:GetBucketLocation",
-                    "s3:ListBucket"
-                  ],
-                  "Resource": [
-                    "arn:aws:s3:::{{bucketName}}"
-                  ]
-                },
-                {
-                  "Effect": "Allow",
-                  "Principal": "*",
-                  "Action": [
                     "s3:GetObject"
                   ],
                   "Resource": [
@@ -224,6 +214,7 @@ public sealed class MinioFileStorageService : IFileStorageService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Không thể thiết lập bucket policy cho {Bucket}.", bucketName);
+            throw;
         }
     }
 

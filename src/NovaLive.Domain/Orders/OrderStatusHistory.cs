@@ -4,6 +4,14 @@ namespace NovaLive.Domain.Orders;
 
 public sealed class OrderStatusHistory : Entity
 {
+    private OrderStatusHistory() { }
+    public static OrderStatusHistory Create(Guid subId, SubOrderStatus? from, SubOrderStatus to,
+        Guid actor, OrderRole role, string? note, DateTimeOffset now) => new()
+    {
+        SubOrderId = subId, FromStatus = from?.ToString(), ToStatus = to.ToString(),
+        ChangedBy = actor, ChangedByRole = role, Note = note, ChangedAt = now
+    };
+
     public Guid SubOrderId { get; private set; }
 
     public string? FromStatus { get; private set; }

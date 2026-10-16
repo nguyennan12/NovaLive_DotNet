@@ -58,8 +58,8 @@ public class UploadMediaCommandValidator : AbstractValidator<UploadMediaCommand>
         When(x => !string.IsNullOrWhiteSpace(x.Bucket), () =>
         {
             RuleFor(x => x.Bucket!)
-                .Must(StorageBuckets.IsValid)
-                .WithMessage($"Bucket không hợp lệ. Các bucket được hỗ trợ: {string.Join(", ", StorageBuckets.All)}.");
+                .Must(StorageBuckets.IsPublic)
+                .WithMessage($"Bucket không hợp lệ. Chỉ chấp nhận các bucket công khai: {string.Join(", ", StorageBuckets.Public)}.");
         });
     }
 }

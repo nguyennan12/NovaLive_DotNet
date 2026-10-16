@@ -38,11 +38,10 @@ public sealed class GetCategoriesTreeQueryHandler(
                 []))
             .ToLookup(c => c.ParentId);
 
-        var allCategoryIds = categories.Select(c => c.Id).ToHashSet();
-
-        // Root nodes: ParentId null hoặc ParentId không nằm trong danh sách danh mục hiện có
+        // Root nodes: Chỉ những danh mục không có ParentId mới được xem là danh mục gốc.
+        // Khi danh mục cha bị ẩn, các con của nó sẽ không bị đôn lên làm root mà sẽ bị ẩn theo toàn bộ nhánh.
         var rootCandidates = categories
-            .Where(c => !c.ParentId.HasValue || !allCategoryIds.Contains(c.ParentId.Value))
+            .Where(c => !c.ParentId.HasValue)
             .OrderBy(c => c.DisplayOrder)
             .ThenBy(c => c.Name);
 

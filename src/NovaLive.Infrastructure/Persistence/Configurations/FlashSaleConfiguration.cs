@@ -22,11 +22,16 @@ public sealed class FlashSaleConfiguration :
 
     public void Configure(EntityTypeBuilder<FlashSaleItem> builder)
     {
-        builder.ToTable("flash_sale_items");
+        builder.ToTable("flash_sale_items", table =>
+        {
+            table.HasCheckConstraint("ck_flash_sale_items_quantity", "quantity > 0 AND per_user_limit > 0");
+            table.HasCheckConstraint("ck_flash_sale_items_stock", "reserved_qty >= 0 AND sold_qty >= 0 AND reserved_qty + sold_qty <= quantity");
+        });
         builder.HasKey(item => item.Id);
 
         builder.Property(item => item.FlashPrice).HasPrecision(18, 2);
         builder.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(item => item.RejectionReason).HasMaxLength(500);
 
         builder.HasIndex(item => new { item.CampaignId, item.SkuId }).IsUnique();
         builder.HasIndex(item => new { item.CampaignId, item.Status });

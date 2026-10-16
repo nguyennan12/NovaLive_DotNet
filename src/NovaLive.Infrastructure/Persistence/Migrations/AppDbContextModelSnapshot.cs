@@ -20,7 +20,7 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("public")
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
@@ -350,6 +350,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
                     b.Property<int>("ReservedQty")
                         .HasColumnType("integer")
                         .HasColumnName("reserved_qty");
@@ -385,7 +390,12 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasIndex("CampaignId", "Status")
                         .HasDatabaseName("ix_flash_sale_items_campaign_id_status");
 
-                    b.ToTable("flash_sale_items", "public");
+                    b.ToTable("flash_sale_items", "public", t =>
+                        {
+                            t.HasCheckConstraint("ck_flash_sale_items_quantity", "quantity > 0 AND per_user_limit > 0");
+
+                            t.HasCheckConstraint("ck_flash_sale_items_stock", "reserved_qty >= 0 AND sold_qty >= 0 AND reserved_qty + sold_qty <= quantity");
+                        });
                 });
 
             modelBuilder.Entity("NovaLive.Domain.Inventory.Inventory", b =>
@@ -623,6 +633,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_livestream_products");
 
+                    b.HasIndex("SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_livestream_products_session_id")
+                        .HasFilter("is_pinned = true");
+
                     b.HasIndex("SessionId", "DisplayOrder")
                         .HasDatabaseName("ix_livestream_products_session_id_display_order");
 
@@ -719,6 +734,11 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_livestream_sessions_agora_channel_name");
 
+                    b.HasIndex("ShopId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_livestream_sessions_shop_id")
+                        .HasFilter("status = 'Live'");
+
                     b.HasIndex("ShopId", "Status")
                         .HasDatabaseName("ix_livestream_sessions_shop_id_status");
 
@@ -796,6 +816,15 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("discount_amount");
 
+                    b.Property<Guid?>("FlashSaleItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flash_sale_item_id");
+
+                    b.Property<string>("FlashSaleState")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("flash_sale_state");
+
                     b.Property<decimal>("LineTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -836,6 +865,9 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_order_items");
+
+                    b.HasIndex("FlashSaleItemId")
+                        .HasDatabaseName("ix_order_items_flash_sale_item_id");
 
                     b.HasIndex("SkuId")
                         .HasDatabaseName("ix_order_items_sku_id");

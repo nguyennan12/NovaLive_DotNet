@@ -17,6 +17,9 @@ public sealed class IdempotencyBehavior<TRequest, TResponse>(
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
+        // Checkout serializes on the buyer cart and persists its receipt in the order outbox.
+        if (request is NovaLive.Application.UseCases.Orders.Commands.Checkout.CheckoutCommand)
+            return await next(cancellationToken);
         if (request is not IIdempotentCommand idempotentCommand)
         {
             return await next(cancellationToken);

@@ -338,7 +338,7 @@ NovaLive
   - `GetCategoriesTreeQuery`: Đọc toàn bộ bảng `Categories` sắp xếp theo `display_order ASC`. Build cấu trúc cây JSON n-cấp (Parent-Child hierarchy) trong bộ nhớ, tính toán số lượng sản phẩm `ProductCount` cho từng danh mục.
   - `CreateCategoryCommand` & `UpdateCategoryCommand` (Admin): Tạo/sửa tên danh mục, slug, icon_url, parent_id, display_order. Kiểm tra không được chọn `parent_id` chính là danh mục hiện tại (chống vòng lặp vô tận).
   - `DeleteCategoryCommand` (Admin): Xóa danh mục. **Ràng buộc**: Kiểm tra nếu danh mục đang chứa `Spus` hoặc đang có `Categories` con → Báo lỗi `400 Bad Request` ("Không thể xóa danh mục đang có sản phẩm hoặc danh mục con").
-  - `CategoriesController`: Public `GET /categories`, `GET /categories/{id}`; Admin `POST /categories`, `PUT /categories/{id}`, `DELETE /categories/{id}`.
+  - `CategoriesController` (Public): `GET /categories`, `GET /categories/{id}`; `AdminCategoriesController` (Admin): `POST /admin/categories`, `PUT /admin/categories/{id}`, `DELETE /admin/categories/{id}`.
 - **Dependencies**: T08
 - **API Contracts**: `CreateCategoryRequest`, `UpdateCategoryRequest`, `CategoryResponse` (`NovaLive.Contracts.V1.Categories`)
 - **Estimated Size**: S

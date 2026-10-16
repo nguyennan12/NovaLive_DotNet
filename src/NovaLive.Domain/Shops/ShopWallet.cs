@@ -22,4 +22,10 @@ public sealed class ShopWallet : Entity
     public string Currency { get; private set; } = "VND";
 
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void Credit(decimal amount, DateTimeOffset now)
+    {
+        Balance += amount;
+        UpdatedAt = now;
+    }
 }

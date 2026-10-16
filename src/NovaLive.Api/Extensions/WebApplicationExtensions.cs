@@ -22,6 +22,11 @@ public static class WebApplicationExtensions
         // 4. CORS & Protocol
         app.UseCors("DefaultCors");
         app.UseHttpsRedirection();
+        app.Use((context, next) =>
+        {
+            context.Request.EnableBuffering();
+            return next();
+        });
 
         // 5. OpenAPI & Scalar API Reference in Development
         app.MapOpenApiDocumentation();

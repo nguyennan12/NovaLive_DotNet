@@ -77,13 +77,13 @@ dotnet test NovaLive.sln
 
 | Dịch vụ | Địa chỉ / URL | Ghi chú |
 | :--- | :--- | :--- |
-| **NovaLive Web API** | http://localhost:5000 | Cổng chính API Backend |
-| **Scalar API Reference (UI)** | http://localhost:5000/scalar/v1 | Giao diện tài liệu & tương tác API (Development) |
-| **OpenAPI Spec** | http://localhost:5000/openapi/v1.json | Đặc tả OpenAPI v3 JSON |
-| **Health Check Endpoint** | http://localhost:5000/api/v1/health | Kiểm tra tình trạng hoạt động của API |
-| **SignalR Livestream Hub** | `ws://localhost:5000/hubs/livestream` | Kênh realtime phòng Live, chat, thả tim |
-| **SignalR Order Hub** | `ws://localhost:5000/hubs/order` | Kênh realtime nhận thông báo đơn hàng |
-| **SignalR Payment Hub** | `ws://localhost:5000/hubs/payment` | Kênh realtime nhận kết quả thanh toán |
+| **NovaLive Web API** | http://localhost:5001 | Cổng chính API Backend |
+| **Scalar API Reference (UI)** | http://localhost:5001/scalar/v1 | Giao diện tài liệu & tương tác API (Development) |
+| **OpenAPI Spec** | http://localhost:5001/openapi/v1.json | Đặc tả OpenAPI v3 JSON |
+| **Health Check Endpoint** | http://localhost:5001/api/v1/health | Kiểm tra tình trạng hoạt động của API |
+| **SignalR Livestream Hub** | `ws://localhost:5001/hubs/livestream` | Kênh realtime phòng Live, chat, thả tim |
+| **SignalR Order Hub** | `ws://localhost:5001/hubs/order` | Kênh realtime nhận thông báo đơn hàng |
+| **SignalR Payment Hub** | `ws://localhost:5001/hubs/payment` | Kênh realtime nhận kết quả thanh toán |
 | **RabbitMQ Management Dashboard** | http://localhost:15672 | Quản trị hàng đợi tin nhắn (`guest` / `guest`) |
 | **MinIO S3 Console UI** | http://localhost:9001 | Giao diện quản lý lưu trữ ảnh/video (`minio_admin` / `minio_password`) |
 | **PostgreSQL Database** | `localhost:5432` | Cơ sở dữ liệu chính (`novalive_db`) |

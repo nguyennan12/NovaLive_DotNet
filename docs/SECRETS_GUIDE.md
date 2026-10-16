@@ -45,6 +45,7 @@ Tài liệu này quy chuẩn cách thức quản lý biến môi trường, thô
 | **OTP Pepper** | `""` | Không bắt buộc nếu chạy Docker | `Otp__Pepper: ${OTP_PEPPER}` |
 | **Email Resend API Key** | `""` | Không bắt buộc nếu chạy Docker | `Email__ApiKey: ${EMAIL_API_KEY}` |
 | **GHN Shipping Token** | `""` | Không bắt buộc nếu chạy Docker | `Ghn__ApiToken: ${GHN_API_TOKEN}` |
+| **Agora RTC AppId / Cert** | `""` | Placeholder 32 hex chars | `Agora__AppId: ${AGORA_APP_ID}`, `Agora__AppCertificate: ${AGORA_APP_CERTIFICATE}` |
 | **CORS Allowed Origins** | `["http://localhost:3000", ...]` | Kế thừa từ `appsettings.json` | Kế thừa từ `appsettings.json` |
 | **Cookies Config** | `nova_at`, `nova_rt`, `Secure: true` | `Secure: false` (hỗ trợ HTTP dev) | Kế thừa từ `appsettings.json` & dev override |
 

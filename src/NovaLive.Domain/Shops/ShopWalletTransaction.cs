@@ -21,4 +21,26 @@ public sealed class ShopWalletTransaction : Entity
     public string? Description { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public static ShopWalletTransaction Create(
+        Guid walletId,
+        WalletTxType type,
+        decimal amount,
+        decimal balanceBefore,
+        decimal balanceAfter,
+        string? refType,
+        Guid? refId,
+        string? description,
+        DateTimeOffset now) => new()
+    {
+        WalletId = walletId,
+        Type = type,
+        Amount = amount,
+        BalanceBefore = balanceBefore,
+        BalanceAfter = balanceAfter,
+        RefType = refType,
+        RefId = refId,
+        Description = description,
+        CreatedAt = now
+    };
 }
