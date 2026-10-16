@@ -1,13 +1,72 @@
 using Microsoft.EntityFrameworkCore;
-using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.FlashSales;
 
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 
-public sealed class FlashSaleRepository(IAppDbContext dbContext) : IFlashSaleRepository
+public sealed class FlashSaleRepository(AppDbContext dbContext) : IFlashSaleRepository
 {
+    public async Task<IReadOnlyList<FlashSaleItem>> GetActiveItemsBySkuIdsAsync(
+        IEnumerable<Guid> skuIds, DateTimeOffset now, CancellationToken ct = default)
+    {
+        var ids = skuIds.Distinct().ToArray();
+        return await dbContext.FlashSaleItems.AsNoTracking().Where(i => ids.Contains(i.SkuId)
+            && i.Status == FlashSaleItemStatus.Approved
+            && dbContext.FlashSaleCampaigns.Any(c => c.Id == i.CampaignId
+                && (c.Status == FlashSaleCampaignStatus.Active || c.Status == FlashSaleCampaignStatus.Scheduled)
+                && c.StartAt <= now && c.EndAt > now))
+            .OrderBy(i => i.Id).ToListAsync(ct);
+    }
+
+    public async Task LockBuyerItemAsync(Guid buyerId, Guid flashSaleItemId, CancellationToken ct = default)
+    {
+        RequireTransaction();
+        if (dbContext.Database.IsNpgsql())
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({$"flash-sale:{buyerId:D}:{flashSaleItemId:D}"}, 827));", ct);
+    }
+
+    public async Task<bool> TryReserveAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default)
+    {
+        RequireTransaction();
+        if (quantity <= 0) return false;
+        // One parameterized UPDATE; EXISTS stays inside the Flash Sale module.
+        // T26 derives Active from the time window, even before Scheduled is persisted as Active.
+        // Use the database clock so a long transaction cannot reserve using its earlier start time.
+        return await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE flash_sale_items SET reserved_qty = reserved_qty + {quantity}
+            WHERE id = {flashSaleItemId} AND status = 'Approved'
+              AND (quantity - (reserved_qty + sold_qty)) >= {quantity}
+              AND EXISTS (SELECT 1 FROM flash_sale_campaigns c
+                  WHERE c.id = flash_sale_items.campaign_id AND c.status IN ('Active', 'Scheduled')
+                    AND c.start_at <= clock_timestamp() AND c.end_at > clock_timestamp())
+            """, ct) == 1;
+    }
+
+    public async Task<bool> ConfirmSoldAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default)
+    {
+        RequireTransaction();
+        if (quantity <= 0) return false;
+        return await dbContext.FlashSaleItems.Where(i => i.Id == flashSaleItemId && i.ReservedQty >= quantity)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.ReservedQty, i => i.ReservedQty - quantity)
+                .SetProperty(i => i.SoldQty, i => i.SoldQty + quantity), ct) == 1;
+    }
+
+    public async Task<bool> ReleaseReservedAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default)
+    {
+        RequireTransaction();
+        if (quantity <= 0) return false;
+        return await dbContext.FlashSaleItems.Where(i => i.Id == flashSaleItemId && i.ReservedQty >= quantity)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.ReservedQty, i => i.ReservedQty - quantity), ct) == 1;
+    }
+
+    private void RequireTransaction()
+    {
+        if (dbContext.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Flash Sale stock operations require the caller's transaction.");
+    }
+
     public async Task<FlashSaleCampaign?> GetCampaignByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await dbContext.FlashSaleCampaigns
@@ -20,7 +79,7 @@ public sealed class FlashSaleRepository(IAppDbContext dbContext) : IFlashSaleRep
     {
         return await dbContext.FlashSaleCampaigns
             .AsNoTracking()
-            .Where(c => c.Status != FlashSaleCampaignStatus.Cancelled &&
+            .Where(c => (c.Status == FlashSaleCampaignStatus.Active || c.Status == FlashSaleCampaignStatus.Scheduled) &&
                         c.StartAt <= now &&
                         c.EndAt > now)
             .OrderBy(c => c.StartAt)

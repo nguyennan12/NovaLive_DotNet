@@ -46,7 +46,7 @@ public sealed class FlashSaleCampaign : AuditableEntity
     }
 
     public bool IsActiveAt(DateTimeOffset time) =>
-        Status != FlashSaleCampaignStatus.Cancelled && StartAt <= time && EndAt > time;
+        (Status is FlashSaleCampaignStatus.Scheduled or FlashSaleCampaignStatus.Active) && StartAt <= time && EndAt > time;
 
     public bool IsUpcomingAt(DateTimeOffset time) =>
         Status != FlashSaleCampaignStatus.Cancelled && time < StartAt;

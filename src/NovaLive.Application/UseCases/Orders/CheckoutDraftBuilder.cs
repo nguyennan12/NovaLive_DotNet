@@ -7,6 +7,7 @@ using NovaLive.Contracts.V1.Orders;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Discounts;
 using NovaLive.Domain.Pricing;
+using NovaLive.Application.UseCases.FlashSales;
 
 namespace NovaLive.Application.UseCases.Orders;
 
@@ -21,7 +22,8 @@ public sealed class CheckoutDraftBuilder(
     IDiscountRepository discounts,
     IShippingProvider shipping,
     ICurrentUser currentUser,
-    IDateTimeProvider clock)
+    IDateTimeProvider clock,
+    IFlashSaleRepository flashSales)
 
 {
     public async Task<Result<PreparedCheckout>> BuildAsync(CalculateCheckoutRequest request, CancellationToken ct, IReadOnlyList<ShopShippingSelectionDto>? selections = null)
@@ -75,6 +77,11 @@ public sealed class CheckoutDraftBuilder(
             || shopIds.Any(id => !selections.Any(s => s.ShopId == id))))
             return OrderErrors.ShippingProviderRequired;
         var now = clock.UtcNow;
+        var flashItems = await flashSales.GetActiveItemsBySkuIdsAsync(skuIds, now, ct);
+        if (flashItems.GroupBy(i => i.SkuId).Any(g => g.Count() != 1)
+            || flashItems.Any(i => !skuMap.TryGetValue(i.SkuId, out var sku) || sku.ShopId != i.ShopId))
+            return FlashSalesErrors.ItemNotAvailable;
+        var flashMap = flashItems.ToDictionary(i => i.SkuId);
         var shopVouchers = new Dictionary<Guid, VoucherSnapshot>();
         foreach (var selection in request.ShopVouchers ?? [])
         {
@@ -131,7 +138,7 @@ public sealed class CheckoutDraftBuilder(
             {
                 var sku = skuMap[i.SkuId];
                 return new OrderItemCalculationInput(sku.Id, sku.SpuId, spuMap[sku.SpuId].CategoryId,
-                    i.Quantity, sku.SellPrice);
+                    i.Quantity, flashMap.TryGetValue(sku.Id, out var flash) ? flash.FlashPrice : sku.SellPrice);
             }).ToList(), shopVouchers.GetValueOrDefault(shopId)));
         }
 
@@ -161,7 +168,7 @@ public sealed class CheckoutDraftBuilder(
         if (productVoucher is not null) vouchers.Add(productVoucher);
         if (shippingVoucher is not null) vouchers.Add(shippingVoucher);
         return new PreparedCheckout(userId, items, address, primaryAddresses.ToDictionary(a => a.ShopId),
-            shopMap, skuMap, spuMap, vouchers, result);
+            shopMap, skuMap, spuMap, vouchers, result, flashMap);
     }
 
     private async Task<Result<VoucherSnapshot>> LoadVoucherAsync(string code, Guid userId, Guid? shopId,

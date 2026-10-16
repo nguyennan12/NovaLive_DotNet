@@ -20,7 +20,7 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("public")
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
@@ -390,7 +390,12 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasIndex("CampaignId", "Status")
                         .HasDatabaseName("ix_flash_sale_items_campaign_id_status");
 
-                    b.ToTable("flash_sale_items", "public");
+                    b.ToTable("flash_sale_items", "public", t =>
+                        {
+                            t.HasCheckConstraint("ck_flash_sale_items_quantity", "quantity > 0 AND per_user_limit > 0");
+
+                            t.HasCheckConstraint("ck_flash_sale_items_stock", "reserved_qty >= 0 AND sold_qty >= 0 AND reserved_qty + sold_qty <= quantity");
+                        });
                 });
 
             modelBuilder.Entity("NovaLive.Domain.Inventory.Inventory", b =>
@@ -801,6 +806,15 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("discount_amount");
 
+                    b.Property<Guid?>("FlashSaleItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("flash_sale_item_id");
+
+                    b.Property<string>("FlashSaleState")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("flash_sale_state");
+
                     b.Property<decimal>("LineTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -841,6 +855,9 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_order_items");
+
+                    b.HasIndex("FlashSaleItemId")
+                        .HasDatabaseName("ix_order_items_flash_sale_item_id");
 
                     b.HasIndex("SkuId")
                         .HasDatabaseName("ix_order_items_sku_id");

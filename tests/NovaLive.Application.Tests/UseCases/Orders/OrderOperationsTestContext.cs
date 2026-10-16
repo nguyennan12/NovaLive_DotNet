@@ -19,7 +19,7 @@ public sealed class OrderOperationsTestContext
     public ParentOrder Parent => Checkout.ParentList.Single();
     public OrderDetailsReader Reader => new(Checkout.Parents.Object, Checkout.Subs.Object,
         Checkout.Items.Object, Checkout.Histories.Object, Checkout.Payments.Object);
-    public OrderReservationReleaser Releaser => new(Checkout.Items.Object, Checkout.Draft.Inventories.Object);
+    public OrderReservationReleaser Releaser => new(Checkout.Items.Object, Checkout.Draft.Inventories.Object, new NovaLive.Application.UseCases.FlashSales.FlashSaleStockService(Checkout.Items.Object, Checkout.Draft.FlashSales.Object));
     public OrderShopAccess Access => new(new ShopAccess(Checkout.Draft.Shops.Object, Seller.Object), Shop.Object);
     public CancelOrderCommandHandler BuyerCancel => new(Checkout.Parents.Object, Checkout.Subs.Object, Checkout.Payments.Object,
         Checkout.Histories.Object, Checkout.Outbox.Object, Releaser, Checkout.Draft.User.Object, Checkout.Draft.Clock.Object);

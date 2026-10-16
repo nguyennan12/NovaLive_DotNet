@@ -6,16 +6,22 @@ public sealed class OrderItem : Entity
 {
     private OrderItem() { }
     public static OrderItem Create(Guid subOrderId, string snapshot, decimal originalPrice,
-        NovaLive.Domain.Pricing.OrderItemCalculationResult price) => new()
+        NovaLive.Domain.Pricing.OrderItemCalculationResult price, Guid? flashSaleItemId = null) => new()
     {
         SubOrderId = subOrderId, SkuId = price.SkuId, SkuSnapshotJson = snapshot,
         Quantity = price.Quantity, UnitPrice = price.UnitPrice, OriginalPrice = originalPrice,
-        DiscountAmount = price.TotalDiscountAmount, LineTotal = price.FinalLineTotal
+        DiscountAmount = price.TotalDiscountAmount, LineTotal = price.FinalLineTotal,
+        FlashSaleItemId = flashSaleItemId,
+        FlashSaleState = flashSaleItemId.HasValue ? FlashSaleReservationState.Reserved : null
     };
 
     public Guid SubOrderId { get; private set; }
 
     public Guid SkuId { get; private set; }
+
+    public Guid? FlashSaleItemId { get; private set; }
+
+    public FlashSaleReservationState? FlashSaleState { get; private set; }
 
     public string SkuSnapshotJson { get; private set; } = "{}";
 

@@ -21,13 +21,14 @@ public sealed class CalculateCheckoutDraftQueryHandler(
     IDiscountRepository discounts,
     IShippingProvider shipping,
     ICurrentUser currentUser,
-    IDateTimeProvider clock)
+    IDateTimeProvider clock,
+    IFlashSaleRepository flashSales)
     : IQueryHandler<CalculateCheckoutDraftQuery, CheckoutPreviewResponse>
 {
     public async Task<Result<CheckoutPreviewResponse>> Handle(CalculateCheckoutDraftQuery query, CancellationToken ct)
     {
         var result = await new CheckoutDraftBuilder(carts, skus, spus, shops, inventories, addresses,
-            warehouses, discounts, shipping, currentUser, clock).BuildAsync(query.Request, ct);
+            warehouses, discounts, shipping, currentUser, clock, flashSales).BuildAsync(query.Request, ct);
         if (result.IsFailure) return result.Error;
         var draft = result.Value!;
         return draft.Price.ToPreview(draft.Shops, draft.Skus, draft.Spus);

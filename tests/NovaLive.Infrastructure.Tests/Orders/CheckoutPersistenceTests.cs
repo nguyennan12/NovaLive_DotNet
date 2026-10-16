@@ -30,6 +30,7 @@ public sealed class CheckoutPersistenceTests
         s.AddScoped<ISubOrderRepository, SubOrderRepository>(); s.AddScoped<IOrderItemRepository, OrderItemRepository>();
         s.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>(); s.AddScoped<IPaymentRepository, PaymentRepository>();
         s.AddScoped<IOutboxRepository, OutboxRepository>();
+        s.AddScoped<IFlashSaleRepository, FlashSaleRepository>();
         var shipping = new Mock<IShippingProvider>(); shipping.SetupGet(p => p.ProviderCode).Returns("GHN");
         shipping.Setup(p => p.CalculateFeeAsync(It.IsAny<ShippingFeeCalculationModel>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(new ShippingFeeQuote("GHN", "2", 30)));
@@ -115,11 +116,11 @@ public sealed class CheckoutPersistenceTests
             var builder = new CheckoutDraftBuilder(sp.GetRequiredService<ICartRepository>(), sp.GetRequiredService<ISkuRepository>(),
                 sp.GetRequiredService<ISpuRepository>(), sp.GetRequiredService<IShopRepository>(), sp.GetRequiredService<IInventoryRepository>(),
                 sp.GetRequiredService<IUserAddressRepository>(), sp.GetRequiredService<IShopAddressRepository>(), sp.GetRequiredService<IDiscountRepository>(),
-                sp.GetRequiredService<IShippingProvider>(), user.Object, host.Clock);
+                sp.GetRequiredService<IShippingProvider>(), user.Object, host.Clock, sp.GetRequiredService<IFlashSaleRepository>());
             var handler = new CheckoutCommandHandler(builder, sp.GetRequiredService<ITransactionManager>(), sp.GetRequiredService<ICartRepository>(),
                 sp.GetRequiredService<IInventoryRepository>(), sp.GetRequiredService<IParentOrderRepository>(), sp.GetRequiredService<ISubOrderRepository>(),
                 sp.GetRequiredService<IOrderItemRepository>(), sp.GetRequiredService<IOrderStatusHistoryRepository>(), sp.GetRequiredService<IPaymentRepository>(),
-                sp.GetRequiredService<IDiscountRepository>(), sp.GetRequiredService<IOutboxRepository>(), user.Object, host.Clock);
+                sp.GetRequiredService<IDiscountRepository>(), sp.GetRequiredService<IOutboxRepository>(), user.Object, host.Clock, sp.GetRequiredService<IFlashSaleRepository>());
             return await handler.Handle(new(request with { PlatformProductVoucherCode = null }, buyer.ToString()), default);
         }
         var results = await Task.WhenAll(Checkout(buyer1, request1), Checkout(buyer2, request2));

@@ -6,13 +6,14 @@ public sealed class SubOrder : AuditableEntity
 {
     private SubOrder() { }
     public static SubOrder Create(Guid parentId, string code, Guid warehouseId,
-        NovaLive.Domain.Pricing.ShopCalculationResult price, bool cod, DateTimeOffset now) => new()
+        NovaLive.Domain.Pricing.ShopCalculationResult price, bool cod, DateTimeOffset now,
+        OrderSource orderSource = OrderSource.Online) => new()
     {
         ParentOrderId = parentId, SubOrderCode = code, ShopId = price.ShopId, WarehouseAddressId = warehouseId,
         ItemAmount = price.ItemsSubtotal, ShippingFee = price.ShippingFee, ShopDiscountAmount = price.ShopDiscountAmount,
         PlatformDiscountAmount = price.PlatformDiscountAmount, ShippingDiscountAmount = price.ShippingDiscountAmount,
         SubTotal = price.ShopTotal, Status = cod ? SubOrderStatus.Confirmed : SubOrderStatus.PendingPayment,
-        ConfirmedAt = cod ? now : null, CreatedAt = now, UpdatedAt = now
+        ConfirmedAt = cod ? now : null, CreatedAt = now, UpdatedAt = now, OrderSource = orderSource
         // T32: calculate SellerEarnings using the configured commission policy at settlement.
     };
 

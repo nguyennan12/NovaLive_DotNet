@@ -4,6 +4,12 @@ namespace NovaLive.Application.UseCases.FlashSales;
 
 public static class FlashSalesErrors
 {
+    public static readonly Error SoldOut = Error.Conflict("FlashSales.SoldOut", "Không còn đủ suất Flash Sale.");
+    public static readonly Error PerUserLimitExceeded = Error.Conflict("FlashSales.PerUserLimitExceeded", "Vượt giới hạn mua Flash Sale trong chiến dịch.");
+    public static readonly Error ItemNotAvailable = Error.Conflict("FlashSales.ItemNotAvailable", "Sản phẩm Flash Sale không còn khả dụng hoặc đã đổi giá.");
+    public static readonly Error CampaignNotActive = Error.Conflict("FlashSales.CampaignNotActive", "Chiến dịch Flash Sale chưa hoạt động hoặc đã kết thúc.");
+    public static readonly Error ReservationConflict = Error.Conflict("FlashSales.ReservationConflict", "Trạng thái giữ chỗ Flash Sale không hợp lệ.");
+
     public static readonly Error CampaignNotFound =
         Error.NotFound("FlashSales.CampaignNotFound", "Không tìm thấy chiến dịch Flash Sale.");
 

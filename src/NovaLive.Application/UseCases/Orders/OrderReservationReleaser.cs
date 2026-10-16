@@ -2,8 +2,9 @@ using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Inventory;
 using NovaLive.Domain.Orders;
+using NovaLive.Application.Abstractions.Services;
 namespace NovaLive.Application.UseCases.Orders;
-public sealed class OrderReservationReleaser(IOrderItemRepository items, IInventoryRepository inventories)
+public sealed class OrderReservationReleaser(IOrderItemRepository items, IInventoryRepository inventories, IFlashSaleStockService flashSales)
 {
     public async Task<Result> ReleaseAsync(ParentOrder parent, IReadOnlyList<SubOrder> children, Guid actor, CancellationToken ct)
     {
@@ -25,7 +26,6 @@ public sealed class OrderReservationReleaser(IOrderItemRepository items, IInvent
             await inventories.AddHistoryAsync(new InventoryHistory(inv.Id, sku, InventoryChangeType.ReserveRelease,
                 inv.QtyOnHand, 0, before, -qty, inv.QtyOnHand, refType: "Order", refId: parent.Id, createdBy: actor), ct);
         }
-        // TODO T27: release the Flash Sale quota for FlashSale/Livestream source orders as well.
-        return Result.Success();
+        return await flashSales.ReleaseReservedAsync(subMap.Keys, ct);
     }
 }

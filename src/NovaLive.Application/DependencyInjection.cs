@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<UseCases.Orders.OrderDetailsReader>();
         services.AddScoped<UseCases.Orders.OrderShopAccess>();
         services.AddScoped<UseCases.Orders.OrderReservationReleaser>();
+        services.AddScoped<Abstractions.Services.IFlashSaleStockService, UseCases.FlashSales.FlashSaleStockService>();
         services.AddScoped<UseCases.Auth.Common.AuthSessionService>();
         services.AddScoped<UseCases.Auth.Common.OtpFlowService>();
         services.AddOptions<UseCases.Shops.KycUrlOptions>();

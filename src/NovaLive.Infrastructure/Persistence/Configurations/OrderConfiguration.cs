@@ -62,6 +62,8 @@ public sealed class OrderConfiguration :
         builder.Property(item => item.DiscountAmount).HasPrecision(18, 2);
         builder.Property(item => item.LineTotal).HasPrecision(18, 2);
         builder.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(item => item.FlashSaleState).HasConversion<string>().HasMaxLength(20);
+        builder.HasIndex(item => item.FlashSaleItemId);
 
         builder.HasIndex(item => item.SubOrderId);
         builder.HasIndex(item => item.SkuId);

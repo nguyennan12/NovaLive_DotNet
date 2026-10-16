@@ -63,8 +63,8 @@ public sealed class CheckoutCommandTestContext
         Draft.ShopList.Select(s => new ShopShippingSelectionDto(s.Id, "GHN", "2")).ToArray(), null, null, null, "MoMo", null);
     public CheckoutCommandHandler Handler => new(new CheckoutDraftBuilder(Draft.Carts.Object, Draft.Skus.Object,
         Draft.Spus.Object, Draft.Shops.Object, Draft.Inventories.Object, Draft.Addresses.Object,
-        Draft.Warehouses.Object, Draft.Discounts.Object, Draft.Shipping.Object, Draft.User.Object, Draft.Clock.Object),
+        Draft.Warehouses.Object, Draft.Discounts.Object, Draft.Shipping.Object, Draft.User.Object, Draft.Clock.Object, Draft.FlashSales.Object),
         Transactions.Object, Draft.Carts.Object, Draft.Inventories.Object, Parents.Object, Subs.Object,
-        Items.Object, Histories.Object, Payments.Object, Draft.Discounts.Object, Outbox.Object, Draft.User.Object, Draft.Clock.Object);
+        Items.Object, Histories.Object, Payments.Object, Draft.Discounts.Object, Outbox.Object, Draft.User.Object, Draft.Clock.Object, Draft.FlashSales.Object);
     public Task<Result<CheckoutResponse>> Run(CheckoutRequest? request = null) => Handler.Handle(new(request ?? Request, "test-key"), default);
 }
