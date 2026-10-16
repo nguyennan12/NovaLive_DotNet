@@ -22,7 +22,8 @@ public sealed class HandleMomoIpnCommandHandler(
     IShopWalletRepository shopWalletRepository,
     IOutboxRepository outboxRepository,
     IDateTimeProvider clock,
-    ILogger<HandleMomoIpnCommandHandler> logger)
+    ILogger<HandleMomoIpnCommandHandler> logger,
+    IFlashSaleStockService flashSales)
     : ICommandHandler<HandleMomoIpnCommand, MomoIpnResponse>
 {
     public async Task<Result<MomoIpnResponse>> Handle(
@@ -117,6 +118,8 @@ public sealed class HandleMomoIpnCommandHandler(
 
             // Lấy danh sách SubOrders để chuyển sang Confirmed và kết chuyển doanh thu ví Shop
             var subOrders = await subOrderRepository.GetByParentIdsAsync([parentOrder.Id], tracked: true, cancellationToken);
+            var flashResult = await flashSales.ConfirmSoldAsync(subOrders.Select(s => s.Id), cancellationToken);
+            if (flashResult.IsFailure) return flashResult.Error;
 
             foreach (var subOrder in subOrders)
             {

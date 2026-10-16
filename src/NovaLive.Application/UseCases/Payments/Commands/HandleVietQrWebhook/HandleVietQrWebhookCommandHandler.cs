@@ -22,7 +22,8 @@ public sealed class HandleVietQrWebhookCommandHandler(
     IShopWalletRepository shopWalletRepository,
     IOutboxRepository outboxRepository,
     IDateTimeProvider clock,
-    ILogger<HandleVietQrWebhookCommandHandler> logger)
+    ILogger<HandleVietQrWebhookCommandHandler> logger,
+    IFlashSaleStockService flashSales)
     : ICommandHandler<HandleVietQrWebhookCommand, VietQrWebhookResponse>
 {
     public async Task<Result<VietQrWebhookResponse>> Handle(
@@ -114,6 +115,8 @@ public sealed class HandleVietQrWebhookCommandHandler(
 
         // 8. Chuyển trạng thái các SubOrders sang Confirmed và cộng doanh thu vào ví Shop
         var subOrders = await subOrderRepository.GetByParentIdsAsync([parentOrder.Id], tracked: true, cancellationToken);
+        var flashResult = await flashSales.ConfirmSoldAsync(subOrders.Select(s => s.Id), cancellationToken);
+        if (flashResult.IsFailure) return flashResult.Error;
 
         foreach (var subOrder in subOrders)
         {

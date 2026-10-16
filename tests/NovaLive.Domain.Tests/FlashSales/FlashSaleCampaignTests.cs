@@ -82,4 +82,19 @@ public class FlashSaleCampaignTests
         campaign.IsActiveAt(endAt.AddMinutes(10)).Should().BeFalse();
         campaign.IsEndedAt(endAt.AddMinutes(10)).Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(FlashSaleCampaignStatus.Scheduled, true)]
+    [InlineData(FlashSaleCampaignStatus.Active, true)]
+    [InlineData(FlashSaleCampaignStatus.Ended, false)]
+    [InlineData(FlashSaleCampaignStatus.Cancelled, false)]
+    public void EffectiveActive_RequiresEligibleStatusAndStartInclusiveEndExclusive(FlashSaleCampaignStatus status, bool active)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var campaign = new FlashSaleCampaign("Window", now, now.AddHours(1));
+        typeof(FlashSaleCampaign).GetProperty(nameof(FlashSaleCampaign.Status))!.SetValue(campaign, status);
+        campaign.IsActiveAt(now).Should().Be(active);
+        campaign.IsActiveAt(now.AddTicks(-1)).Should().BeFalse();
+        campaign.IsActiveAt(now.AddHours(1)).Should().BeFalse();
+    }
 }

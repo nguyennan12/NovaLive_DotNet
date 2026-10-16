@@ -30,6 +30,7 @@ public sealed class CheckoutTestContext : IDisposable
     public Mock<IDiscountRepository> Discounts { get; } = new(MockBehavior.Strict);
     public Mock<IShippingProvider> Shipping { get; } = new(MockBehavior.Strict);
     public Mock<ICurrentUser> User { get; } = new(MockBehavior.Strict);
+    public Mock<IFlashSaleRepository> FlashSales { get; } = new();
     public Mock<IDateTimeProvider> Clock { get; } = new(MockBehavior.Strict);
     public Cart Cart { get; }
     public UserAddress Address { get; }
@@ -48,6 +49,8 @@ public sealed class CheckoutTestContext : IDisposable
         User.SetupGet(x => x.IsAuthenticated).Returns(true);
         User.SetupGet(x => x.UserId).Returns(UserId);
         Clock.SetupGet(x => x.UtcNow).Returns(Now);
+        FlashSales.Setup(x => x.GetActiveItemsBySkuIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<NovaLive.Domain.FlashSales.FlashSaleItem>());
         Carts.Setup(x => x.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(Cart);
         Carts.Setup(x => x.GetCartItemsByIdsAsync(It.IsAny<IEnumerable<Guid>>(), UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((IEnumerable<Guid> ids, Guid? _, CancellationToken _) => Items.Where(i => ids.Contains(i.Id)).ToList());
@@ -95,7 +98,7 @@ public sealed class CheckoutTestContext : IDisposable
 
     public CalculateCheckoutRequest Request => new(Items.Select(i => i.Id).ToList(), Address.Id, null, null, null);
     public CalculateCheckoutDraftQueryHandler Handler => new(Carts.Object, Skus.Object, Spus.Object, Shops.Object,
-        Inventories.Object, Addresses.Object, Warehouses.Object, Discounts.Object, Shipping.Object, User.Object, Clock.Object);
+        Inventories.Object, Addresses.Object, Warehouses.Object, Discounts.Object, Shipping.Object, User.Object, Clock.Object, FlashSales.Object);
 
     public Task<Result<CheckoutPreviewResponse>> Run(CalculateCheckoutRequest? request = null, CancellationToken ct = default) =>
         Handler.Handle(new CalculateCheckoutDraftQuery(request ?? Request), ct);

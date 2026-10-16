@@ -5,6 +5,18 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
 public interface IFlashSaleRepository
 {
+    Task<IReadOnlyList<FlashSaleItem>> GetActiveItemsBySkuIdsAsync(IEnumerable<Guid> skuIds, DateTimeOffset now, CancellationToken ct = default);
+
+    Task LockBuyerItemAsync(Guid buyerId, Guid flashSaleItemId, CancellationToken ct = default);
+
+    Task<bool> TryReserveAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default);
+
+    /// <summary>Counter primitive; order flows must use IFlashSaleStockService for durable idempotency.</summary>
+    Task<bool> ConfirmSoldAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default);
+
+    /// <summary>Counter primitive; order flows must use IFlashSaleStockService for durable idempotency.</summary>
+    Task<bool> ReleaseReservedAsync(Guid flashSaleItemId, int quantity, CancellationToken ct = default);
+
     Task<FlashSaleCampaign?> GetCampaignByIdAsync(Guid id, CancellationToken ct = default);
 
     Task<IReadOnlyList<FlashSaleCampaign>> GetActiveCampaignsAsync(DateTimeOffset now, CancellationToken ct = default);

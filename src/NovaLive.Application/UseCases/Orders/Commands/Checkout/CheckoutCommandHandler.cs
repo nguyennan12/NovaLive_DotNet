@@ -13,12 +13,13 @@ using NovaLive.Domain.Inventory;
 using NovaLive.Domain.Orders;
 using NovaLive.Domain.Payments;
 using NovaLive.Domain.System;
+using NovaLive.Application.UseCases.FlashSales;
 namespace NovaLive.Application.UseCases.Orders.Commands.Checkout;
 public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransactionManager transactions,
     ICartRepository carts, IInventoryRepository inventories, IParentOrderRepository parents,
     ISubOrderRepository subs, IOrderItemRepository orderItems, IOrderStatusHistoryRepository histories,
     IPaymentRepository payments, IDiscountRepository discounts, IOutboxRepository outbox,
-    ICurrentUser user, IDateTimeProvider clock) : ICommandHandler<CheckoutCommand, CheckoutResponse>
+    ICurrentUser user, IDateTimeProvider clock, IFlashSaleRepository flashSales) : ICommandHandler<CheckoutCommand, CheckoutResponse>
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     public async Task<Result<CheckoutResponse>> Handle(CheckoutCommand command, CancellationToken ct)
@@ -54,6 +55,27 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
                 if (!stock.TryGetValue(sku, out var inv) || inv.ShopId != draft.Skus[sku].ShopId || inv.AvailableQty < qty)
                     return CheckoutErrors.InsufficientStock(sku);
             var now = clock.UtcNow;
+            // Cheap cart/stock validations are complete. All requests use the same quota lock order.
+            foreach (var flash in draft.FlashSaleItems.Values.OrderBy(i => i.Id))
+            {
+                await flashSales.LockBuyerItemAsync(buyer, flash.Id, ct);
+                var campaign = await flashSales.GetCampaignByIdAsync(flash.CampaignId, ct);
+                if (campaign is null || !campaign.IsActiveAt(clock.UtcNow))
+                    return FlashSalesErrors.CampaignNotActive;
+                var current = await flashSales.GetItemByIdAsync(flash.Id, ct);
+                if (current is null || current.Status != FlashSaleItemStatus.Approved || current.FlashPrice != flash.FlashPrice
+                    || current.SkuId != flash.SkuId || current.ShopId != flash.ShopId || current.CampaignId != flash.CampaignId)
+                    return FlashSalesErrors.ItemNotAvailable;
+                var qty = quantities[flash.SkuId];
+                var used = await orderItems.GetFlashSaleUsageAsync(buyer, flash.Id, ct);
+                if (used > (long)current.PerUserLimit - qty) return FlashSalesErrors.PerUserLimitExceeded;
+            }
+            var activeNow = await flashSales.GetActiveItemsBySkuIdsAsync(quantities.Keys, clock.UtcNow, ct);
+            if (!activeNow.Select(i => i.Id).ToHashSet().SetEquals(draft.FlashSaleItems.Values.Select(i => i.Id)))
+                return FlashSalesErrors.ItemNotAvailable;
+            foreach (var flash in draft.FlashSaleItems.Values.OrderBy(i => i.Id))
+                if (!await flashSales.TryReserveAsync(flash.Id, quantities[flash.SkuId], ct))
+                    return FlashSalesErrors.SoldOut;
             var price = draft.Price;
             ParentOrder? parent = null;
             for (var attempt = 0; attempt < 5; attempt++)
@@ -83,7 +105,8 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
             foreach (var shop in price.ShopResults.OrderBy(s => s.ShopId))
             {
                 var sub = SubOrder.Create(parent.Id, $"{parent.OrderCode}-S{responseSubs.Count + 1}",
-                    draft.Warehouses[shop.ShopId].Id, shop, method == PaymentMethod.COD, now);
+                    draft.Warehouses[shop.ShopId].Id, shop, method == PaymentMethod.COD, now,
+                    shop.Items.Any(i => draft.FlashSaleItems.ContainsKey(i.SkuId)) ? OrderSource.FlashSale : OrderSource.Online);
                 await subs.AddAsync(sub, ct);
                 await histories.AddAsync(OrderStatusHistory.Create(sub.Id, null, SubOrderStatus.PendingPayment,
                     buyer, OrderRole.Buyer, "Checkout", now), ct);
@@ -96,7 +119,8 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
                     using var attributes = JsonDocument.Parse(sku.AttributesJson ?? "{}");
                     var snapshot = JsonSerializer.Serialize(new { sku.SkuCode, SpuName = spu.Name,
                         Attributes = attributes.RootElement, spu.ThumbnailUrl }, Json);
-                    await orderItems.AddAsync(OrderItem.Create(sub.Id, snapshot, sku.OriginalPrice, line), ct);
+                    await orderItems.AddAsync(OrderItem.Create(sub.Id, snapshot, sku.OriginalPrice, line,
+                        draft.FlashSaleItems.GetValueOrDefault(sku.Id)?.Id), ct);
                 }
                 responseSubs.Add(new(sub.Id, sub.SubOrderCode, sub.ShopId, sub.SubTotal, sub.Status.ToString()));
                 eventSubs.Add(new(sub.Id, sub.ShopId, shop.Items.Sum(i => i.Quantity), sub.SubTotal));
@@ -115,8 +139,8 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
                 payment.Id, payment.Status.ToString(), responseSubs, payment.ExpiredAt);
             await outbox.AddAsync(new OutboxMessage("OrderPlacedEvent", JsonSerializer.Serialize(new OrderPlacedEvent(
                 parent.Id, parent.OrderCode, buyer, eventSubs, method.ToString(), price.GrandTotal, key, response), Json)), ct);
-            // T27 reserves Flash Sale separately; this checkout creates Online orders only.
-            // T30/T32/T43/T47/T49 handle gateway, settlement, notifications, sale deduction and expiry.
+            // COD keeps the Flash Sale reservation until reconciliation or cancellation.
+            // T47/T49 must use IFlashSaleStockService in their transaction for confirm/expiry.
             return response;
         }, false, ct);
     }

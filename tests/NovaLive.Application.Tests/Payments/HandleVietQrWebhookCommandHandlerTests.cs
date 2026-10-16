@@ -25,6 +25,7 @@ public class HandleVietQrWebhookCommandHandlerTests
     private readonly Mock<ISubOrderRepository> _subOrderRepositoryMock = new();
     private readonly Mock<IShopWalletRepository> _shopWalletRepositoryMock = new();
     private readonly Mock<IOutboxRepository> _outboxRepositoryMock = new();
+    private readonly Mock<IFlashSaleStockService> _flashSales = new();
     private readonly Mock<IDateTimeProvider> _clockMock = new();
     private readonly DateTimeOffset _now = new(2026, 10, 15, 10, 0, 0, TimeSpan.Zero);
 
@@ -33,6 +34,7 @@ public class HandleVietQrWebhookCommandHandlerTests
     public HandleVietQrWebhookCommandHandlerTests()
     {
         _clockMock.SetupGet(c => c.UtcNow).Returns(_now);
+        _flashSales.Setup(s => s.ConfirmSoldAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         _vietQrAdapterMock.Setup(v => v.VerifyWebhookSignature(It.IsAny<string>(), It.IsAny<string?>())).Returns(true);
 
         _handler = new HandleVietQrWebhookCommandHandler(
@@ -43,7 +45,7 @@ public class HandleVietQrWebhookCommandHandlerTests
             _shopWalletRepositoryMock.Object,
             _outboxRepositoryMock.Object,
             _clockMock.Object,
-            NullLogger<HandleVietQrWebhookCommandHandler>.Instance);
+            NullLogger<HandleVietQrWebhookCommandHandler>.Instance, _flashSales.Object);
     }
 
     [Fact]
@@ -86,6 +88,7 @@ public class HandleVietQrWebhookCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        _flashSales.Verify(f => f.ConfirmSoldAsync(It.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { subOrder.Id })), It.IsAny<CancellationToken>()), Times.Once);
         result.Value.Success.Should().BeTrue();
         result.Value.OrderCode.Should().Be(orderCode);
 
