@@ -4,6 +4,11 @@ using NovaLive.Domain.Orders;
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 public sealed class SubOrderRepository(AppDbContext db) : ISubOrderRepository
 {
+    public Task<List<SubOrder>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)
+    {
+        var keys = ids.Distinct().ToArray();
+        return db.SubOrders.AsNoTracking().Where(s => keys.Contains(s.Id)).ToListAsync(ct);
+    }
     public Task<SubOrder?> FindByIdAsync(Guid id, CancellationToken ct) =>
         db.SubOrders.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id, ct);
 
