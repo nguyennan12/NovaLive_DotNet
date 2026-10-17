@@ -4,7 +4,7 @@ namespace NovaLive.Domain.Shops;
 
 public sealed class ShopWallet : Entity
 {
-    public ShopWallet()
+    private ShopWallet()
     {
     }
 
@@ -27,5 +27,12 @@ public sealed class ShopWallet : Entity
     {
         Balance += amount;
         UpdatedAt = now;
+    }
+
+    public Result DebitRefund(decimal amount, DateTimeOffset now)
+    {
+        if (amount < 0 || Balance < amount) return WalletStateErrors.InsufficientBalance;
+        Balance -= amount; UpdatedAt = now;
+        return Result.Success();
     }
 }

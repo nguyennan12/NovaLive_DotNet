@@ -117,6 +117,14 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
+    public Result ReceiveReturn(int qty, DateTimeOffset now)
+    {
+        if (qty <= 0 || (long)QtyOnHand + qty > int.MaxValue || Version == int.MaxValue)
+            return InventoryReservationErrors.InvalidReturn;
+        QtyOnHand += qty; Version++; LastUpdated = now;
+        return Result.Success();
+    }
+
     public void Return(int qty)
     {
         if (qty <= 0)

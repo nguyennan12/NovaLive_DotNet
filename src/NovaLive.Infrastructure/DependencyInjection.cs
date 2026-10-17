@@ -63,6 +63,10 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
         // Repositories
+        services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
+        services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
+        services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
+        services.AddScoped<IOrderReturnItemRepository, OrderReturnItemRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<IUserRepository, NovaLive.Infrastructure.Persistence.Repositories.UserRepository>();
         services.AddScoped<IPermissionRepository, NovaLive.Infrastructure.Persistence.Repositories.PermissionRepository>();

@@ -10,12 +10,8 @@ public record OrderReturnResponse(
     decimal RequestedRefundAmount,
     decimal? ApprovedRefundAmount,
     DateTime CreatedAt,
-    List<ReturnItemDto> Items,
-    List<string> EvidenceUrls);
-
-public record ReturnItemDto(
-    Guid OrderItemId,
-    string SpuName,
-    string SkuCode,
-    int Quantity,
-    decimal RefundPrice);
+    IReadOnlyList<ReturnItemDto> Items,
+    IReadOnlyList<string> EvidenceUrls,
+    NovaLive.Contracts.V1.Shops.ShopAddressResponse? ReturnAddress = null,
+    string? SellerResponse = null,
+    IReadOnlyList<string>? SellerEvidenceUrls = null);

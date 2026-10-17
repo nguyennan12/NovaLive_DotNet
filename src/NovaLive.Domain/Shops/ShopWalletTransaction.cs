@@ -4,6 +4,7 @@ namespace NovaLive.Domain.Shops;
 
 public sealed class ShopWalletTransaction : Entity
 {
+    private ShopWalletTransaction() { }
     public Guid WalletId { get; private set; }
 
     public WalletTxType Type { get; private set; }

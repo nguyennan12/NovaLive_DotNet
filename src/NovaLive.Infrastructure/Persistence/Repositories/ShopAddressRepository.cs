@@ -6,6 +6,9 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class ShopAddressRepository(AppDbContext dbContext) : IShopAddressRepository
 {
+    public Task<ShopAddress?> GetReturnAddressAsync(Guid shopId, CancellationToken ct) =>
+        dbContext.ShopAddresses.AsNoTracking().Where(a => a.ShopId == shopId && a.IsReturn)
+            .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).FirstOrDefaultAsync(ct);
     public Task<ShopAddress?> FindForShopAsync(Guid id, Guid shopId, CancellationToken ct) =>
         dbContext.ShopAddresses.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id && a.ShopId == shopId, ct);
 

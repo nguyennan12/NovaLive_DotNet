@@ -24,6 +24,8 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddScoped<UseCases.Orders.CheckoutDraftBuilder>();
+        services.AddScoped<UseCases.Returns.ReturnReader>();
+        services.AddScoped<UseCases.Returns.SellerReturnAccess>();
         services.AddScoped<UseCases.Orders.OrderDetailsReader>();
         services.AddScoped<UseCases.Orders.OrderShopAccess>();
         services.AddScoped<UseCases.Orders.OrderReservationReleaser>();

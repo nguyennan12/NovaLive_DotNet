@@ -76,6 +76,22 @@ public sealed class SubOrder : AuditableEntity
         UpdatedAt = deliveredAt;
         return true;
     }
+    public Result RequestReturn(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.Delivered || DeliveredAt is null) return ReturnStateErrors.NotDelivered;
+        if (now > DeliveredAt.Value.AddDays(7)) return ReturnStateErrors.Expired;
+        Status = SubOrderStatus.ReturnRequested;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    public Result MarkAsReturned(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.ReturnRequested) return ReturnStateErrors.InvalidStatus;
+        Status = SubOrderStatus.Returned; UpdatedAt = now;
+        return Result.Success();
+    }
+
     public Result Cancel(Guid actor, OrderRole role, string reason, DateTimeOffset now)
     {
         if (Status == SubOrderStatus.Cancelled) return Result.Failure(OrderStateErrors.AlreadyCancelled);
