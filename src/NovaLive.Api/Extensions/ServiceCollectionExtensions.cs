@@ -95,6 +95,9 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<NovaLive.Application.Abstractions.Services.ILivestreamNotificationService, NovaLive.Api.Services.LivestreamNotificationService>();
+        services.AddSingleton<NovaLive.Api.Services.LivestreamReactionBatcher>();
+        services.AddSingleton<NovaLive.Api.Services.ILivestreamReactionBatcher>(sp => sp.GetRequiredService<NovaLive.Api.Services.LivestreamReactionBatcher>());
+        services.AddHostedService(sp => sp.GetRequiredService<NovaLive.Api.Services.LivestreamReactionBatcher>());
 
         // 6. Controllers & JSON Options
         services.AddControllers()

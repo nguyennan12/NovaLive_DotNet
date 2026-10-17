@@ -90,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<IShopWalletRepository, ShopWalletRepository>();
         services.AddScoped<ILivestreamSessionRepository, LivestreamSessionRepository>();
         services.AddScoped<ILivestreamProductRepository, LivestreamProductRepository>();
+        services.AddScoped<ILivestreamCommentRepository, LivestreamCommentRepository>();
 
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
@@ -105,6 +106,7 @@ public static class DependencyInjection
             services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
             services.AddSingleton<ICacheService, RedisCacheService>();
             services.AddSingleton<IIdempotencyService, RedisIdempotencyService>();
+            services.AddSingleton<ILivestreamCacheManager, LivestreamCacheManager>();
         }
 
         // Outbox background worker

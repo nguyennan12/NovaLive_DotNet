@@ -93,4 +93,17 @@ public static class LivestreamMappings
             expiresAt,
             availableQty);
     }
+
+    public static LivestreamCommentResponse ToResponse(this LivestreamComment comment)
+    {
+        return new LivestreamCommentResponse(
+            comment.Id,
+            comment.SessionId,
+            comment.UserId,
+            comment.DisplayName,
+            comment.Content,
+            comment.IsQuestion,
+            comment.CreatedAt);
+    }
 }
+

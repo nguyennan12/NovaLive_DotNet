@@ -78,3 +78,23 @@ public record EndLiveSessionSummaryResponse(
     decimal TotalEstimatedRevenue,
     DateTimeOffset StartedAt,
     DateTimeOffset EndedAt);
+
+public record LivestreamCommentResponse(
+    Guid Id,
+    Guid SessionId,
+    Guid? UserId,
+    string DisplayName,
+    string Content,
+    bool IsQuestion,
+    DateTimeOffset CreatedAt);
+
+public record LivestreamReactionBatchResponse(
+    Guid SessionId,
+    Dictionary<string, int> Reactions,
+    int TotalBatchCount,
+    DateTimeOffset SentAt);
+
+public record ViewerCountUpdatedResponse(
+    Guid SessionId,
+    int ViewerCount);
+

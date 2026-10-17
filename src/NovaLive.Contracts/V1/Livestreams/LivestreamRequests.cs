@@ -20,3 +20,11 @@ public record QuickBuyCheckoutRequest(
     int Quantity,
     Guid ShippingAddressId,
     string PaymentMethod);
+
+public record SendLivestreamCommentRequest(
+    string Content,
+    bool IsQuestion = false);
+
+public record SendLivestreamReactionRequest(
+    string Type);
+
