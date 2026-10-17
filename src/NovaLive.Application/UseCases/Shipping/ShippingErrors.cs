@@ -4,6 +4,8 @@ namespace NovaLive.Application.UseCases.Shipping;
 
 public static class ShippingErrors
 {
+    public static readonly Error InvalidWebhook =
+        Error.Validation("Shipping.InvalidWebhook", "Dữ liệu webhook hoặc trạng thái vận chuyển không hợp lệ.");
     public static readonly Error SubOrderNotFound =
         Error.NotFound("Shipping.SubOrderNotFound", "Không tìm thấy đơn hàng của gian hàng.");
     public static readonly Error ShipmentNotFound =
