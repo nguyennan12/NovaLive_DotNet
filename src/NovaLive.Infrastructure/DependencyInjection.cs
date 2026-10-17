@@ -105,6 +105,7 @@ public static class DependencyInjection
 
         // Outbox background worker
         services.AddHostedService<OutboxBackgroundWorker>();
+        services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging
         services.AddMassTransit(bus =>

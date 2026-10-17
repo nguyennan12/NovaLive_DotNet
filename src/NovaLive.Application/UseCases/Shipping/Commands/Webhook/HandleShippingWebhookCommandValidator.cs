@@ -6,16 +6,8 @@ public sealed class HandleShippingWebhookCommandValidator : AbstractValidator<Ha
 {
     public HandleShippingWebhookCommandValidator()
     {
-        RuleFor(x => x.Request)
-            .NotNull().WithMessage("Dữ liệu webhook không được để trống.");
-
-        When(x => x.Request != null, () =>
-        {
-            RuleFor(x => x.Request.OrderCode)
-                .NotEmpty().WithMessage("Mã đơn vận chuyển (OrderCode) không được để trống.");
-
-            RuleFor(x => x.Request.Status)
-                .NotEmpty().WithMessage("Trạng thái vận chuyển (Status) không được để trống.");
-        });
+        RuleFor(x => x.Provider).IsInEnum();
+        RuleFor(x => x.TrackingCode).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Status).IsInEnum();
     }
 }

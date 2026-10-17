@@ -8,4 +8,4 @@ public record GhnWebhookRequest(
     decimal? TotalFee = null,
     decimal? CodAmount = null,
     string? Reason = null,
-    DateTime? UpdatedAt = null);
+    DateTimeOffset? UpdatedAt = null);

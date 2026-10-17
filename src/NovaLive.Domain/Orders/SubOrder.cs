@@ -68,13 +68,13 @@ public sealed class SubOrder : AuditableEntity
         return Result.Success();
     }
 
-    public void MarkAsDelivered(DateTimeOffset? deliveredAt = null)
+    public bool MarkAsDelivered(DateTimeOffset deliveredAt)
     {
-        if (Status != SubOrderStatus.Delivered && Status != SubOrderStatus.Completed && Status != SubOrderStatus.Cancelled)
-        {
-            Status = SubOrderStatus.Delivered;
-            DeliveredAt = deliveredAt ?? DateTimeOffset.UtcNow;
-        }
+        if (Status != SubOrderStatus.Shipping) return false;
+        Status = SubOrderStatus.Delivered;
+        DeliveredAt = deliveredAt;
+        UpdatedAt = deliveredAt;
+        return true;
     }
     public Result Cancel(Guid actor, OrderRole role, string reason, DateTimeOffset now)
     {

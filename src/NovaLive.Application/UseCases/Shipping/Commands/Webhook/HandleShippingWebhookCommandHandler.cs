@@ -1,88 +1,49 @@
-using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Persistence.Repositories;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Common.Messaging;
+using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
+using NovaLive.Domain.Orders;
+using NovaLive.Domain.System;
 
 namespace NovaLive.Application.UseCases.Shipping.Commands.Webhook;
 
 public sealed class HandleShippingWebhookCommandHandler(
-    IAppDbContext dbContext,
-    ILogger<HandleShippingWebhookCommandHandler> logger)
-    : ICommandHandler<HandleShippingWebhookCommand>
+    IShippingOrderRepository shipments,
+    ISubOrderRepository subs,
+    IOrderStatusHistoryRepository histories,
+    IOutboxRepository outbox,
+    IDateTimeProvider clock,
+    ILogger<HandleShippingWebhookCommandHandler> logger) : ICommandHandler<HandleShippingWebhookCommand>
 {
-    public async Task<Result> Handle(HandleShippingWebhookCommand command, CancellationToken cancellationToken)
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    public async Task<Result> Handle(HandleShippingWebhookCommand command, CancellationToken ct)
     {
-        var req = command.Request;
+        // Serialize webhook and polling transactions on the same shipment before reading its state.
+        var shipment = await shipments.GetByTrackingForUpdateAsync(command.Provider, command.TrackingCode.Trim(), ct);
+        if (shipment is null) return ShippingErrors.OrderNotFound;
+        var sub = await subs.GetForUpdateAsync(shipment.SubOrderId, ct);
+        if (sub is null) return ShippingErrors.SubOrderNotFound;
 
-        // 1. Tìm kiếm đơn vận chuyển trong Database theo mã đơn GHN hoặc TrackingCode
-        var orderCode = req.OrderCode.Trim();
-        var trackingCode = req.TrackingCode?.Trim();
-
-        var shippingOrder = await dbContext.ShippingOrders
-            .FirstOrDefaultAsync(s =>
-                s.TrackingCode == orderCode ||
-                s.ProviderOrderId == orderCode ||
-                (trackingCode != null && s.TrackingCode == trackingCode),
-                cancellationToken);
-
-        if (shippingOrder is null)
-        {
-            logger.LogWarning("Không tìm thấy đơn vận chuyển tương ứng với mã GHN: {OrderCode}", req.OrderCode);
-            // Trả về Success để GHN không retry liên tục các đơn không thuộc hệ thống hoặc đơn test
+        var now = clock.UtcNow;
+        if (!shipment.UpdateStatusFromWebhook(command.Status, command.RawPayload, now))
             return Result.Success();
-        }
 
-        // 2. Chuyển đổi mã trạng thái từ GHN sang ShippingStatus
-        var mappedStatus = MapGhnStatus(req.Status);
-
-        // 3. Cập nhật trạng thái và payload snapshot vào ShippingOrder
-        shippingOrder.UpdateStatusFromWebhook(
-            newStatus: mappedStatus,
-            webhookPayload: command.RawPayload,
-            eventTime: req.UpdatedAt);
-
-        // 4. Đồng bộ trạng thái SubOrder tương ứng (FR-SHIP-006, FR-SHIP-007)
-        var subOrder = await dbContext.SubOrders
-            .FirstOrDefaultAsync(s => s.Id == shippingOrder.SubOrderId, cancellationToken);
-
-        if (subOrder is not null)
+        if (command.Status == ShippingStatus.Delivered && sub.MarkAsDelivered(now))
         {
-            if (mappedStatus == ShippingStatus.Delivered)
-            {
-                subOrder.MarkAsDelivered(req.UpdatedAt);
-            }
-            else if (mappedStatus == ShippingStatus.Delivering || mappedStatus == ShippingStatus.Picking)
-            {
-                subOrder.MarkAsShipping(req.UpdatedAt);
-            }
+            await histories.AddAsync(OrderStatusHistory.Create(sub.Id, SubOrderStatus.Shipping,
+                SubOrderStatus.Delivered, null, OrderRole.System, "Shipment delivered", now), ct);
+            await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
+                new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
+                    shipment.Provider.ToString(), shipment.TrackingCode!, now), Json), now), ct);
         }
-
-        logger.LogInformation(
-            "Cập nhật thành công trạng thái đơn vận chuyển SubOrder={SubOrderId}, TrackingCode={TrackingCode} sang {Status}",
-            shippingOrder.SubOrderId,
-            shippingOrder.TrackingCode,
-            mappedStatus);
+        else if (command.Status is ShippingStatus.Failed or ShippingStatus.Returned or ShippingStatus.Cancelled)
+            logger.LogWarning("Carrier reported {Status} for {Provider}/{TrackingCode}; SubOrder {SubOrderId} remains {SubOrderStatus}",
+                command.Status, command.Provider, command.TrackingCode, sub.Id, sub.Status);
 
         return Result.Success();
-    }
-
-
-    private static ShippingStatus MapGhnStatus(string ghnStatus)
-    {
-        var normalized = ghnStatus.Trim().ToLowerInvariant();
-
-        return normalized switch
-        {
-            "ready_for_pick" => ShippingStatus.ReadyToPick,
-            "picking" => ShippingStatus.Picking,
-            "storing" => ShippingStatus.Picking,
-            "delivering" => ShippingStatus.Delivering,
-            "delivered" => ShippingStatus.Delivered,
-            "delivery_fail" => ShippingStatus.Failed,
-            "return" or "returning" or "returned" => ShippingStatus.Returned,
-            "cancel" or "cancelled" => ShippingStatus.Cancelled,
-            _ => ShippingStatus.Delivering
-        };
     }
 }

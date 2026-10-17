@@ -4,12 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NovaLive.Infrastructure.Persistence;
+using System.Text.Json;
+using NovaLive.Contracts.V1.Shipping;
+using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Infrastructure.System;
 
 public sealed class OutboxBackgroundWorker(
     IServiceScopeFactory scopeFactory,
-    ILogger<OutboxBackgroundWorker> logger)
+    ILogger<OutboxBackgroundWorker> logger,
+    IDateTimeProvider clock)
     : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(10);
@@ -25,18 +29,20 @@ public sealed class OutboxBackgroundWorker(
             {
                 await ProcessOutboxMessagesAsync(stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occurred while processing Outbox messages.");
             }
 
-            await Task.Delay(Interval, stoppingToken);
+            try { await Task.Delay(Interval, stoppingToken); }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
         }
 
         logger.LogInformation("OutboxBackgroundWorker stopped.");
     }
 
-    private async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
+    public async Task ProcessOutboxMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -59,9 +65,17 @@ public sealed class OutboxBackgroundWorker(
         {
             try
             {
-                // In production, deserialize message.Payload by message.EventType and publish via MassTransit
-                message.MarkAsProcessed();
+                if (message.EventType == nameof(ShipmentDeliveredEvent))
+                {
+                    var delivered = JsonSerializer.Deserialize<ShipmentDeliveredEvent>(message.Payload,
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                        ?? throw new JsonException("Invalid shipment delivered event.");
+                    await publishEndpoint.Publish(delivered, cancellationToken);
+                }
+                // Other event dispatch is owned by the existing event infrastructure tasks.
+                message.MarkAsProcessed(clock.UtcNow);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 message.MarkAsFailed(ex.Message);

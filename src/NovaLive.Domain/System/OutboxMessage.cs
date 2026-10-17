@@ -25,9 +25,9 @@ public sealed class OutboxMessage : Entity
 
     public string? ErrorMessage { get; private set; }
 
-    public void MarkAsProcessed()
+    public void MarkAsProcessed(DateTimeOffset processedAt)
     {
-        ProcessedAt = DateTimeOffset.UtcNow;
+        ProcessedAt = processedAt;
         ErrorMessage = null;
     }
 

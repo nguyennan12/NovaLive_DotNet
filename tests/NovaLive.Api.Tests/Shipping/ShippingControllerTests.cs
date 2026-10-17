@@ -11,6 +11,8 @@ using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Xunit;
+using System.Text;
+using System.Text.Json;
 
 namespace NovaLive.Api.Tests.Shipping;
 
@@ -36,12 +38,13 @@ public class ShippingControllerTests
     {
         // Arrange
         var request = new GhnWebhookRequest("GHN123", "delivering");
+        _controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request)));
         _validatorMock
             .Setup(v => v.ValidateWebhook(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns(false);
 
         // Act
-        var result = await _controller.GhnWebhook(request, CancellationToken.None);
+        var result = await _controller.GhnWebhook(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<UnauthorizedObjectResult>();
@@ -52,6 +55,7 @@ public class ShippingControllerTests
     {
         // Arrange
         var request = new GhnWebhookRequest("GHN123", "delivered");
+        _controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request)));
         _validatorMock
             .Setup(v => v.ValidateWebhook(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns(true);
@@ -61,12 +65,13 @@ public class ShippingControllerTests
             .ReturnsAsync(Result.Success());
 
         // Act
-        var result = await _controller.GhnWebhook(request, CancellationToken.None);
+        var result = await _controller.GhnWebhook(CancellationToken.None);
 
         // Assert
         var okResult = result.Should().BeOfType<ObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
-        _senderMock.Verify(s => s.Send(It.Is<HandleShippingWebhookCommand>(c => c.Request.OrderCode == "GHN123"), It.IsAny<CancellationToken>()), Times.Once);
+        _senderMock.Verify(s => s.Send(It.Is<HandleShippingWebhookCommand>(c => c.TrackingCode == "GHN123"
+            && c.Provider == ShippingProvider.GHN && c.Status == ShippingStatus.Delivered), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

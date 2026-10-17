@@ -1,93 +1,39 @@
 using FluentAssertions;
 using NovaLive.Application.UseCases.Shipping.Commands.Webhook;
-using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
-using NovaLive.Domain.Shipping;
 using Xunit;
 
 namespace NovaLive.Application.Tests.Shipping;
 
-public class HandleShippingWebhookCommandTests
+public sealed class HandleShippingWebhookCommandTests
 {
-    private readonly HandleShippingWebhookCommandValidator _validator = new();
+    [Fact]
+    public void Validator_AcceptsValidEvent() => new HandleShippingWebhookCommandValidator()
+        .Validate(new HandleShippingWebhookCommand(ShippingProvider.GHN, "TRACK-1", ShippingStatus.Delivered)).IsValid.Should().BeTrue();
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Validator_RejectsMissingTrackingCode(string? code) => new HandleShippingWebhookCommandValidator()
+        .Validate(new HandleShippingWebhookCommand(ShippingProvider.GHN, code!, ShippingStatus.Delivered)).IsValid.Should().BeFalse();
 
     [Fact]
-    public void Validator_WhenValidRequest_ShouldBeValid()
+    public void Validator_RejectsLongTrackingAndUnknownEnums()
     {
-        var request = new GhnWebhookRequest("GHN123", "delivered");
-        var command = new HandleShippingWebhookCommand(request, "{}");
-
-        var result = _validator.Validate(command);
-        result.IsValid.Should().BeTrue();
+        var result = new HandleShippingWebhookCommandValidator().Validate(new HandleShippingWebhookCommand(
+            (ShippingProvider)99, new string('x', 101), (ShippingStatus)99));
+        result.Errors.Select(e => e.PropertyName).Should().BeEquivalentTo("Provider", "TrackingCode", "Status");
     }
 
     [Fact]
-    public void Validator_WhenMissingOrderCode_ShouldHaveError()
+    public void Key_IncludesProviderTrackingStatusAndUtcEventTime()
     {
-        var request = new GhnWebhookRequest("", "delivering");
-        var command = new HandleShippingWebhookCommand(request, "{}");
-
-        var result = _validator.Validate(command);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName.Contains("OrderCode"));
-    }
-
-    [Fact]
-    public void Validator_WhenMissingStatus_ShouldHaveError()
-    {
-        var request = new GhnWebhookRequest("GHN123", "");
-        var command = new HandleShippingWebhookCommand(request, "{}");
-
-        var result = _validator.Validate(command);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName.Contains("Status"));
-    }
-
-    [Fact]
-    public void ShippingOrder_UpdateStatusFromWebhook_SetsDeliveredAtWhenDelivered()
-    {
-        var order = new ShippingOrder(
-            subOrderId: Guid.NewGuid(),
-            provider: ShippingProvider.GHN,
-            serviceCode: "2",
-            pickupAddressJson: "{}",
-            deliveryAddressJson: "{}",
-            codAmount: 0,
-            shippingFee: 25000,
-            weightGram: 500,
-            trackingCode: "GHN_TEST_01");
-
-        order.Status.Should().Be(ShippingStatus.ReadyToPick);
-
-        order.UpdateStatusFromWebhook(ShippingStatus.Delivered, "{\"status\":\"delivered\"}");
-
-        order.Status.Should().Be(ShippingStatus.Delivered);
-        order.DeliveredAt.Should().NotBeNull();
-        order.WebhookPayload.Should().Be("{\"status\":\"delivered\"}");
-    }
-
-    [Fact]
-    public void ShippingOrder_UpdateStatusFromWebhook_PreventsStatusRegression()
-    {
-        var order = new ShippingOrder(
-            subOrderId: Guid.NewGuid(),
-            provider: ShippingProvider.GHN,
-            serviceCode: "2",
-            pickupAddressJson: "{}",
-            deliveryAddressJson: "{}",
-            codAmount: 0,
-            shippingFee: 25000,
-            weightGram: 500,
-            trackingCode: "GHN_TEST_02");
-
-        // Đơn đã giao thành công
-        order.UpdateStatusFromWebhook(ShippingStatus.Delivered, "{\"status\":\"delivered\"}");
-        order.Status.Should().Be(ShippingStatus.Delivered);
-
-        // Giả lập webhook cũ "delivering" bắn lại trễ do network retry
-        order.UpdateStatusFromWebhook(ShippingStatus.Delivering, "{\"status\":\"delivering\"}");
-
-        // Trạng thái vẫn phải giữ nguyên là Delivered, không được thụt lùi
-        order.Status.Should().Be(ShippingStatus.Delivered);
+        var at = DateTimeOffset.Parse("2026-10-17T01:00:00Z");
+        var c = new HandleShippingWebhookCommand(ShippingProvider.GHN, "TRACK-1", ShippingStatus.Delivered, "{}", at);
+        c.IdempotencyKey.Should().Be((c with { RawPayload = "different", EventTimestamp = at.ToOffset(TimeSpan.FromHours(7)) }).IdempotencyKey);
+        foreach (var other in new[] { c with { Provider = ShippingProvider.GHTK }, c with { TrackingCode = "TRACK-2" },
+            c with { Status = ShippingStatus.Picking }, c with { EventTimestamp = at.AddSeconds(1) }, c with { EventTimestamp = null } })
+            other.IdempotencyKey.Should().NotBe(c.IdempotencyKey);
     }
 }

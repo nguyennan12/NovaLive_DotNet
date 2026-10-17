@@ -70,21 +70,31 @@ public sealed class ShippingOrder : AuditableEntity
 
     public DateTimeOffset? DeliveredAt { get; private set; }
 
-    public void UpdateStatusFromWebhook(
+    public bool UpdateStatusFromWebhook(
         ShippingStatus newStatus,
         string? webhookPayload,
-        DateTimeOffset? eventTime = null)
+        DateTimeOffset now)
     {
-        WebhookPayload = webhookPayload;
+        if (!Enum.IsDefined(newStatus) || Status == newStatus
+            || Status is ShippingStatus.Returned or ShippingStatus.Cancelled)
+            return false;
 
-        // Tránh ghi đè ngược khi đơn đã hoàn tất giao
-        if (Status == ShippingStatus.Delivered && newStatus != ShippingStatus.Delivered)
+        // Carrier exception states advance shipment tracking only, including returns after delivery.
+        var advances = newStatus switch
         {
-            return;
-        }
+            ShippingStatus.Picking => Status == ShippingStatus.ReadyToPick,
+            ShippingStatus.Delivering => Status is ShippingStatus.ReadyToPick or ShippingStatus.Picking,
+            ShippingStatus.Delivered => Status is ShippingStatus.ReadyToPick or ShippingStatus.Picking or ShippingStatus.Delivering,
+            ShippingStatus.Failed => Status is ShippingStatus.ReadyToPick or ShippingStatus.Picking
+                or ShippingStatus.Delivering or ShippingStatus.Delivered,
+            ShippingStatus.Returned or ShippingStatus.Cancelled => true,
+            _ => false
+        };
+        if (!advances) return false;
 
         Status = newStatus;
-        var now = eventTime ?? DateTimeOffset.UtcNow;
+        UpdatedAt = now;
+        WebhookPayload = webhookPayload;
 
         if (newStatus == ShippingStatus.Picking && PickedAt is null)
         {
@@ -94,6 +104,7 @@ public sealed class ShippingOrder : AuditableEntity
         {
             DeliveredAt = now;
         }
+        return true;
     }
 
     public void SetTracking(string trackingCode, string? providerOrderId = null)
