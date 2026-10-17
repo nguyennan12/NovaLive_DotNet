@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Moq;
 using NovaLive.Application.UseCases.Returns;
 using NovaLive.Application.UseCases.Returns.Commands.RequestReturn;
 using NovaLive.Application.UseCases.Returns.Queries.GetMyReturns;
@@ -12,7 +13,8 @@ public sealed class BuyerReturnTests
     public async Task SeventhDay_CreateHistorySnapshotRefundAndQueryableOwnReturn()
     {
         var c = new ReturnTestContext(); var result = await c.Handler.Handle(new(c.Request), default);
-        result.IsSuccess.Should().BeTrue(); result.Value!.RequestedRefundAmount.Should().Be(160);
+        result.IsSuccess.Should().BeTrue(); result.Value!.RequestedRefundAmount.Should().Be(180);
+        result.Value.Items.Single().RefundPrice.Should().Be(180);
         c.Sub.Status.Should().Be(SubOrderStatus.ReturnRequested); c.Saved.Should().ContainSingle(); c.SavedLines.Should().ContainSingle();
         c.History.Should().ContainSingle().Which.ChangedByRole.Should().Be(OrderRole.Buyer);
         var detail = await new GetReturnDetailQueryHandler(c.Returns.Object, c.User.Object, c.Reader).Handle(new(c.Saved[0].Id), default);
@@ -20,6 +22,28 @@ public sealed class BuyerReturnTests
         var page = await new GetMyReturnsQueryHandler(c.Returns.Object, c.User.Object, c.Reader).Handle(new("Pending"), default);
         page.Value!.Total.Should().Be(1); page.Value.Items.Should().ContainSingle();
         (await c.Handler.Handle(new(c.Request), default)).Error.Should().Be(ReturnErrors.ActiveReturnExists);
+    }
+    [Fact]
+    public async Task MultiplePartialReturns_IgnoreRejectedQuantitiesAndRefundExactRemainingAmount()
+    {
+        var c = new ReturnTestContext();
+        var item = OrderItem.Create(c.Sub.Id, "{}", 40000,
+            new(Guid.NewGuid(), Guid.NewGuid(), 3, 40000, 120000, 0, 20000, 20000, 100000));
+        c.Items.Setup(i => i.GetBySubOrderIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+        var rejected = OrderReturn.Create(c.Sub.Id, c.Buyer, ReturnReason.Defective, [], 100000, c.Now);
+        typeof(OrderReturn).GetProperty(nameof(OrderReturn.Status))!.SetValue(rejected, ReturnStatus.SellerRejected);
+        c.Saved.Add(rejected); c.SavedLines.Add(OrderReturnItem.Create(rejected.Id, item.Id, 3, null));
+        var refunds = new List<decimal>();
+        foreach (var expected in new[] { 33333m, 33333m, 33334m })
+        {
+            // Arrange the Delivered state that a future dispute-resolution flow may restore.
+            typeof(SubOrder).GetProperty(nameof(SubOrder.Status))!.SetValue(c.Sub, SubOrderStatus.Delivered);
+            var result = await c.Handler.Handle(new(c.Request with { Items = [new(item.Id, 1, null)] }), default);
+            result.IsSuccess.Should().BeTrue(); result.Value!.RequestedRefundAmount.Should().Be(expected);
+            refunds.Add(c.Saved.Last().RefundAmount);
+            typeof(OrderReturn).GetProperty(nameof(OrderReturn.Status))!.SetValue(c.Saved.Last(), ReturnStatus.Completed);
+        }
+        refunds.Sum().Should().Be(item.LineTotal);
     }
     [Fact]
     public async Task PastSeventhDay_DoesNotWrite()

@@ -33,7 +33,7 @@ internal sealed class ReturnHttpTestContext : IDisposable
         App = configure == null ? Factory : Factory.WithWebHostBuilder(b => b.ConfigureTestServices(configure));
         Client = App.CreateClient();
     }
-    public async Task SeedAsync()
+    public async Task SeedAsync(decimal productDiscount = 0)
     {
         using var scope = App.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Mock.Get(scope.ServiceProvider.GetRequiredService<ICacheService>())
@@ -45,12 +45,12 @@ internal sealed class ReturnHttpTestContext : IDisposable
         var warehouse = new ShopAddress(shop.Id, "Return warehouse", "Seller", "0900000000", 1, "P", 1, "D", "W", "Ward", "Return street"); warehouse.SetReturn(true);
         var spu = new Spu(shop.Id, Guid.NewGuid(), "Product", null, null, null, null);
         var sku = new Sku(spu.Id, shop.Id, "RET-SKU", null, 100, 100, 100);
-        var parent = ParentOrder.Create(buyer.Id, "RETURN-PARENT", "{}", 200, 10, 0, 210, null, Factory.Clock.UtcNow.AddDays(-2));
+        var parent = ParentOrder.Create(buyer.Id, "RETURN-PARENT", "{}", 200, 10, productDiscount, 210 - productDiscount, null, Factory.Clock.UtcNow.AddDays(-2));
         var sub = SubOrder.Create(parent.Id, "RETURN-SUB", warehouse.Id,
-            new ShopCalculationResult(shop.Id, 200, 10, 0, 0, 0, 200, 210, []), true, Factory.Clock.UtcNow.AddDays(-2));
+            new ShopCalculationResult(shop.Id, 200, 10, 0, productDiscount, 0, 200 - productDiscount, 210 - productDiscount, []), true, Factory.Clock.UtcNow.AddDays(-2));
         sub.MarkAsShipping(Factory.Clock.UtcNow.AddDays(-2)); sub.MarkAsDelivered(Factory.Clock.UtcNow.AddDays(-1));
         var item = OrderItem.Create(sub.Id, """{"spuName":"Product","skuCode":"RET-SKU"}""", 100,
-            new(sku.Id, spu.Id, 2, 100, 200, 0, 0, 0, 200));
+            new(sku.Id, spu.Id, 2, 100, 200, 0, productDiscount, productDiscount, 200 - productDiscount));
         var wallet = new ShopWallet(shop.Id); wallet.Credit(1000, Factory.Clock.UtcNow);
         db.Users.AddRange(buyer, seller); db.UserRoles.AddRange(new UserRole(buyer.Id, SystemRoleIds.Buyer, Factory.Clock.UtcNow),
             new UserRole(seller.Id, SystemRoleIds.Buyer, Factory.Clock.UtcNow),

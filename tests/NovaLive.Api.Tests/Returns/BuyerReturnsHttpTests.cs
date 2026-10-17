@@ -37,6 +37,19 @@ public sealed class BuyerReturnsHttpTests
         (await c.Client.PostAsJsonAsync("/api/v1/returns", c.Request)).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
     [Fact]
+    public async Task DiscountedReturn_PersistsAndDisplaysNetPriceWithoutSecondVoucherDeduction()
+    {
+        using var c = new ReturnHttpTestContext(); await c.SeedAsync(productDiscount: 20);
+        var response = await c.Client.PostAsJsonAsync("/api/v1/returns", c.Request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        var created = (await response.Content.ReadFromJsonAsync<ApiResponse<OrderReturnResponse>>())!.Data!;
+        created.RequestedRefundAmount.Should().Be(90); created.Items.Single().RefundPrice.Should().Be(90);
+        var detail = await c.Client.GetFromJsonAsync<ApiResponse<OrderReturnResponse>>($"/api/v1/returns/{created.Id}");
+        detail!.Data!.RequestedRefundAmount.Should().Be(90); detail.Data.Items.Single().RefundPrice.Should().Be(90);
+        using var scope = c.App.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.OrderReturns.SingleAsync()).RefundAmount.Should().Be(90);
+    }
+    [Fact]
     public async Task AuthenticationPermissionAndValidation_MapToHttpStatuses()
     {
         using var c = new ReturnHttpTestContext(); await c.SeedAsync();

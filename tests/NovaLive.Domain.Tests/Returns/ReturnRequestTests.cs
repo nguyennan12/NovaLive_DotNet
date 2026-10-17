@@ -20,11 +20,11 @@ public sealed class ReturnRequestTests
         Sub().RequestReturn(Now).Error.Should().Be(ReturnStateErrors.NotDelivered);
     }
     [Theory]
-    [InlineData(1, 0, 80)]
-    [InlineData(2, 0, 160)]
-    [InlineData(2, 2, 160)]
-    [InlineData(4, 0, 320)]
-    public void Refund_UsesSnapshotDiscountAndReturnedQuantity(int quantity, int previous, decimal expected)
+    [InlineData(1, 0, 90)]
+    [InlineData(2, 0, 180)]
+    [InlineData(2, 2, 180)]
+    [InlineData(4, 0, 360)]
+    public void Refund_UsesNetSnapshotAndReturnedQuantity(int quantity, int previous, decimal expected)
     {
         var item = OrderItem.Create(Guid.NewGuid(), "{}", 100, new(Guid.NewGuid(), Guid.NewGuid(), 4, 100, 400, 0, 40, 40, 360));
         ReturnRefundCalculator.Calculate(item, quantity, previous).Value.Should().Be(expected);
@@ -40,7 +40,7 @@ public sealed class ReturnRequestTests
     [Fact]
     public void InvalidSnapshot_ReturnsBusinessError()
     {
-        var item = OrderItem.Create(Guid.NewGuid(), "{}", 1, new(Guid.NewGuid(), Guid.NewGuid(), 1, 1, 1, 0, 2, 2, 1));
+        var item = OrderItem.Create(Guid.NewGuid(), "{}", 1, new(Guid.NewGuid(), Guid.NewGuid(), 1, 1, 1, 0, 2, 2, -1));
         ReturnRefundCalculator.Calculate(item, 1).Error.Should().Be(ReturnStateErrors.InvalidSnapshot);
     }
 }

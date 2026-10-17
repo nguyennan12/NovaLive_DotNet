@@ -60,10 +60,10 @@ public sealed class SellerReturnTests
         var c = await SellerReturnTestContext.Create(true);
         (await c.Received.Handle(new(c.Request.Id), default)).IsSuccess.Should().BeTrue();
         c.Request.Status.Should().Be(ReturnStatus.Completed); c.Request.ResolvedAt.Should().Be(c.Buyer.Now);
-        c.Buyer.Sub.Status.Should().Be(SubOrderStatus.Returned); c.Wallet.Balance.Should().Be(840); c.Stock.QtyOnHand.Should().Be(7);
+        c.Buyer.Sub.Status.Should().Be(SubOrderStatus.Returned); c.Wallet.Balance.Should().Be(820); c.Stock.QtyOnHand.Should().Be(7);
         var money = c.WalletLedger.Should().ContainSingle().Subject;
-        money.Type.Should().Be(WalletTxType.OrderRefund); money.Amount.Should().Be(-160);
-        money.BalanceBefore.Should().Be(1000); money.BalanceAfter.Should().Be(840);
+        money.Type.Should().Be(WalletTxType.OrderRefund); money.Amount.Should().Be(-180);
+        money.BalanceBefore.Should().Be(1000); money.BalanceAfter.Should().Be(820);
         money.RefType.Should().Be("OrderReturn"); money.RefId.Should().Be(c.Request.Id); money.CreatedAt.Should().Be(c.Buyer.Now);
         var stock = c.StockLedger.Should().ContainSingle().Subject;
         stock.ChangeType.Should().Be(InventoryChangeType.ReturnIn); stock.QtyBefore.Should().Be(5); stock.QtyAfter.Should().Be(7);

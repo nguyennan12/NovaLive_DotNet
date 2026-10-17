@@ -21,10 +21,12 @@ public sealed class SellerReturnsHttpTests
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<ApiResponse<OrderReturnResponse>>())!.Data!.Id;
     }
-    [Fact]
-    public async Task ApproveThenReceive_PersistsAtomicLedgersAndRetainsAddressSnapshot()
+    [Theory]
+    [InlineData(0, 100)]
+    [InlineData(20, 90)]
+    public async Task ApproveThenReceive_PersistsAtomicLedgersAndRetainsAddressSnapshot(decimal discount, decimal refund)
     {
-        using var c = new ReturnHttpTestContext(); await c.SeedAsync(); var id = await Request(c);
+        using var c = new ReturnHttpTestContext(); await c.SeedAsync(discount); var id = await Request(c);
         c.Authenticate(c.SellerId, true);
         var page = await c.Client.GetFromJsonAsync<ApiResponse<PagedResult<OrderReturnResponse>>>("/api/v1/seller/returns?status=Pending");
         page!.Data!.Items.Should().ContainSingle();
@@ -43,12 +45,13 @@ public sealed class SellerReturnsHttpTests
         (await c.Client.PutAsync($"/api/v1/seller/returns/{id}/received", null)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await c.Client.PutAsync($"/api/v1/seller/returns/{id}/received", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         using var checkScope = c.App.Services.CreateScope(); var check = checkScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        (await check.OrderReturns.SingleAsync()).Status.Should().Be(ReturnStatus.Completed);
+        var completed = await check.OrderReturns.SingleAsync();
+        completed.Status.Should().Be(ReturnStatus.Completed); completed.RefundAmount.Should().Be(refund);
         (await check.SubOrders.SingleAsync()).Status.Should().Be(SubOrderStatus.Returned);
-        (await check.ShopWallets.SingleAsync()).Balance.Should().Be(900);
+        (await check.ShopWallets.SingleAsync()).Balance.Should().Be(1000 - refund);
         (await check.Inventories.SingleAsync()).QtyOnHand.Should().Be(6);
         var money = await check.ShopWalletTransactions.SingleAsync(); money.Type.Should().Be(WalletTxType.OrderRefund);
-        money.BalanceBefore.Should().Be(1000); money.BalanceAfter.Should().Be(900); money.Amount.Should().Be(-100);
+        money.BalanceBefore.Should().Be(1000); money.BalanceAfter.Should().Be(1000 - refund); money.Amount.Should().Be(-refund);
         money.RefType.Should().Be("OrderReturn"); money.RefId.Should().Be(id);
         var stock = await check.InventoryHistories.SingleAsync(); stock.QtyBefore.Should().Be(5); stock.QtyAfter.Should().Be(6);
         stock.ChangeType.Should().Be(InventoryChangeType.ReturnIn); stock.RefId.Should().Be(id);
