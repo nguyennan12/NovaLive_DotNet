@@ -1,4 +1,4 @@
 namespace NovaLive.Contracts.V1.Returns;
 
 public record SellerReturnResponseRequest(
-    string? ReasonNote);
+    [property: System.Text.Json.Serialization.JsonPropertyName("note")] string? ReasonNote);

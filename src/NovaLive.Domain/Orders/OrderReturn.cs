@@ -19,4 +19,35 @@ public sealed class OrderReturn : AuditableEntity
     public string? AdminNote { get; private set; }
     public Guid? ResolvedBy { get; private set; }
     public DateTimeOffset? ResolvedAt { get; private set; }
+
+    public Result Approve(string response, DateTimeOffset now)
+    {
+        var guard = CanRespond(now);
+        if (guard.IsFailure) return guard;
+        Status = ReturnStatus.SellerApproved; SellerResponse = response; UpdatedAt = now;
+        return Result.Success();
+    }
+
+    public Result Reject(string response, DateTimeOffset now)
+    {
+        var guard = CanRespond(now);
+        if (guard.IsFailure) return guard;
+        if (string.IsNullOrWhiteSpace(response)) return ReturnStateErrors.RejectionRequired;
+        Status = ReturnStatus.SellerRejected; SellerResponse = response; UpdatedAt = now;
+        return Result.Success();
+    }
+
+    private Result CanRespond(DateTimeOffset now)
+    {
+        if (Status != ReturnStatus.Pending) return ReturnStateErrors.InvalidStatus;
+        if (now > CreatedAt.AddDays(3)) return ReturnStateErrors.ResponseExpired;
+        return Result.Success();
+    }
+
+    public Result ConfirmReceived(Guid seller, DateTimeOffset now)
+    {
+        if (Status != ReturnStatus.SellerApproved) return ReturnStateErrors.InvalidStatus;
+        Status = ReturnStatus.Completed; ResolvedBy = seller; ResolvedAt = now; UpdatedAt = now;
+        return Result.Success();
+    }
 }

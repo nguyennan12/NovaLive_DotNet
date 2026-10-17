@@ -85,6 +85,13 @@ public sealed class SubOrder : AuditableEntity
         return Result.Success();
     }
 
+    public Result MarkAsReturned(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.ReturnRequested) return ReturnStateErrors.InvalidStatus;
+        Status = SubOrderStatus.Returned; UpdatedAt = now;
+        return Result.Success();
+    }
+
     public Result Cancel(Guid actor, OrderRole role, string reason, DateTimeOffset now)
     {
         if (Status == SubOrderStatus.Cancelled) return Result.Failure(OrderStateErrors.AlreadyCancelled);

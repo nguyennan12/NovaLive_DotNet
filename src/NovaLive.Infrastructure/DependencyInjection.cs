@@ -64,6 +64,8 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
+        services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
+        services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
         services.AddScoped<IOrderReturnItemRepository, OrderReturnItemRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<IUserRepository, NovaLive.Infrastructure.Persistence.Repositories.UserRepository>();
