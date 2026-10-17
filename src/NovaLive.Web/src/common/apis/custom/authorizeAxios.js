@@ -1,4 +1,4 @@
-// authorizeAxios.js — adapted for NovaLive .NET 9 Clean Architecture
+// authorizeAxios.js — import store thẳng, không cần injectStore
 import axios from 'axios'
 import { clearCurrentUser } from '~/store/user/userSlice'
 import { store } from '~/store/store'
@@ -8,10 +8,7 @@ const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_SOC
 const authorizedAxiosInstance = axios.create({
   baseURL: backendUrl ? `${backendUrl}/api/v1` : '/api/v1',
   timeout: 1000 * 60 * 10,
-  withCredentials: true,
-  headers: {
-    'X-Requested-With': 'XMLHttpRequest'
-  }
+  withCredentials: true
 })
 
 authorizedAxiosInstance.interceptors.request.use((config) => {
@@ -26,24 +23,22 @@ let refreshTokenPromise = null
 
 authorizedAxiosInstance.interceptors.response.use(
   (response) => {
-    const resData = response.data
-    // Bridge .NET ApiResponse<T> ({ success, message, data }) with legacy ({ metadata })
-    if (resData && typeof resData === 'object') {
-      if (resData.data !== undefined && resData.metadata === undefined) {
-        resData.metadata = resData.data
-      }
+    // Unwrap ApiResponse<T> (.data.data) or fallback to .data
+    if (response?.data?.data !== undefined) {
+      return response.data.data
     }
-    return resData
+    return response.data
   },
   (error) => {
-    const originalRequest = error.config
-    const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
-                        originalRequest?.url?.includes('/auth/refresh') ||
-                        originalRequest?.url?.includes('/auth/register')
+    if (error.response?.status === 401) {
+      store.dispatch(clearCurrentUser())
+      window.location.href = '/login'
+      return Promise.reject(error)
+    }
 
-    // Handle 401 or 410 for token expiration
-    if ((error.response?.status === 401 || error.response?.status === 410) && !isAuthRoute && !originalRequest?._retry) {
-      originalRequest._retry = true
+    const originalRequests = error.config
+    if (error.response?.status === 410 && !originalRequests._retry) {
+      originalRequests._retry = true
       if (!refreshTokenPromise) {
         refreshTokenPromise = import('~/common/apis/services/userService')
           .then(({ refreshTokenAPI }) => refreshTokenAPI())
@@ -54,15 +49,11 @@ authorizedAxiosInstance.interceptors.response.use(
           })
           .finally(() => { refreshTokenPromise = null })
       }
-      return refreshTokenPromise.then(() => authorizedAxiosInstance(originalRequest))
-    }
-
-    if (error.response?.status === 401 && isAuthRoute) {
-      store.dispatch(clearCurrentUser())
+      return refreshTokenPromise.then(() => authorizedAxiosInstance(originalRequests))
     }
 
     return Promise.reject(error)
   }
 )
 
-export default authorizedAxiosInstance
+export default authorizedAxiosInstance

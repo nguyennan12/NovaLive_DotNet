@@ -14,6 +14,8 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import ScrollToTop from './common/hooks/useScroll'
 
 
+import { SignalRProvider } from './common/contexts/SignalRContext'
+
 const persitor = persistStore(store)
 const queryClient = new QueryClient()
 
@@ -27,7 +29,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ConfirmProvider>
               <CssBaseline />
               <ScrollToTop />
-              <App />
+              <SignalRProvider>
+                <App />
+              </SignalRProvider>
               <ToastContainer autoClose={2000} theme="colored" />
             </ConfirmProvider>
           </ThemeProvider >

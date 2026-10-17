@@ -3,9 +3,8 @@ import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutl
 import { Autocomplete, Box, Button, Chip, FormControl, FormHelperText, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material'
 import { Controller, FormProvider, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { addInventoryAPI } from '~/common/apis/services/inventoryService'
 import SectionCard from '../shared/SectionCard'
-import { useQueryClient } from '@tanstack/react-query'
+import { useStockAdjustment } from '../../hooks/useInventory'
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
@@ -29,7 +28,8 @@ const REASON_META = {
 
 const OUT_REASONS = ['order', 'damaged', 'transfer', 'adjustment']
 
-const StockOutForm = ({ skus, setParams }) => {
+const StockOutForm = ({ skus }) => {
+  const { adjustStock, isSubmitting } = useStockAdjustment()
   const methods = useForm({
     mode: 'onBlur',
     defaultValues: {
@@ -40,28 +40,22 @@ const StockOutForm = ({ skus, setParams }) => {
       type: 'OUT'
     }
   })
-  const queryClient = useQueryClient()
   const { handleSubmit, control, watch, reset } = methods
   const selectedProduct = watch('product')
 
   const onSubmit = async (data) => {
-    const { product, ...rest } = data
-    const payload = {
-      productId: product.sku_spuId,
-      skuId: product._id,
-      shopId: '69e364dfdf24f31846f15580',
-      ...rest
+    const { product } = data
+    if (!product) {
+      toast.error('Vui lòng chọn sản phẩm!')
+      return
     }
-    toast.promise(addInventoryAPI(payload), {
-      pending: 'Processing...',
-      success: 'Stock removed successfully!',
-      error: 'Failed to remove stock'
+    const skuId = product.skuId || product.id || product._id || product.sku_spuId
+    await adjustStock({
+      skuId,
+      qtyChange: -Math.abs(Number(data.stock)),
+      changeType: data.reason === 'damaged' ? 'Damage' : 'Adjustment',
+      note: data.note || `Xuất kho: ${data.reason || 'Lý do khác'}`
     })
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: ['skus'], type: 'active' }),
-      queryClient.refetchQueries({ queryKey: ['chart_inventory'], type: 'active' }),
-      queryClient.refetchQueries({ queryKey: ['history_inventory'], type: 'active' })
-    ])
     reset()
   }
 

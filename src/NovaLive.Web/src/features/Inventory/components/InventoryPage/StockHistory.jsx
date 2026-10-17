@@ -1,13 +1,11 @@
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded'
 import { Box, MenuItem, Pagination, Select, Skeleton, Typography } from '@mui/material'
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { getHistoryInventoryAPI } from '~/common/apis/services/inventoryService'
 import EmptyState from '../shared/EmptyState'
 import SectionCard from '../shared/SectionCard'
 import StatusBadge from '../shared/StatusBadge'
 import { LIMIT } from '~/common/utils/constant'
-
+import { useStockHistory } from '../../hooks/useInventory'
 
 const fmt = (iso) => {
   const d = new Date(iso)
@@ -17,22 +15,13 @@ const fmt = (iso) => {
 const COLS = ['Type', 'Product', 'SKU', 'Qty', 'Time', 'User', 'Note']
 const GRID = '80px 2fr 1fr 60px 1.2fr 1.5fr 2fr'
 
-const StockHistory = ({ loading = false }) => {
-
+const StockHistory = ({ loading: externalLoading = false }) => {
   const [page, setPage] = useState(1)
   const [type, setType] = useState('all')
 
   const params = { page, limit: LIMIT.INVENTORY, type }
-
-  const queryString = new URLSearchParams(params).toString()
-  const { data = [] } = useQuery({
-    queryKey: ['history_inventory', queryString],
-    queryFn: () => getHistoryInventoryAPI(queryString)
-  })
-
-  const histories = data?.items || []
-  const totalPages = data?.totalPages || 1
-  const totalItems = data?.totalItems || 0
+  const { histories, totalPages, totalItems, isLoading } = useStockHistory(params)
+  const loading = externalLoading || isLoading
 
   const handlePageChange = (event, value) => {
     setPage(value)

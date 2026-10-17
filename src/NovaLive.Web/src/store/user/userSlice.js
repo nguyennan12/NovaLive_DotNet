@@ -30,16 +30,14 @@ export const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(loginUserAPI.fulfilled, (state, action) => {
-      const payload = action.payload?.data || action.payload?.metadata || action.payload
+      const payload = action.payload?.data || action.payload?.metadata || action.payload || {}
       const user = payload?.user || payload
       const tokens = payload?.tokens || {}
-      if (user) {
-        state.currentUser = {
-          ...user,
-          _id: user.id || user.userId || user._id,
-          id: user.id || user.userId || user._id,
-          accessToken: tokens.accessToken || user.accessToken
-        }
+      state.currentUser = {
+        ...user,
+        _id: user?.id || user?._id,
+        id: user?.id || user?._id,
+        accessToken: tokens.accessToken || payload?.accessToken || user?.accessToken
       }
     })
     builder.addCase(logoutUserAPI.fulfilled, (state) => {

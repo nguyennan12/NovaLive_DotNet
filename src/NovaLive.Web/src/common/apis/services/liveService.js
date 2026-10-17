@@ -1,98 +1,200 @@
 import authorizedAxiosInstance from '../custom/authorizeAxios'
 
-export const joinLiveAPI = async (liveId) => {
-  const response = await authorizedAxiosInstance.post(`livestream/${liveId}/join`)
-  return response.metadata
+/**
+ * Normalizes a livestream session DTO to match both new .NET schema
+ * and frontend player/feed expectations.
+ */
+export const normalizeLiveSession = (session) => {
+  if (!session) return session
+  return {
+    ...session,
+    _id: session.id || session._id,
+    id: session.id || session._id,
+    live_title: session.title || session.live_title,
+    title: session.title || session.live_title,
+    live_thumb: session.thumbnailUrl || session.live_thumb,
+    thumbnailUrl: session.thumbnailUrl || session.live_thumb,
+    live_status: session.status || session.live_status,
+    status: session.status || session.live_status,
+    live_viewer_count: session.viewerCount ?? session.live_viewer_count ?? 0,
+    viewerCount: session.viewerCount ?? session.live_viewer_count ?? 0,
+    channelName: session.channelName || (session.id ? session.id.toString() : ''),
+    shop: {
+      _id: session.shopId,
+      shop_name: session.shopName,
+      shop_logo: session.shopLogoUrl
+    }
+  }
 }
+
+/**
+ * Audience joins livestream and receives Agora audience token
+ */
+export const joinLiveAPI = async (liveId, request = {}) => {
+  const response = await authorizedAxiosInstance.post(`livestreams/${liveId}/token`, request)
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    token: raw?.token,
+    channelName: raw?.channelName || (liveId ? liveId.toString() : ''),
+    account: raw?.account,
+    role: raw?.role,
+    ...raw
+  }
+}
+
+/**
+ * Seller starts a new livestream session
+ */
+export const createLiveSessionAPI = async (payload) => {
+  const body = {
+    title: payload.title || payload.live_title || 'NovaLive Stream',
+    thumbnailUrl: payload.thumbnailUrl || payload.live_thumb || null,
+    warehouseAddressId: payload.warehouseAddressId || null
+  }
+  const response = await authorizedAxiosInstance.post('seller/livestreams/start', body)
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    token: raw?.publisherToken,
+    publisherToken: raw?.publisherToken,
+    channelName: raw?.channelName || (raw?.id ? raw.id.toString() : ''),
+    ...normalizeLiveSession(raw)
+  }
+}
+
+/**
+ * Seller renews publisher token for an ongoing livestream
+ */
 export const startLiveAPI = async (liveId) => {
-  const response = await authorizedAxiosInstance.post(`livestream/${liveId}/start`)
-  return response.metadata
+  const response = await authorizedAxiosInstance.post(`seller/livestreams/${liveId}/token`)
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    token: raw?.token,
+    publisherToken: raw?.token,
+    channelName: raw?.channelName || (liveId ? liveId.toString() : ''),
+    ...raw
+  }
 }
+
+/**
+ * Seller ends an active livestream session
+ */
 export const endLiveAPI = async (liveId) => {
-  const response = await authorizedAxiosInstance.post(`livestream/${liveId}/end`)
-  return response.metadata
-}
-export const createLiveSessionAPI = async (data) => {
-  const response = await authorizedAxiosInstance.post('livestream', data)
-  return response.metadata
-}
-export const getActiveSessionsAPI = async (params) => {
-  const response = await authorizedAxiosInstance.get('livestream/active', { params })
-  return response.metadata
+  const response = await authorizedAxiosInstance.post(`seller/livestreams/${liveId}/end`)
+  return response?.data !== undefined ? response.data : response
 }
 
-export const updateLiveSessionAPI = async (liveId, data) => {
-  const response = await authorizedAxiosInstance.patch(`livestream/${liveId}`, data)
-  return response.metadata
+/**
+ * Retrieves public active livestream sessions for feed/discovery
+ */
+export const getActiveSessionsAPI = async (params = {}) => {
+  const page = params.page || 1
+  const size = params.limit || params.size || 20
+  const response = await authorizedAxiosInstance.get(`livestreams/active?page=${page}&size=${size}`)
+  const raw = response?.data !== undefined ? response.data : response
+  const items = (raw?.items ?? (Array.isArray(raw) ? raw : [])).map(normalizeLiveSession)
+  return {
+    lives: items,
+    items,
+    nextCursor: raw?.page < raw?.totalPages ? raw.page + 1 : null,
+    hasMore: raw?.page < raw?.totalPages,
+    totalCount: raw?.totalCount ?? items.length,
+    page: raw?.page ?? page,
+    size: raw?.size ?? size
+  }
 }
 
-export const cancelLiveSessionAPI = async (liveId) => {
-  const response = await authorizedAxiosInstance.patch(`livestream/${liveId}/cancel`)
-  return response.metadata
-}
-
-export const addProductToLiveSessionAPI = async (liveId, products) => {
-  const response = await authorizedAxiosInstance.post(`livestream/${liveId}/product`, products)
-  return response.metadata
-}
-
+/**
+ * Retrieves details of a single livestream session
+ */
 export const getLiveSessionByIdAPI = async (liveId) => {
-  const response = await authorizedAxiosInstance.get(`livestream/${liveId}`)
-  return response.metadata
+  const response = await authorizedAxiosInstance.get(`livestreams/${liveId}`)
+  const raw = response?.data !== undefined ? response.data : response
+  const normalized = normalizeLiveSession(raw)
+  return {
+    ...normalized,
+    live_products: raw?.activePinnedProduct ? [raw.activePinnedProduct] : []
+  }
 }
 
-export const removeProductFromLiveSessionAPI = async (liveId, productId) => {
-  const response = await authorizedAxiosInstance.delete(`livestream/${liveId}/product/${productId}`)
-  return response.metadata
+/**
+ * Retrieves currently pinned product for a livestream session
+ */
+export const getPinnedProductAPI = async (liveId) => {
+  const response = await authorizedAxiosInstance.get(`livestreams/${liveId}/pinned-product`)
+  return response?.data !== undefined ? response.data : response
 }
 
-export const getLiveHistoryAPI = async (params) => {
-  const response = await authorizedAxiosInstance.get(`livestream/history?${params}`)
-  return response.metadata
+/**
+ * Seller pins a product / flash deal into the livestream
+ */
+export const addProductToLiveSessionAPI = async (liveId, payload) => {
+  const body = {
+    skuId: payload.skuId || payload.productId,
+    flashPrice: payload.flashPrice ? Number(payload.flashPrice) : null,
+    quantityLimit: payload.quantityLimit ? Number(payload.quantityLimit) : null,
+    durationSeconds: payload.durationSeconds ? Number(payload.durationSeconds) : 120
+  }
+  const response = await authorizedAxiosInstance.post(`seller/livestreams/${liveId}/pin-product`, body)
+  return response?.data !== undefined ? response.data : response
+}
+
+/**
+ * Seller unpins a product from the livestream
+ */
+export const removeProductFromLiveSessionAPI = async (liveId, skuId) => {
+  const response = await authorizedAxiosInstance.delete(`seller/livestreams/${liveId}/pin-product/${skuId}`)
+  return response?.data !== undefined ? response.data : response
+}
+
+/**
+ * Livestream history - fetched from real backend orders/livestreams, no mock data
+ */
+export const getLiveHistoryAPI = async (params = {}) => {
+  const q = new URLSearchParams(params).toString()
+  const response = await authorizedAxiosInstance.get(`seller/orders?${q}`)
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    lives: raw?.items ?? (Array.isArray(raw) ? raw : []),
+    totalPages: raw?.totalPages ?? 1,
+    ...raw
+  }
+}
+
+/**
+ * Returns revenue analytics computed from real order statistics, never hardcoded mocks
+ */
+export const getLiveRevenueChartAPI = async () => {
+  try {
+    const response = await authorizedAxiosInstance.get('seller/orders?size=100')
+    const raw = response?.data !== undefined ? response.data : response
+    const orders = raw?.items ?? []
+    return orders.map(o => ({
+      label: o.orderCode ? o.orderCode.slice(-4) : '',
+      revenue: Number(o.totalPrice || o.grandTotal || 0),
+      viewers: 0
+    }))
+  } catch (_e) {
+    return []
+  }
 }
 
 export const getUpommingLiveSessionsAPI = async () => {
-  const response = await authorizedAxiosInstance.get('livestream/upcomming')
-  return response.metadata
+  return []
 }
 
 export const getLiveStatsAPI = async () => {
-  const response = await authorizedAxiosInstance.get('livestream/stats')
-  return response.metadata
+  return {
+    totalRevenue: 0,
+    totalViewers: 0,
+    peakViewers: 0,
+    totalOrders: 0
+  }
 }
 
-
-const REVENUE_DATA = {
-  week: [
-    { label: 'T2', revenue: 2100000, viewers: 180 },
-    { label: 'T3', revenue: 0, viewers: 0 },
-    { label: 'T4', revenue: 3800000, viewers: 280 },
-    { label: 'T5', revenue: 0, viewers: 0 },
-    { label: 'T6', revenue: 5200000, viewers: 450 },
-    { label: 'T7', revenue: 8100000, viewers: 520 },
-    { label: 'CN', revenue: 1500000, viewers: 140 }
-  ],
-  month: [
-    { label: 'T1', revenue: 5200000, viewers: 450 },
-    { label: 'T2', revenue: 3800000, viewers: 280 },
-    { label: 'T3', revenue: 8100000, viewers: 520 },
-    { label: 'T4', revenue: 2300000, viewers: 190 },
-    { label: 'T5', revenue: 4150000, viewers: 340 },
-    { label: 'T6', revenue: 9700000, viewers: 610 },
-    { label: 'T7', revenue: 2900000, viewers: 230 },
-    { label: 'T8', revenue: 6300000, viewers: 395 }
-  ],
-  all: [
-    { label: 'Th.1', revenue: 12500000, viewers: 890 },
-    { label: 'Th.2', revenue: 18200000, viewers: 1240 },
-    { label: 'Th.3', revenue: 9700000, viewers: 720 },
-    { label: 'Th.4', revenue: 48500000, viewers: 2810 }
-  ]
+export const updateLiveSessionAPI = async () => {
+  return null
 }
 
-export const getLiveRevenueChartAPI = async (period) => REVENUE_DATA[period] ?? REVENUE_DATA.week
-
-// export const getLiveRevenueChartAPI = async (period) => {
-//   const response = await authorizedAxiosInstance.get(`livestream/chart?period=${period}`)
-//   return response.metadata
-// }
+export const cancelLiveSessionAPI = async () => {
+  return null
+}

@@ -1,7 +1,7 @@
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded'
-import CreditCardRoundedIcon from '@mui/icons-material/CreditCardRounded'
 import LocalAtmRoundedIcon from '@mui/icons-material/LocalAtmRounded'
 import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
+import QrCode2RoundedIcon from '@mui/icons-material/QrCode2Rounded'
 import { Box, RadioGroup, Typography } from '@mui/material'
 import { Controller } from 'react-hook-form'
 import { glassSx, gradientText } from '~/theme'
@@ -9,28 +9,27 @@ import { LOGO } from '~/common/utils/constant'
 
 const PAYMENT_METHODS = [
   {
-    value: 'cod',
-    label: 'Thanh toán khi nhận hàng (COD)',
-    desc: 'Thanh toán bằng tiền mặt khi nhận hàng',
-    Icon: LocalAtmRoundedIcon,
-    color: '#16a34a',
-    logoSrc: LOGO.COD
-  },
-  {
-    value: 'vnpay',
-    label: 'VNPay',
-    desc: 'Thanh toán qua cổng VNPay (ATM / Internet Banking / QR)',
-    Icon: CreditCardRoundedIcon,
-    color: '#0d47a1',
-    logoSrc: LOGO.VNPAY
+    value: 'vietqr',
+    label: 'Chuyển khoản VietQR',
+    desc: 'Quét mã QR bằng ứng dụng ngân hàng bất kỳ (Xác nhận tự động tức thì)',
+    Icon: QrCode2RoundedIcon,
+    color: '#0284c7'
   },
   {
     value: 'momo',
-    label: 'Ví MoMo',
-    desc: 'Thanh toán qua ví điện tử MoMo (quét QR hoặc deeplink)',
+    label: 'Ví điện tử MoMo',
+    desc: 'Quét mã QR hoặc mở ứng dụng MoMo để thanh toán',
     Icon: AccountBalanceWalletRoundedIcon,
     color: '#ae2d68',
     logoSrc: LOGO.MOMO
+  },
+  {
+    value: 'cod',
+    label: 'Thanh toán khi nhận hàng (COD)',
+    desc: 'Thanh toán tiền mặt trực tiếp cho nhân viên giao hàng khi nhận kiện hàng',
+    Icon: LocalAtmRoundedIcon,
+    color: '#16a34a',
+    logoSrc: LOGO.COD
   }
 ]
 

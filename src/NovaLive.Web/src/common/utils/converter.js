@@ -84,6 +84,7 @@ export const slugCateToNameCate = (categoriesSlug = [], categories = []) =>
 
 export const toArrayProducts = (data) => {
   if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.items)) return data.items
   if (data && Array.isArray(data.products)) return data.products
   return []
 }

@@ -1,18 +1,16 @@
-import AddIcon from '@mui/icons-material/Add'
+import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import InventoryIcon from '@mui/icons-material/Inventory'
 import { Box, Breadcrumbs, Grid, Link, Typography } from '@mui/material'
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { getAllProductWithStockAPI } from '~/common/apis/services/productService'
+import { LIMIT } from '~/common/utils/constant'
 import ProductStockList from '../components/InventoryPage/ProductStockList'
 import ReservedStock from '../components/InventoryPage/ReservedStock'
 import StockHistory from '../components/InventoryPage/StockHistory'
 import StockInForm from '../components/InventoryPage/StockInForm'
 import StockOutForm from '../components/InventoryPage/StockOutForm'
 import StockOverviewChart from '../components/InventoryPage/StockOverviewChart'
-import { LIMIT } from '~/common/utils/constant'
-
+import { useInventoryStock } from '../hooks/useInventory'
 
 const InventoryPage = () => {
   const [params, setParams] = useState({
@@ -22,15 +20,7 @@ const InventoryPage = () => {
     limit: LIMIT.INVENTORY
   })
 
-  const queryString = new URLSearchParams(params).toString()
-
-  const { data, isLoading, isPlaceholderData } = useQuery({
-    queryKey: ['skus', queryString],
-    queryFn: () => getAllProductWithStockAPI(queryString),
-    placeholderData: (previousData) => previousData
-  })
-  const skus = data?.items || []
-  const totalPages = data?.totalPages || 1
+  const { skus, totalPages, isLoading, isPlaceholderData } = useInventoryStock(params)
 
   return (
     <Box sx={{
@@ -66,7 +56,7 @@ const InventoryPage = () => {
               fontWeight: 600
             }}
           >
-            <AddIcon sx={{ fontSize: 14 }} /> Manager
+            <AddRoundedIcon sx={{ fontSize: 14 }} /> Manager
           </Typography>
         </Breadcrumbs>
 

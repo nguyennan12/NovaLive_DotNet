@@ -8,7 +8,7 @@ import { formatDate, formatVND } from '~/common/utils/formatters'
 import { selectCurrentUser } from '~/store/user/userSlice'
 import { STATUS_CONFIG, canCancelOrder, isDeliveredWithinReturnWindow } from '../../constants/orderStatus'
 import CancelOrderDialog from '../shared/CancelOrderDialog'
-import CodOtpDialog from '../shared/CodOtpDialog'
+import PaymentQrModal from '../shared/PaymentQrModal'
 import { glassSx } from '~/theme'
 
 function StatusChip({ status }) {
@@ -31,7 +31,7 @@ function StatusChip({ status }) {
 
 const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDetail, cancelMutation, retryVNPayMutation, onOrderUpdated }, ref) {
   const [showCancel, setShowCancel] = useState(false)
-  const [showCodRetry, setShowCodRetry] = useState(false)
+  const [showPaymentQr, setShowPaymentQr] = useState(false)
   const user = useSelector(selectCurrentUser)
 
   const { _id, order_trackingNumber, order_status, order_products = [], order_checkout = {}, order_payment = {}, createdAt, deliveredAt } = order
@@ -48,21 +48,14 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
   const remainCount = order_products.length - 1
 
   // Payment retry conditions
-  const isPendingPayment = order_status === 'pending' && order_payment.paymentStatus === 'pending'
-  const canRetryVNPay = isPendingPayment && order_payment.method === 'vnpay'
-  const canRetryCOD = isPendingPayment && order_payment.method === 'cod'
+  const isPendingPayment = (order_status === 'pending' || order_status === 'Pending') &&
+    (order_payment.paymentStatus === 'pending' || order_payment.paymentStatus === 'Pending' || !order_payment.paymentStatus)
+  const canPayOnline = isPendingPayment && (order_payment.method || '').toLowerCase() !== 'cod'
 
   const withinReturn = isDeliveredWithinReturnWindow(order_status, deliveredAt)
 
   const handleCancel = () => {
-    cancelMutation.mutate(_id, { onSuccess: () => setShowCancel(false) })
-  }
-
-  const handleRetryVNPay = () => {
-    retryVNPayMutation?.mutate({
-      trackingNumber: order_trackingNumber,
-      amount: order_checkout.finalCheckout
-    })
+    cancelMutation.mutate({ orderId: _id, reason: 'Người mua hủy đơn' }, { onSuccess: () => setShowCancel(false) })
   }
 
   return (
@@ -175,37 +168,19 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
               </Button>
             )}
 
-            {canRetryVNPay && (
+            {canPayOnline && (
               <Button
                 size="small"
-                disabled={retryVNPayMutation?.isPending}
-                startIcon={retryVNPayMutation?.isPending
-                  ? <CircularProgress size={12} sx={{ color: '#fff' }} />
-                  : <PaymentRoundedIcon sx={{ fontSize: '14px !important' }} />}
-                onClick={handleRetryVNPay}
+                startIcon={<PaymentRoundedIcon sx={{ fontSize: '14px !important' }} />}
+                onClick={() => setShowPaymentQr(true)}
                 sx={{
                   fontSize: '0.76rem', fontWeight: 700, py: 0.5, px: 1.5,
-                  bgcolor: '#ffba43ff', color: '#fff',
-                  '&:hover': { bgcolor: '#d97706' },
-                  '&:disabled': { bgcolor: 'rgba(245,158,11,0.5)', color: '#fff' }
+                  background: 'linear-gradient(90deg, #568dfb, #69aedc)',
+                  color: '#fff',
+                  '&:hover': { boxShadow: '0 2px 8px rgba(52,133,247,0.3)' }
                 }}
               >
-                Thanh toán VNPay
-              </Button>
-            )}
-
-            {canRetryCOD && (
-              <Button
-                size="small"
-                onClick={() => setShowCodRetry(true)}
-                sx={{
-                  fontSize: '0.76rem', fontWeight: 600, py: 0.5, px: 1.5,
-                  border: '1px solid rgba(52,133,247,0.4)', color: 'secondary.main',
-                  bgcolor: 'rgba(52,133,247,0.06)',
-                  '&:hover': { bgcolor: 'rgba(52,133,247,0.12)' }
-                }}
-              >
-                Xác nhận OTP
+                Thanh toán ngay
               </Button>
             )}
 
@@ -271,17 +246,22 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
         open={showCancel}
         onClose={() => setShowCancel(false)}
         onConfirm={handleCancel}
-        loading={cancelMutation.isPending}
+        loading={cancelMutation?.isPending}
         trackingNumber={order_trackingNumber}
       />
 
-      <CodOtpDialog
-        open={showCodRetry}
-        onClose={() => setShowCodRetry(false)}
-        orderId={_id}
-        email={user?.user_email}
-        onSuccess={() => {
-          setShowCodRetry(false)
+      <PaymentQrModal
+        open={showPaymentQr}
+        onClose={() => setShowPaymentQr(false)}
+        paymentData={{
+          paymentId: order.paymentId || order.payment_id,
+          parentOrderId: _id,
+          orderCode: order_trackingNumber || order.orderCode || _id,
+          amount: order_checkout.finalCheckout || order.grandTotal || 0,
+          paymentMethod: (order_payment.method || 'vietqr').toLowerCase()
+        }}
+        onPaymentSuccess={() => {
+          setShowPaymentQr(false)
           onOrderUpdated?.()
         }}
       />

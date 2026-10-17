@@ -3,11 +3,10 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import { Autocomplete, Box, Button, FormControl, FormHelperText, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material'
 import { Controller, FormProvider, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { addInventoryAPI } from '~/common/apis/services/inventoryService'
+import SectionCard from '../shared/SectionCard'
+import { useStockAdjustment } from '../../hooks/useInventory'
 
 const WAREHOUSES = ['Kho Hồ Chí Minh', 'Kho Hà Nội', 'Kho Đà Nẵng', 'Kho Cần Thơ']
-import SectionCard from '../shared/SectionCard'
-import { useQueryClient } from '@tanstack/react-query'
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
@@ -22,9 +21,8 @@ const fieldSx = {
   '& label.Mui-focused': { color: 'secondary.main' }
 }
 
-
-const StockInForm = ({ skus, setParams }) => {
-  const queryClient = useQueryClient()
+const StockInForm = ({ skus }) => {
+  const { adjustStock, isSubmitting } = useStockAdjustment()
   const methods = useForm({
     mode: 'onBlur',
     defaultValues: {
@@ -36,25 +34,20 @@ const StockInForm = ({ skus, setParams }) => {
     }
   })
   const { handleSubmit, reset, control } = methods
-  const onSubmit = async (data) => {
-    const { product, ...rest } = data
-    const payload = {
-      productId: product.sku_spuId,
-      skuId: product._id,
-      shopId: '69e364dfdf24f31846f15580',
-      ...rest
-    }
-    toast.promise(addInventoryAPI(payload), {
-      pending: 'Processing...',
-      success: 'Stock adding successfully!',
-      error: 'Failed to add stock'
-    })
 
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: ['skus'], type: 'active' }),
-      queryClient.refetchQueries({ queryKey: ['chart_inventory'], type: 'active' }),
-      queryClient.refetchQueries({ queryKey: ['history_inventory'], type: 'active' })
-    ])
+  const onSubmit = async (data) => {
+    const { product } = data
+    if (!product) {
+      toast.error('Vui lòng chọn sản phẩm!')
+      return
+    }
+    const skuId = product.skuId || product.id || product._id || product.sku_spuId
+    await adjustStock({
+      skuId,
+      qtyChange: Number(data.stock),
+      changeType: 'Restock',
+      note: data.note || 'Nhập kho hàng hóa'
+    })
     reset()
   }
   const onError = () => {

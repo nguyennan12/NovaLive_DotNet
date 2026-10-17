@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Box, Chip, IconButton } from '@mui/material'
-import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material'
+import KeyboardArrowLeft from '@mui/icons-material/KeyboardArrowLeft'
+import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight'
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded'
 
 
