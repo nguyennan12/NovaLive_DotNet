@@ -164,7 +164,7 @@ public class LivestreamHubTests
     }
 
     [Fact]
-    public async Task SendMessage_WithSessionId_DispatchesCommandSuccessfully()
+    public async Task SendMessageToSession_WithSessionId_DispatchesCommandSuccessfully()
     {
         var expectedResponse = new LivestreamCommentResponse(
             Guid.NewGuid(),
@@ -184,7 +184,7 @@ public class LivestreamHubTests
 
         var hub = CreateHub();
 
-        var response = await hub.SendMessage(_sessionId, "Shop có freeship không?");
+        var response = await hub.SendMessageToSession(_sessionId, "Shop có freeship không?");
 
         response.Should().BeEquivalentTo(expectedResponse);
     }
@@ -216,25 +216,25 @@ public class LivestreamHubTests
     }
 
     [Fact]
-    public async Task SendMessage_WhenCommandFails_ThrowsHubException()
+    public async Task SendMessageToSession_WhenCommandFails_ThrowsHubException()
     {
         _senderMock.Setup(s => s.Send(It.IsAny<SendLivestreamCommentCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Error.Validation("Livestream.Invalid", "Nội dung không hợp lệ."));
 
         var hub = CreateHub();
 
-        var act = async () => await hub.SendMessage(_sessionId, "Hello");
+        var act = async () => await hub.SendMessageToSession(_sessionId, "Hello");
 
         await act.Should().ThrowAsync<HubException>()
             .WithMessage("Nội dung không hợp lệ.");
     }
 
     [Fact]
-    public void SendReaction_WithSessionId_EnqueuesInReactionBatcher()
+    public void SendReactionToSession_WithSessionId_EnqueuesInReactionBatcher()
     {
         var hub = CreateHub();
 
-        hub.SendReaction(_sessionId, "heart");
+        hub.SendReactionToSession(_sessionId, "heart");
 
         _reactionBatcherMock.Verify(r => r.AddReaction(_sessionId, "heart"), Times.Once);
     }

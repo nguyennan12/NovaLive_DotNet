@@ -66,7 +66,13 @@ public sealed class LivestreamHub(
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task<LivestreamCommentResponse> SendMessage(Guid sessionId, string content)
+    public Task<LivestreamCommentResponse> SendMessage(string content)
+    {
+        var sessionId = GetActiveSessionId();
+        return SendMessageToSession(sessionId, content);
+    }
+
+    public async Task<LivestreamCommentResponse> SendMessageToSession(Guid sessionId, string content)
     {
         var (userId, displayName) = ResolveUserInfo();
 
@@ -84,21 +90,15 @@ public sealed class LivestreamHub(
         return result.Value!;
     }
 
-    public Task<LivestreamCommentResponse> SendMessage(string content)
-    {
-        var sessionId = GetActiveSessionId();
-        return SendMessage(sessionId, content);
-    }
-
-    public void SendReaction(Guid sessionId, string type)
-    {
-        reactionBatcher.AddReaction(sessionId, type);
-    }
-
     public void SendReaction(string type)
     {
         var sessionId = GetActiveSessionId();
-        SendReaction(sessionId, type);
+        SendReactionToSession(sessionId, type);
+    }
+
+    public void SendReactionToSession(Guid sessionId, string type)
+    {
+        reactionBatcher.AddReaction(sessionId, type);
     }
 
     private Guid GetActiveSessionId()
