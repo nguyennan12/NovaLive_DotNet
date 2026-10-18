@@ -4,6 +4,18 @@ namespace NovaLive.Domain.Notifications;
 
 public sealed class Notification : Entity
 {
+    private Notification() { }
+
+    public Notification(Guid userId, string type, string title, string body, string? refType, Guid? refId)
+    {
+        UserId = userId;
+        Type = type;
+        Title = title;
+        Body = body;
+        RefType = refType;
+        RefId = refId;
+    }
+
     public Guid UserId { get; private set; }
 
     public string Type { get; private set; } = string.Empty;

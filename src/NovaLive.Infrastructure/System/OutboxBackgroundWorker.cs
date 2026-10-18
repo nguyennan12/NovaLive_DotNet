@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using NovaLive.Infrastructure.Persistence;
 using System.Text.Json;
 using NovaLive.Contracts.V1.Shipping;
+using NovaLive.Application.UseCases.Orders;
 using NovaLive.Application.Abstractions.Services;
 
 namespace NovaLive.Infrastructure.System;
@@ -71,6 +72,13 @@ public sealed class OutboxBackgroundWorker(
                         new JsonSerializerOptions(JsonSerializerDefaults.Web))
                         ?? throw new JsonException("Invalid shipment delivered event.");
                     await publishEndpoint.Publish(delivered, cancellationToken);
+                }
+                else if (message.EventType == nameof(OrderPlacedEvent))
+                {
+                    var orderPlaced = JsonSerializer.Deserialize<OrderPlacedEvent>(message.Payload,
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                        ?? throw new JsonException("Invalid order placed event.");
+                    await publishEndpoint.Publish(orderPlaced, cancellationToken);
                 }
                 // Other event dispatch is owned by the existing event infrastructure tasks.
                 message.MarkAsProcessed(clock.UtcNow);

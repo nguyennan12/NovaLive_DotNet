@@ -123,7 +123,10 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
                         draft.FlashSaleItems.GetValueOrDefault(sku.Id)?.Id), ct);
                 }
                 responseSubs.Add(new(sub.Id, sub.SubOrderCode, sub.ShopId, sub.SubTotal, sub.Status.ToString()));
-                eventSubs.Add(new(sub.Id, sub.ShopId, shop.Items.Sum(i => i.Quantity), sub.SubTotal));
+                eventSubs.Add(new(sub.Id, sub.SubOrderCode, sub.ShopId, shop.Items.Sum(i => i.Quantity), sub.SubTotal,
+                    shop.Items.Select(item => new OrderPlacedItem(draft.Spus[item.SpuId].Name,
+                        draft.Skus[item.SkuId].SkuCode, draft.Spus[item.SpuId].ThumbnailUrl,
+                        item.Quantity, item.UnitPrice, item.FinalLineTotal)).ToList()));
             }
             var payment = Payment.Create(parent.Id, method, price.GrandTotal, now);
             await payments.AddAsync(payment, ct);
@@ -138,7 +141,7 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
             var response = new CheckoutResponse(parent.Id, parent.OrderCode, price.GrandTotal, method.ToString(),
                 payment.Id, payment.Status.ToString(), responseSubs, payment.ExpiredAt);
             await outbox.AddAsync(new OutboxMessage("OrderPlacedEvent", JsonSerializer.Serialize(new OrderPlacedEvent(
-                parent.Id, parent.OrderCode, buyer, eventSubs, method.ToString(), price.GrandTotal, key, response), Json)), ct);
+                parent.Id, parent.OrderCode, now, buyer, eventSubs, method.ToString(), price.GrandTotal, key, response), Json)), ct);
             // COD keeps the Flash Sale reservation until reconciliation or cancellation.
             // T47/T49 must use IFlashSaleStockService in their transaction for confirm/expiry.
             return response;

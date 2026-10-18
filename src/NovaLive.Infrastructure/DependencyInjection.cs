@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ICartRepository, NovaLive.Infrastructure.Persistence.Repositories.CartRepository>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IShopAddressRepository, ShopAddressRepository>();
@@ -122,6 +123,7 @@ public static class DependencyInjection
         // Messaging
         services.AddMassTransit(bus =>
         {
+            bus.AddConsumer<OrderPlacedConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration.GetValue<string>("RabbitMQ:Host")
@@ -139,6 +141,18 @@ public static class DependencyInjection
             });
         });
         services.AddScoped<IMessageBus, MassTransitMessageBus>();
+
+        services.AddHttpClient<ResendOrderConfirmationEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(10))
+            .RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddTransient<LoggingOrderConfirmationEmailSender>();
+        services.AddTransient<IOrderConfirmationEmailSender>(provider =>
+        {
+            var settings = provider.GetRequiredService<IOptions<EmailOptions>>().Value;
+            return settings.IsLogging
+                ? provider.GetRequiredService<LoggingOrderConfirmationEmailSender>()
+                : provider.GetRequiredService<ResendOrderConfirmationEmailSender>();
+        });
 
         // GHN Shipping Provider
         services.Configure<GhnOptions>(configuration.GetSection(GhnOptions.SectionName));

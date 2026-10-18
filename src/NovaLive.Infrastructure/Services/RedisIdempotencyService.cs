@@ -7,6 +7,12 @@ public sealed class RedisIdempotencyService(ICacheService cacheService) : IIdemp
 {
     private const string KeyPrefix = "idempotency:";
 
+    public Task<bool> TryAcquireAsync(string key, TimeSpan ttl, CancellationToken cancellationToken = default) =>
+        cacheService.TrySetAsync($"{KeyPrefix}{key}", "processing", ttl, cancellationToken);
+
+    public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
+        cacheService.RemoveAsync($"{KeyPrefix}{key}", cancellationToken);
+
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var cached = await cacheService.GetAsync<string>($"{KeyPrefix}{key}", cancellationToken);

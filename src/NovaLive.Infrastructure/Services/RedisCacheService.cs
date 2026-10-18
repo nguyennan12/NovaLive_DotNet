@@ -82,6 +82,16 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis, ILogger<Redi
         }
     }
 
+    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!_redis.IsConnected)
+            throw new InvalidOperationException("Redis is unavailable for an idempotency claim.");
+
+        var payload = JsonSerializer.Serialize(value);
+        return await _database.StringSetAsync(key, payload, ttl, When.NotExists).WaitAsync(cancellationToken);
+    }
+
     public async Task<T> GetOrSetAsync<T>(
         string key,
         Func<CancellationToken, Task<T>> factory,

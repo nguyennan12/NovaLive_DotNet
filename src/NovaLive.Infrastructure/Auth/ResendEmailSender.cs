@@ -22,7 +22,7 @@ public sealed class ResendEmailSender(HttpClient client, IOptions<EmailOptions> 
                 : $"{settings.FromName} <{settings.FromAddress}>",
             to = new[] { email },
             subject = $"NovaLive — Mã {purpose}",
-            html = $"<html lang=\"vi\"><body><p>Mã OTP để {purpose} của bạn:</p><p><strong>{WebUtility.HtmlEncode(otp)}</strong></p><p>Mã có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này với người khác.</p></body></html>"
+            html = OtpEmailTemplate.Render(otp, type, purpose)
         };
         // A retry after timeout must not deliver a duplicate message if the first request was accepted.
         var idempotencyKey = Guid.NewGuid().ToString("N");

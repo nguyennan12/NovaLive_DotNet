@@ -175,6 +175,15 @@ internal sealed class TestCache(TestClock clock) : ICacheService
         lock (gate) values[key] = (value!, ttl is null ? null : clock.UtcNow + ttl);
         return Task.CompletedTask;
     }
+    public Task<bool> TrySetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default)
+    {
+        lock (gate)
+        {
+            if (Read(key) is not null) return Task.FromResult(false);
+            values[key] = (value!, clock.UtcNow + ttl);
+            return Task.FromResult(true);
+        }
+    }
     public async Task<T> GetOrSetAsync<T>(string key, Func<CancellationToken, Task<T>> factory, TimeSpan? ttl = null, CancellationToken cancellationToken = default)
     {
         var cached = await GetAsync<T>(key, cancellationToken);
