@@ -22,7 +22,7 @@ public sealed class RedisHealthCheck(IConnectionMultiplexer redis) : IHealthChec
         {
             if (!redis.IsConnected)
             {
-                return HealthCheckResult.Degraded("Redis is connecting or temporarily unreachable.");
+                return HealthCheckResult.Unhealthy("Redis is unavailable.");
             }
             await redis.GetDatabase().PingAsync().WaitAsync(cancellationToken);
             return HealthCheckResult.Healthy();

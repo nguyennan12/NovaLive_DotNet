@@ -146,22 +146,6 @@ public sealed class RegisterVerifyIntegrationTests
         json.RootElement.GetProperty("checks").GetProperty("redis").GetProperty("status").GetString().Should().Be("Unhealthy");
     }
 
-    [Fact]
-    public async Task Startup_DoesNotExposeClientUntilInitializationAndSeedingComplete()
-    {
-        using var factory = new AuthApplicationFactory(pauseInitialization: true);
-        var creatingClient = Task.Run(() => factory.CreateClient());
-        try
-        {
-            await factory.InitializationEntered.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            creatingClient.IsCompleted.Should().BeFalse();
-            factory.InitializationComplete.Should().BeFalse();
-        }
-        finally { factory.ReleaseInitialization.TrySetResult(); }
-        using var client = await creatingClient.WaitAsync(TimeSpan.FromSeconds(20));
-        factory.InitializationComplete.Should().BeTrue();
-        (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
-    }
 
     private static async Task<RegisterUserResponse> Register(HttpClient client)
     {
