@@ -22,9 +22,15 @@ export const normalizeProduct = (p) => {
     thumbnailUrl: p.thumbnailUrl || p.spu_thumb || '',
     spu_shopId: p.shopId || p.spu_shopId,
     shopId: p.shopId || p.spu_shopId,
+    spu_shop_name: p.shopName || p.spu_shop_name || '',
+    shopName: p.shopName || p.spu_shop_name || '',
+    spu_category: p.categoryId || p.spu_category,
+    categoryId: p.categoryId || p.spu_category,
+    categoryName: p.categoryName || '',
+    total_sold: p.soldCount ?? p.total_sold ?? 0,
     spu_price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
     price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
-    spu_quantity: p.totalStock ?? p.stock ?? p.spu_quantity ?? 100,
+    spu_quantity: p.totalStock ?? p.stock ?? p.spu_quantity,
     sku_list: (p.skus || p.sku_list || []).map((s) => {
       const skuId = s.id || s._id || s.sku_id
       let attrName = ''
@@ -46,7 +52,7 @@ export const normalizeProduct = (p) => {
         sku_name: attrName || s.skuCode || s.name || 'Mặc định',
         sku_price: s.sellPrice ?? s.price ?? s.sku_price,
         sku_original_price: s.originalPrice ?? s.sku_original_price,
-        sku_stock: s.availableQty ?? s.initialStock ?? s.stock ?? s.sku_stock ?? 50
+        sku_stock: s.availableQty ?? s.initialStock ?? s.stock ?? s.sku_stock
       }
     })
   }

@@ -14,6 +14,7 @@ import { checkAvailableAPI } from '~/common/apis/services/discountService'
 import { selectAppliedShopDiscounts, clearShopDiscount, setShopDiscount } from '~/store/discount/discountSlice'
 import { useDiscounts } from '../../hook/useDiscounts'
 import { DiscountCardMini } from './DiscountCardMini'
+import { useCart } from '~/features/Cart/hooks/useCart'
 
 function ShopDiscountPopup({ open, onClose, shopId, shopName, subtotal = 0 }) {
   const dispatch = useDispatch()
@@ -21,6 +22,11 @@ function ShopDiscountPopup({ open, onClose, shopId, shopName, subtotal = 0 }) {
   const appliedDiscount = shopDiscounts?.[String(shopId)]
   const [codeInput, setCodeInput] = useState('')
   const [checkingId, setCheckingId] = useState(null)
+  const { selectedItems } = useCart()
+  const cartItemIds = selectedItems
+    .filter(item => String(item.shopId) === String(shopId))
+    .map(item => item.cartItemId)
+    .filter(Boolean)
 
   const filters = { shopId, search: codeInput, status: 'active' }
   const { filtered, isLoading } = useDiscounts(filters)
@@ -35,7 +41,7 @@ function ShopDiscountPopup({ open, onClose, shopId, shopName, subtotal = 0 }) {
     setCheckingId(discount.id)
     try {
       await toast.promise(
-        checkAvailableAPI(discount.code, subtotal),
+        checkAvailableAPI({ code: discount.code, shopId, cartItemIds }),
         {
           pending: 'Đang kiểm tra voucher...',
           success: 'Áp dụng voucher thành công!',

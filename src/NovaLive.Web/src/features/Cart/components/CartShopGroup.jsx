@@ -19,22 +19,22 @@ function CartShopGroup({ group }) {
 
   const [discountOpen, setDiscountOpen] = useState(false)
 
-  const groupSkuIds = items.map(i => String(i.skuId))
-  const allGroupSelected = groupSkuIds.length > 0 && groupSkuIds.every(id => selectedIds.includes(id))
-  const someGroupSelected = groupSkuIds.some(id => selectedIds.includes(id))
+  const groupCartItemIds = items.map(i => String(i.cartItemId))
+  const allGroupSelected = groupCartItemIds.length > 0 && groupCartItemIds.every(id => selectedIds.includes(id))
+  const someGroupSelected = groupCartItemIds.some(id => selectedIds.includes(id))
 
   const shopSubtotal = useMemo(() => {
     return items
-      .filter(i => selectedIds.includes(String(i.skuId)))
+      .filter(i => selectedIds.includes(String(i.cartItemId)))
       .reduce((s, i) => s + (i.isFlashSale ? i.flashSalePrice : i.price) * i.quantity, 0)
   }, [items, selectedIds])
 
 
   const handleToggleGroup = () => {
     if (allGroupSelected) {
-      dispatch(setSelectedIds(selectedIds.filter(id => !groupSkuIds.includes(id))))
+      dispatch(setSelectedIds(selectedIds.filter(id => !groupCartItemIds.includes(id))))
     } else {
-      const next = [...new Set([...selectedIds, ...groupSkuIds])]
+      const next = [...new Set([...selectedIds, ...groupCartItemIds])]
       dispatch(setSelectedIds(next))
     }
   }
@@ -70,7 +70,7 @@ function CartShopGroup({ group }) {
       {/* Danh sách sản phẩm */}
       <Box sx={{ px: 2 }}>
         {items.map((item, idx) => (
-          <Box key={String(item.skuId)}>
+          <Box key={String(item.cartItemId)}>
             <CartItem item={item} />
             {idx < items.length - 1 && (
               <Divider sx={{ borderColor: 'divider', opacity: 0.7 }} />

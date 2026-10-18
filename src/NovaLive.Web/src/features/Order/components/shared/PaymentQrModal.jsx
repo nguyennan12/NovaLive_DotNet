@@ -128,10 +128,10 @@ export default function PaymentQrModal({
 
   // Manual status check fallback
   const handleCheckManual = async () => {
-    if (!paymentId) return
+    if (!parentOrderId) return
     try {
-      const res = await getPaymentStatusAPI(paymentId)
-      if (res?.status === 'Success' || res?.status === 'success' || res?.status === 'Paid') {
+      const res = await getPaymentStatusAPI(parentOrderId)
+      if (res?.isPaid) {
         handleSuccess(res)
       } else {
         toast.info('Hệ thống chưa nhận được tiền. Nếu bạn đã chuyển, vui lòng chờ trong giây lát.')

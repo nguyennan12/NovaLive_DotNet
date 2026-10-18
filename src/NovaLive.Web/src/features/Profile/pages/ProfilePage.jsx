@@ -13,7 +13,7 @@ import { useProfileMutation } from '../hooks/useProfileMutation'
 
 function ProfilePage() {
   const currentUser = useSelector(selectCurrentUser)
-  const isShop = !!currentUser?.user_shop
+  const isShop = !!(currentUser?.shopId || currentUser?.user_shop)
 
   const { profile, isLoading } = useProfile()
   const { updateProfile, isUpdating, changePassword, isChangingPassword } = useProfileMutation()

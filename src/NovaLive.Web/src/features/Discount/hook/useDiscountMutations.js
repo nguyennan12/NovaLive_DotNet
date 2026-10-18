@@ -19,7 +19,7 @@ export const useDiscountMutations = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ discountCode, payload }) => updateDiscountAPI(discountCode, payload),
+    mutationFn: ({ discountId, payload }) => updateDiscountAPI(discountId, payload),
     onSuccess: invalidateDiscounts
   })
 
@@ -31,14 +31,14 @@ export const useDiscountMutations = () => {
   return {
     addDiscount: createMutation.mutateAsync,
     updateDiscount: ({ targetDiscount, payload }) => {
-      const code = targetDiscount?.code ?? targetDiscount?.discount_code
-      if (!code) throw new Error('Missing discount code')
-      return updateMutation.mutateAsync({ discountCode: code, payload })
+      const id = targetDiscount?.id ?? targetDiscount?._id
+      if (!id) throw new Error('Missing discount id')
+      return updateMutation.mutateAsync({ discountId: id, payload })
     },
     deleteDiscount: (targetDiscount) => {
-      const code = targetDiscount?.code ?? targetDiscount?.discount_code
-      if (!code) throw new Error('Missing discount code')
-      return deleteMutation.mutateAsync(code)
+      const id = targetDiscount?.id ?? targetDiscount?._id
+      if (!id) throw new Error('Missing discount id')
+      return deleteMutation.mutateAsync(id)
     },
     // Trạng thái loading chung cho các nút bấm UI
     isMutating: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending

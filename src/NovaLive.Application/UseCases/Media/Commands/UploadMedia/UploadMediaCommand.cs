@@ -8,4 +8,5 @@ public record UploadMediaCommand(
     string FileName,
     string ContentType,
     long Length,
-    string? Bucket = null) : ICommand<UploadMediaResponse>;
+    string? Bucket = null,
+    bool AllowPrivateKycBucket = false) : ICommand<UploadMediaResponse>;

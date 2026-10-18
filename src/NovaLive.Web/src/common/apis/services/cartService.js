@@ -5,8 +5,14 @@ const normalizeCartItem = (item) => {
   const id = item.cartItemId || item.id || item._id
   const skuId = item.skuId || item.sku_id
   const spuId = item.spuId || item.spu_id
-  const quantity = item.quantity || item.count || 1
+  const quantity = item.quantity ?? item.count ?? 1
   const price = item.price ?? item.sellPrice ?? item.sell_price ?? 0
+  let skuName = item.skuName || item.sku_name
+  if (!skuName && item.attributesJson) {
+    try { skuName = JSON.parse(item.attributesJson) } catch { skuName = null }
+  }
+  const name = item.spuName || item.spu_name || item.name || ''
+  const image = item.thumbnailUrl || item.spu_thumb || item.image || ''
 
   return {
     ...item,
@@ -19,11 +25,14 @@ const normalizeCartItem = (item) => {
     count: quantity,
     price,
     sell_price: price,
-    spu_name: item.spuName || item.spu_name || '',
-    spuName: item.spuName || item.spu_name || '',
-    thumbnailUrl: item.thumbnailUrl || item.spu_thumb || '',
-    spu_thumb: item.thumbnailUrl || item.spu_thumb || '',
-    availableStock: item.availableStock ?? item.stock ?? 999
+    name,
+    spu_name: name,
+    spuName: name,
+    image,
+    thumbnailUrl: image,
+    spu_thumb: image,
+    skuName,
+    availableStock: item.availableStock ?? item.stock
   }
 }
 
@@ -58,9 +67,9 @@ export const addToCartAPI = async ({ skuId, quantity = 1 }) => {
   return await authorizedAxiosInstance.post('cart/items', { skuId, quantity })
 }
 
-export const updateCartItemAPI = async ({ cartItemId, skuId, quantity }) => {
-  const targetId = cartItemId || skuId
-  return await authorizedAxiosInstance.put(`cart/items/${targetId}`, { quantity })
+export const updateCartItemAPI = async ({ cartItemId, quantity }) => {
+  if (!cartItemId) throw new Error('cartItemId is required to update a cart item')
+  return await authorizedAxiosInstance.put(`cart/items/${cartItemId}`, { quantity })
 }
 
 export const removeCartItemAPI = async (cartItemId) => {
@@ -72,8 +81,8 @@ export const removeCartItemsAPI = async (cartItemIds = []) => {
 }
 
 // Backward compatibility alias for multi/single deletion
-export const removeFromCartAPI = async ({ skuIds, cartItemIds }) => {
-  const ids = cartItemIds || skuIds || []
+export const removeFromCartAPI = async ({ cartItemIds = [] }) => {
+  const ids = cartItemIds
   if (ids.length === 1) {
     return await removeCartItemAPI(ids[0])
   }
@@ -81,12 +90,5 @@ export const removeFromCartAPI = async ({ skuIds, cartItemIds }) => {
 }
 
 export const validateVoucherAPI = async ({ code, shopId = null, cartItemIds = [] }) => {
-  if (typeof code === 'string' && arguments.length === 1) {
-    return await authorizedAxiosInstance.post('discounts/validate', {
-      code,
-      shopId: null,
-      cartItemIds: []
-    })
-  }
   return await authorizedAxiosInstance.post('discounts/validate', { code, shopId, cartItemIds })
 }

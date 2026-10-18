@@ -23,7 +23,7 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
-  const stock = stockConfig[getStockStatus(product.spu_quantity)] || stockConfig['in']
+  const stock = product.spu_quantity == null ? null : stockConfig[getStockStatus(product.spu_quantity)]
   const queryClient = useQueryClient()
 
   const handleDelete = async () => {
@@ -162,7 +162,7 @@ const ProductCard = ({ product }) => {
             {formatVND(product.spu_price)}
           </Typography>
 
-          <Box
+          {stock && <Box
             sx={{
               bgcolor: '#f4f4f4',
               borderRadius: { xs: '8px', sm: '10px' },
@@ -187,7 +187,7 @@ const ProductCard = ({ product }) => {
             <Typography sx={{ fontSize: { xs: '0.55rem', sm: '0.6rem' }, fontWeight: 700, color: '#333', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {stock.label}
             </Typography>
-          </Box>
+          </Box>}
         </Box>
 
       </Box>

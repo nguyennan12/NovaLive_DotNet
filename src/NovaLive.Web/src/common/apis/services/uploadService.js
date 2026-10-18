@@ -13,7 +13,16 @@ export const uploadSingleImageAPI = async (file, bucket = 'products') => {
 }
 
 export const uploadAvatarAPI = async (file) => {
-  return uploadSingleImageAPI(file, 'kyc-docs')
+  return uploadSingleImageAPI(file, 'products')
+}
+
+export const uploadKycDocumentAPI = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await authorizedAxiosInstance.post('upload/kyc-document', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return res.metadata ?? res.data ?? res
 }
 
 export const uploadShopLogoAPI = async (file) => {

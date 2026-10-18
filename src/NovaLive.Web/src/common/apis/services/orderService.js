@@ -153,7 +153,7 @@ export const getPaymentStatusAPI = async (orderId) => {
   try {
     const res = await authorizedAxiosInstance.get(`orders/${orderId}`)
     const order = res?.data !== undefined ? res.data : res
-    const isPaid = order?.paymentStatus === 'Paid' || order?.paymentStatus === 'Completed' || order?.status === 'Processing'
+    const isPaid = String(order?.paymentStatus || '').toLowerCase() === 'paid'
     return {
       status: order?.paymentStatus || (isPaid ? 'Paid' : 'Pending'),
       isPaid,

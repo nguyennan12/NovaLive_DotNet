@@ -37,6 +37,11 @@ export const userSlice = createSlice({
         ...user,
         _id: user?.id || user?._id,
         id: user?.id || user?._id,
+        user_shop: user?.shopId || user?.user_shop,
+        user_name: user?.fullName || user?.user_name,
+        user_email: user?.email || user?.user_email,
+        user_phone: user?.phone || user?.user_phone,
+        user_avatar: user?.avatarUrl || user?.user_avatar,
         accessToken: tokens.accessToken || payload?.accessToken || user?.accessToken
       }
     })

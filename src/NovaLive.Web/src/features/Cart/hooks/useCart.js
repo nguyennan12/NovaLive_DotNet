@@ -35,7 +35,7 @@ export const useCart = () => {
     cartId,
     cartCount,
     // cart selection
-    toggleSelect: (skuId) => dispatch(toggleSelect(skuId)),
+    toggleSelect: (cartItemId) => dispatch(toggleSelect(cartItemId)),
     deselectAll: () => dispatch(deselectAll())
   }
 }

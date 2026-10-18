@@ -74,12 +74,31 @@ export const resetPasswordAPI = async (data) => {
   return await authorizedAxiosInstance.post('auth/reset-password', payload)
 }
 
+const normalizeUserProfile = (user) => user && ({
+  ...user,
+  id: user.id || user.userId || user._id,
+  _id: user.id || user.userId || user._id,
+  user_name: user.fullName || user.user_name || '',
+  user_email: user.email || user.user_email || '',
+  user_phone: user.phone || user.user_phone || '',
+  user_gender: user.gender || user.user_gender || '',
+  user_birthday: user.birthday || user.user_birthday || '',
+  user_avatar: user.avatarUrl || user.user_avatar || ''
+})
+
 export const getMyProfileAPI = async () => {
-  return await authorizedAxiosInstance.get('auth/me')
+  return normalizeUserProfile(await authorizedAxiosInstance.get('users/me'))
 }
 
 export const updateMyProfileAPI = async (data) => {
-  return await authorizedAxiosInstance.put('users/me', data)
+  const request = {
+    fullName: data.fullName || data.user_name,
+    phone: data.phone ?? data.user_phone ?? null,
+    birthday: data.birthday ?? data.user_birthday ?? null,
+    gender: data.gender ?? data.user_gender ?? null,
+    avatarUrl: data.avatarUrl ?? data.user_avatar ?? null
+  }
+  return normalizeUserProfile(await authorizedAxiosInstance.put('users/me', request))
 }
 
 // ─── Backward compatibility aliases ──────────────────────────────────────────

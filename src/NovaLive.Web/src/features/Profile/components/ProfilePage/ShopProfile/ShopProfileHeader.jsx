@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useSelector } from 'react-redux'
 import { uploadShopLogoAPI } from '~/common/apis/services/uploadService'
+import { updateShopAPI } from '~/common/apis/services/shopService'
 import { useUpload } from '~/common/hooks/useUpload'
 import { useShop, useShopMutation } from '~/features/Shop/hooks/useShop'
 import { selectCurrentUser } from '~/store/user/userSlice'
@@ -50,6 +51,7 @@ const EditShopDialog = ({ open, onClose, shop, onSave, isSaving }) => {
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
       shop_name: shop?.shop_name || '',
+      description: shop?.description || '',
       contact_phone: shop?.shop_contact?.phone || '',
       contact_email: shop?.shop_contact?.email || ''
     }
@@ -58,14 +60,22 @@ const EditShopDialog = ({ open, onClose, shop, onSave, isSaving }) => {
   useEffect(() => {
     if (open) reset({
       shop_name: shop?.shop_name || '',
+      description: shop?.description || '',
       contact_phone: shop?.shop_contact?.phone || '',
       contact_email: shop?.shop_contact?.email || ''
     })
   }, [open, shop, reset])
 
-  const onSubmit = ({ shop_name, contact_phone, contact_email }) => {
+  const onSubmit = ({ shop_name, description, contact_phone, contact_email }) => {
     onSave(
-      { shopId: shop._id, data: { shop_name, shop_contact: { phone: contact_phone, email: contact_email } } },
+      { shopId: shop._id, data: {
+        shopName: shop_name,
+        description,
+        logoUrl: shop.logoUrl,
+        bannerUrl: shop.bannerUrl,
+        phone: contact_phone,
+        email: contact_email
+      } },
       { onSuccess: onClose }
     )
   }
@@ -90,6 +100,10 @@ const EditShopDialog = ({ open, onClose, shop, onSave, isSaving }) => {
               {...register('contact_phone', {
                 pattern: { value: /^(0[3-9]\d{8})?$/, message: 'SĐT không hợp lệ' }
               })}
+            />
+            <TextField
+              fullWidth size="small" label="Mô tả cửa hàng" multiline minRows={2}
+              {...register('description')}
             />
             <TextField
               fullWidth size="small" label="Email liên hệ"
@@ -137,7 +151,17 @@ const ShopProfileHeader = () => {
   const [editOpen, setEditOpen] = useState(false)
 
   const uploadShopLogo = useUpload({
-    api: uploadShopLogoAPI,
+    api: async (file) => {
+      const uploaded = await uploadShopLogoAPI(file)
+      await updateShopAPI({
+        shopName: shop?.shopName || shop?.shop_name,
+        description: shop?.description || '',
+        logoUrl: uploaded?.url,
+        bannerUrl: shop?.bannerUrl || null,
+        phone: shop?.phone || shop?.shop_contact?.phone,
+        email: shop?.email || shop?.shop_contact?.email
+      })
+    },
     afterUpload: () => queryClient.refetchQueries({ queryKey: ['my_shop', currentUser?._id] }),
     pendingMsg: 'Đang tải lên logo cửa hàng...',
     successMsg: 'Cập nhật logo thành công!',
@@ -211,9 +235,9 @@ const ShopProfileHeader = () => {
               />
               <Box sx={{ display: 'flex', gap: 2, mt: 1.25, flexWrap: 'wrap', alignItems: 'center' }}>
                 <HeaderStat icon={StarIcon} label="đánh giá" value={metrics.rating_avg?.toFixed(1) || '0.0'} color="#f59e0b" />
-                <HeaderStat icon={InventoryIcon} label="sản phẩm" value={metrics.total_products ?? 0} color="#8b5cf6" />
-                <HeaderStat icon={LocalMallIcon} label="đã bán" value={metrics.total_sold ?? 0} color="#14c3eb" />
-                <HeaderStat icon={GroupIcon} label="theo dõi" value={metrics.follower_count ?? 0} color="#10b981" />
+                {metrics.total_products != null && <HeaderStat icon={InventoryIcon} label="sản phẩm" value={metrics.total_products} color="#8b5cf6" />}
+                {metrics.total_sold != null && <HeaderStat icon={LocalMallIcon} label="đã bán" value={metrics.total_sold} color="#14c3eb" />}
+                {metrics.follower_count != null && <HeaderStat icon={GroupIcon} label="theo dõi" value={metrics.follower_count} color="#10b981" />}
               </Box>
             </Box>
 

@@ -33,8 +33,7 @@ export const useCartMutations = () => {
     mutationFn: removeFromCartAPI,
     onSuccess: (_, variables) => {
       invalidateCart()
-      // Xóa các skuId đã remove ra khỏi selection
-      const removedIds = variables.skuIds.map(String)
+      const removedIds = variables.cartItemIds.map(String)
       dispatch(setSelectedIds(selectedIds.filter(id => !removedIds.includes(id))))
     },
     onError: (err) =>
@@ -45,10 +44,10 @@ export const useCartMutations = () => {
     addToCart: (data) => addMutation.mutate(data),
     addToCartAsync: (data) => addMutation.mutateAsync(data),
     //xóa 1 item ra khỏi cart
-    removeItem: (skuId) => removeMutation.mutate({ skuIds: [String(skuId)] }),
+    removeItem: (cartItemId) => removeMutation.mutate({ cartItemIds: [String(cartItemId)] }),
     //xóa những items đã dc chọn ra khỏi cart
-    removeSelectedItems: () => removeMutation.mutate({ skuIds: selectedIds }),
-    updateQuantity: (skuId, newQty, oldQty) => updateMutation.mutate({ skuId, quantity: newQty, old_quantity: oldQty }),
+    removeSelectedItems: () => removeMutation.mutate({ cartItemIds: selectedIds }),
+    updateQuantity: (cartItemId, newQty) => updateMutation.mutate({ cartItemId, quantity: newQty }),
     isPending: addMutation.isPending || removeMutation.isPending || updateMutation.isPending
   }
 }

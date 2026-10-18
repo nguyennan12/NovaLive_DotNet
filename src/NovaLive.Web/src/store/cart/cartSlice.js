@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit'
 
 // Cart slice chỉ lưu UI state — server là source of truth cho data giỏ hàng
 const initialState = {
-  selectedIds: [] // skuId[] đang được chọn để thanh toán
+  selectedIds: [] // cartItemId[] đang được chọn để thanh toán
 }
 
 export const cartSlice = createSlice({

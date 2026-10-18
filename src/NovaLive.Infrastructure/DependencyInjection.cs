@@ -124,6 +124,7 @@ public static class DependencyInjection
         services.AddMassTransit(bus =>
         {
             bus.AddConsumer<OrderPlacedConsumer>();
+            bus.AddConsumer<PaymentSuccessConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration.GetValue<string>("RabbitMQ:Host")

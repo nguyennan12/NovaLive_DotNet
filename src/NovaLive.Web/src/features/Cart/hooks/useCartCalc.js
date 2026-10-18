@@ -13,12 +13,12 @@ export const useCartCalc = (shopGroups) => {
   )
 
   const selectedItems = useMemo(
-    () => allItems?.filter(i => selectedIds.includes(String(i.skuId))),
+    () => allItems?.filter(i => selectedIds.includes(String(i.cartItemId))),
     [allItems, selectedIds]
   )
 
   const isAllSelected =
-    allItems?.length > 0 && allItems.every(i => selectedIds.includes(String(i.skuId)))
+    allItems?.length > 0 && allItems.every(i => selectedIds.includes(String(i.cartItemId)))
 
   const subtotal = useMemo(
     () => selectedItems?.reduce((s, i) => s + (i.isFlashSale ? i.flashSalePrice : i.price) * i.quantity, 0),

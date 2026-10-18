@@ -6,14 +6,14 @@ import { QuantityStepper } from './shared/QuantityStepper'
 
 function CartItem({ item }) {
   const { selectedIds, toggleSelect, updateQuantity, removeItem, isPending } = useCart()
-  const skuIdStr = String(item.skuId)
-  const isSelected = selectedIds.includes(skuIdStr) //biến kiểm tra product đã dc chọn chưa
+  const cartItemId = String(item.cartItemId)
+  const isSelected = selectedIds.includes(cartItemId)
 
   const variationLabel = item.skuName ? Object.values(item.skuName).filter(Boolean) : null
 
   const handleQuantityChange = (newQty) => {
     if (newQty < 1) return
-    updateQuantity(item.skuId, newQty, item.quantity)
+    updateQuantity(item.cartItemId, newQty, item.quantity)
   }
 
   return (
@@ -22,7 +22,7 @@ function CartItem({ item }) {
         {/* Checkbox */}
         <Checkbox
           checked={isSelected}
-          onChange={() => toggleSelect(skuIdStr)}
+          onChange={() => toggleSelect(cartItemId)}
           size="small"
           sx={{
             mt: 0.75, p: 0, flexShrink: 0,
@@ -86,7 +86,7 @@ function CartItem({ item }) {
               />
               <IconButton
                 size="small"
-                onClick={() => removeItem(item.skuId)}
+                onClick={() => removeItem(item.cartItemId)}
                 sx={{ color: 'error.main', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' } }}
               >
                 <DeleteOutlineRoundedIcon sx={{ fontSize: 18 }} />
