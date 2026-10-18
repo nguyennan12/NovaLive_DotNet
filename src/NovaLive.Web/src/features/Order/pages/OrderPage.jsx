@@ -72,7 +72,7 @@ function OrderPage() {
     return {
       cartItemIds,
       shippingAddressId: addressId,
-      shopVouchers: appliedshopDiscounts?.map((v) => ({ shopId: v.shopId, code: v.code })) || [],
+      shopVouchers: (Array.isArray(appliedshopDiscounts) ? appliedshopDiscounts : Object.values(appliedshopDiscounts || {})).filter(Boolean).map((v) => ({ shopId: v.shopId, code: v.code })),
       platformProductVoucherCode: appliedProductVoucher?.code || null,
       platformFreeshipVoucherCode: appliedFreeshipVoucher?.code || null,
       // Legacy compatibility
@@ -119,14 +119,14 @@ function OrderPage() {
     const shippingProviders = shopGroups.map((g) => ({
       shopId: g.shopId,
       provider: 'GHN',
-      serviceCode: 'standard'
+      serviceCode: '2'
     }))
 
     orderMutation.mutate({
       cartItemIds,
       shippingAddressId: addressId,
       shippingProviders,
-      shopVouchers: appliedshopDiscounts?.map((v) => ({ shopId: v.shopId, code: v.code })) || [],
+      shopVouchers: (Array.isArray(appliedshopDiscounts) ? appliedshopDiscounts : Object.values(appliedshopDiscounts || {})).filter(Boolean).map((v) => ({ shopId: v.shopId, code: v.code })),
       platformProductVoucherCode: appliedProductVoucher?.code || null,
       platformFreeshipVoucherCode: appliedFreeshipVoucher?.code || null,
       paymentMethod: backendPaymentMethod,

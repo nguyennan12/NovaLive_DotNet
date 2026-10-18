@@ -35,7 +35,7 @@ function OrderHistoryPage() {
 
   const { orders, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteOrders(status)
   const lastOrderRef = useInfiniteScroll({ isFetchingNextPage, fetchNextPage, hasNextPage })
-  const { cancelMutation, retryVNPayMutation, invalidateOrders } = useOrderMutation()
+  const { cancelMutation, invalidateOrders } = useOrderMutation()
 
   const handleTabChange = (_, newValue) => {
     setTabIdx(newValue)
@@ -102,7 +102,6 @@ function OrderHistoryPage() {
                 order={order}
                 onViewDetail={setDetailOrder}
                 cancelMutation={cancelMutation}
-                retryVNPayMutation={retryVNPayMutation}
                 onOrderUpdated={invalidateOrders}
                 ref={isLast ? lastOrderRef : null}
               />

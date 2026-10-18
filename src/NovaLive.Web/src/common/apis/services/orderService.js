@@ -35,6 +35,70 @@ export const checkoutAPI = async (payload, idempotencyKey) => {
   })
 }
 
+export const normalizeOrder = (o) => {
+  if (!o) return o
+  const id = o.id || o._id
+  const total = o.grandTotal ?? o.order_checkout?.finalCheckout ?? o.order_checkout?.finalTotal ?? o.total ?? 0
+  const code = o.orderCode || o.order_trackingNumber || o.code || id
+  const status = (o.status || o.order_status || o.paymentStatus || 'pending').toLowerCase()
+
+  let rawItems = o.items || o.order_products || []
+  if ((!rawItems || rawItems.length === 0) && Array.isArray(o.subOrders)) {
+    rawItems = o.subOrders.flatMap((sub) => {
+      const items = sub.items || []
+      return items.map((it) => {
+        let snapshot = {}
+        try {
+          snapshot = typeof it.skuSnapshotJson === 'string' ? JSON.parse(it.skuSnapshotJson) : (it.skuSnapshotJson || {})
+        } catch {
+          // ignore
+        }
+        return {
+          id: it.id,
+          skuId: it.skuId,
+          quantity: it.quantity,
+          price: it.unitPrice ?? it.originalPrice ?? 0,
+          spuName: snapshot.SpuName || snapshot.spuName || snapshot.name || 'Sản phẩm',
+          thumbnailUrl: snapshot.ThumbnailUrl || snapshot.thumbnailUrl || snapshot.thumb || '',
+          shopName: sub.shopName || 'Nova Flagship Store'
+        }
+      })
+    })
+  }
+
+  return {
+    ...o,
+    _id: id,
+    id,
+    order_trackingNumber: code,
+    orderCode: code,
+    order_status: status,
+    order_checkout: {
+      finalCheckout: total,
+      finalTotal: total,
+      totalPrice: total,
+      ...o.order_checkout
+    },
+    order_payment: {
+      paymentStatus: (o.paymentStatus || o.order_payment?.paymentStatus || 'pending').toLowerCase(),
+      method: o.paymentMethod || o.order_payment?.method || 'VietQR',
+      ...o.order_payment
+    },
+    order_products: rawItems.map((p) => ({
+      ...p,
+      productId: {
+        spu_name: p.spuName || p.name || p.productId?.spu_name || 'Sản phẩm',
+        spu_thumb: p.thumbnailUrl || p.thumb || p.productId?.spu_thumb || '',
+        spu_shopId: {
+          shop_name: p.shopName || o.shopName || p.productId?.spu_shopId?.shop_name || 'Nova Flagship Store'
+        }
+      },
+      price: p.price ?? 0,
+      quantity: p.quantity ?? 1
+    }))
+  }
+}
+
 export const getMyOrdersAPI = async (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.status && filters.status !== 'all') params.append('status', filters.status)
@@ -43,11 +107,24 @@ export const getMyOrdersAPI = async (filters = {}) => {
   if (filters.from) params.append('from', filters.from)
   if (filters.to) params.append('to', filters.to)
 
-  return await authorizedAxiosInstance.get(`orders?${params.toString()}`)
+  const res = await authorizedAxiosInstance.get(`orders?${params.toString()}`)
+  const rawItems = res?.items ?? (Array.isArray(res) ? res : [])
+  const enriched = await Promise.all(
+    rawItems.map(async (item) => {
+      try {
+        const detail = await authorizedAxiosInstance.get(`orders/${item.id}`)
+        return normalizeOrder(detail?.data !== undefined ? detail.data : detail)
+      } catch {
+        return normalizeOrder(item)
+      }
+    })
+  )
+  return enriched
 }
 
 export const getOrderDetailAPI = async (orderId) => {
-  return await authorizedAxiosInstance.get(`orders/${orderId}`)
+  const res = await authorizedAxiosInstance.get(`orders/${orderId}`)
+  return normalizeOrder(res?.data !== undefined ? res.data : res)
 }
 
 export const cancelOrderAPI = async (orderId, reason = 'Buyer cancelled') => {
@@ -72,8 +149,19 @@ export const createMomoPaymentAPI = async ({ orderId, orderInfo = 'Thanh toan do
   })
 }
 
-export const getPaymentStatusAPI = async (paymentId) => {
-  return await authorizedAxiosInstance.get(`payments/${paymentId}/status`)
+export const getPaymentStatusAPI = async (orderId) => {
+  try {
+    const res = await authorizedAxiosInstance.get(`orders/${orderId}`)
+    const order = res?.data !== undefined ? res.data : res
+    const isPaid = order?.paymentStatus === 'Paid' || order?.paymentStatus === 'Completed' || order?.status === 'Processing'
+    return {
+      status: order?.paymentStatus || (isPaid ? 'Paid' : 'Pending'),
+      isPaid,
+      order
+    }
+  } catch (_e) {
+    return { status: 'Pending', isPaid: false }
+  }
 }
 
 // ─── Backward compatibility aliases ──────────────────────────────────────────

@@ -52,13 +52,13 @@ export const useHomeProducts = (filters = {}) => {
     enabled: isFiltering && !!queryString
   })
 
+  const sortedAll = useMemo(() => sortList(products, filters.sort), [products, filters.sort])
+
   //get product filter
   const filteredProducts = useMemo(
-    () => sortList(toArrayProducts(rawFiltered), filters.sort),
-    [rawFiltered, filters.sort]
+    () => (isFiltering ? sortList(toArrayProducts(rawFiltered), filters.sort) : sortedAll),
+    [isFiltering, rawFiltered, sortedAll, filters.sort]
   )
-
-  const sortedAll = useMemo(() => sortList(products, filters.sort), [products, filters.sort])
   const featuredProducts = useMemo(() => sortedAll.slice(0, 10), [sortedAll])
   //get products best seller
   const bestSellers = useMemo(

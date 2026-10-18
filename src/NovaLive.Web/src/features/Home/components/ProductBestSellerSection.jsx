@@ -74,7 +74,7 @@ const ProductBestSellerSection = ({ products = [], isLoading }) => {
       ) : (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
           {products.map((product, idx) => (
-            <Box key={product.spu_code || product.mongo_id || product._id} sx={{ position: 'relative' }}>
+            <Box key={product.id || product.spu_code || product._id || product.mongo_id || idx} sx={{ position: 'relative' }}>
               {idx < 3 && (
                 <Box sx={{
                   position: 'absolute', top: -8, left: 8, zIndex: 1,

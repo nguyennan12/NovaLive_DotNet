@@ -85,6 +85,7 @@ export const useOrderHub = ({
       onOrderStatusChangedRef.current?.(payload)
     })
 
+    let retryTimer = null
     const start = async () => {
       try {
         await connection.start()
@@ -96,13 +97,30 @@ export const useOrderHub = ({
           await connection.invoke('JoinCustomer', customerId)
         }
       } catch (err) {
-        console.error('Failed to connect to OrderNotificationHub:', err)
+        // If 401 Unauthorized, token might be renewing via refresh token interceptor
+        if (err?.statusCode === 401 || err?.message?.includes('401')) {
+          retryTimer = setTimeout(async () => {
+            if (connectionRef.current && connectionRef.current.state === HubConnectionState.Disconnected) {
+              try {
+                await connectionRef.current.start()
+                setConnectionState(connectionRef.current.state)
+                if (shopId) await connectionRef.current.invoke('JoinShop', shopId)
+                if (customerId) await connectionRef.current.invoke('JoinCustomer', customerId)
+              } catch {
+                // Keep disconnected if session has expired
+              }
+            }
+          }, 1500)
+        } else {
+          console.warn('OrderNotificationHub connection warning:', err?.message || err)
+        }
       }
     }
 
     start()
 
     return () => {
+      if (retryTimer) clearTimeout(retryTimer)
       if (connection.state === HubConnectionState.Connected) {
         if (shopId) connection.invoke('LeaveShop', shopId).catch(() => {})
       }

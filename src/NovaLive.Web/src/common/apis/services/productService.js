@@ -8,29 +8,47 @@ import { toQueryString } from '~/common/utils/converter'
  */
 export const normalizeProduct = (p) => {
   if (!p) return p
+  const spuId = p.id || p._id
   return {
     ...p,
-    _id: p.id || p._id,
-    id: p.id || p._id,
-    spu_code: p.id || p.spu_code || p.slug,
+    _id: spuId,
+    id: spuId,
+    spu_code: spuId,
     spu_name: p.name || p.spu_name,
     name: p.name || p.spu_name,
     spu_description: p.description || p.spu_description,
     description: p.description || p.spu_description,
     spu_thumb: p.thumbnailUrl || p.spu_thumb || '',
     thumbnailUrl: p.thumbnailUrl || p.spu_thumb || '',
+    spu_shopId: p.shopId || p.spu_shopId,
+    shopId: p.shopId || p.spu_shopId,
     spu_price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
     price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
     spu_quantity: p.totalStock ?? p.stock ?? p.spu_quantity ?? 100,
-    sku_list: (p.skus || p.sku_list || []).map((s) => ({
-      ...s,
-      _id: s.id || s._id,
-      id: s.id || s._id,
-      sku_code: s.skuCode || s.sku_code || s.id,
-      sku_price: s.sellPrice ?? s.price ?? s.sku_price,
-      sku_original_price: s.originalPrice ?? s.sku_original_price,
-      sku_stock: s.initialStock ?? s.stock ?? s.sku_stock
-    }))
+    sku_list: (p.skus || p.sku_list || []).map((s) => {
+      const skuId = s.id || s._id || s.sku_id
+      let attrName = ''
+      try {
+        if (s.attributesJson) {
+          const parsed = JSON.parse(s.attributesJson)
+          attrName = Object.values(parsed).join(' - ')
+        }
+      } catch {
+        attrName = s.skuCode || ''
+      }
+      return {
+        ...s,
+        _id: skuId,
+        id: skuId,
+        sku_id: skuId,
+        sku_spuId: s.spuId || s.sku_spuId || spuId,
+        sku_code: s.skuCode || s.sku_code || skuId,
+        sku_name: attrName || s.skuCode || s.name || 'Mặc định',
+        sku_price: s.sellPrice ?? s.price ?? s.sku_price,
+        sku_original_price: s.originalPrice ?? s.sku_original_price,
+        sku_stock: s.availableQty ?? s.initialStock ?? s.stock ?? s.sku_stock ?? 50
+      }
+    })
   }
 }
 
@@ -60,31 +78,77 @@ export const addProductAPI = async (data) => {
 }
 
 export const getAllProductsAPI = async (params = {}) => {
-  const query = typeof params === 'string' ? params : toQueryString(params)
-  const response = await authorizedAxiosInstance.get(`products?${query}`)
-  const raw = response?.data !== undefined ? response.data : response
-  const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
-  return {
-    products: items,
-    items,
-    totalCount: raw?.totalCount ?? raw?.total ?? items.length,
-    page: raw?.page ?? 1,
-    size: raw?.size ?? items.length,
-    ...raw
+  try {
+    const rawParams = typeof params === 'object' && params !== null ? { ...params } : {}
+    if (rawParams.limit && !rawParams.size) rawParams.size = rawParams.limit
+    const query = typeof params === 'string' ? params : toQueryString(rawParams)
+    const response = await authorizedAxiosInstance.get(`products?${query}`)
+    const raw = response?.data !== undefined ? response.data : response
+    const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
+    return {
+      ...raw,
+      products: items,
+      items,
+      totalCount: raw?.totalCount ?? raw?.total ?? items.length,
+      page: raw?.page ?? 1,
+      size: raw?.size ?? items.length
+    }
+  } catch (error) {
+    console.error('getAllProductsAPI error:', error)
+    return {
+      products: [],
+      items: [],
+      totalCount: 0,
+      page: 1,
+      size: 0
+    }
   }
 }
 
 export const getAllProductWithStockAPI = async (query = '') => {
-  const q = typeof query === 'string' ? query : toQueryString(query)
-  const response = await authorizedAxiosInstance.get(`products/search?${q}`)
-  const raw = response?.data !== undefined ? response.data : response
-  const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
-  return {
-    products: items,
-    items,
-    totalCount: raw?.totalCount ?? items.length,
-    ...raw
+  try {
+    const q = typeof query === 'string' ? query : toQueryString(query)
+    const response = await authorizedAxiosInstance.get(`products/search?${q}`)
+    const raw = response?.data !== undefined ? response.data : response
+    const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
+    return {
+      ...raw,
+      products: items,
+      items,
+      totalCount: raw?.totalCount ?? items.length
+    }
+  } catch (error) {
+    console.error('getAllProductWithStockAPI error:', error)
+    return { products: [], items: [], totalCount: 0 }
   }
+}
+
+export const getSellerProductsAPI = async (params = {}) => {
+  try {
+    const rawParams = typeof params === 'object' && params !== null ? { ...params } : {}
+    if (rawParams.limit && !rawParams.size) rawParams.size = rawParams.limit
+    const query = typeof params === 'string' ? params : toQueryString(rawParams)
+    const response = await authorizedAxiosInstance.get(`seller/products?${query}`)
+    const raw = response?.data !== undefined ? response.data : response
+    const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
+    return {
+      ...raw,
+      products: items,
+      items,
+      totalCount: raw?.totalCount ?? items.length,
+      page: raw?.page ?? 1,
+      size: raw?.size ?? items.length
+    }
+  } catch (error) {
+    console.error('getSellerProductsAPI error:', error)
+    return { products: [], items: [], totalCount: 0, page: 1, size: 0 }
+  }
+}
+
+export const getSellerProductDetailAPI = async (productId) => {
+  const response = await authorizedAxiosInstance.get(`seller/products/${productId}`)
+  const raw = response?.data !== undefined ? response.data : response
+  return normalizeProduct(raw)
 }
 
 export const deleteProductAPI = async (productId) => {
@@ -116,15 +180,20 @@ export const getProductDetailAPI = async (productId) => {
 }
 
 export const queryProductAPI = async (query = '') => {
-  const q = typeof query === 'string' ? query : toQueryString(query)
-  const response = await authorizedAxiosInstance.get(`products/search?${q}`)
-  const raw = response?.data !== undefined ? response.data : response
-  const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
-  return {
-    products: items,
-    items,
-    totalCount: raw?.totalCount ?? items.length,
-    ...raw
+  try {
+    const q = typeof query === 'string' ? query : toQueryString(query)
+    const response = await authorizedAxiosInstance.get(`products/search?${q}`)
+    const raw = response?.data !== undefined ? response.data : response
+    const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
+    return {
+      products: items,
+      items,
+      totalCount: raw?.totalCount ?? items.length,
+      ...raw
+    }
+  } catch (error) {
+    console.error('queryProductAPI error:', error)
+    return { products: [], items: [], totalCount: 0 }
   }
 }
 

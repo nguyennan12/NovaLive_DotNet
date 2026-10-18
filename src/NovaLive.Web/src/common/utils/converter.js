@@ -17,7 +17,8 @@ export const toQueryString = (params = {}) => {
       const numericLimit = Number(value)
       if (Number.isFinite(numericLimit)) {
         const safeLimit = Math.max(1, Math.min(100, Math.trunc(numericLimit)))
-        searchParams.set(key, String(safeLimit))
+        searchParams.set('size', String(safeLimit))
+        searchParams.set('limit', String(safeLimit))
         return
       }
     }

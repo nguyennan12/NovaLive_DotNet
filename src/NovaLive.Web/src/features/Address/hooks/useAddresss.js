@@ -2,10 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { getAllUserAddressAPI, getUserAddressAPI } from '~/common/apis/services/addressService'
 
 export const useAddress = (user) => {
+  const userId = user?.id || user?._id
   const addressId = user?.default_address_id
-  const userId = user?._id
-  const ownerType = user?.user_shop ? 'shop' : 'user'
-  // const ownerType = 'user'
+
+  const { data: allAddressUser = [] } = useQuery({
+    queryKey: ['all_address_user', userId],
+    queryFn: () => getAllUserAddressAPI(),
+    enabled: !!userId,
+    staleTime: 1000 * 30
+  })
 
   const { data: addressUser } = useQuery({
     queryKey: ['address_user', addressId],
@@ -14,14 +19,10 @@ export const useAddress = (user) => {
     staleTime: 1000 * 30
   })
 
-  const { data: allAddressUser = [] } = useQuery({
-    queryKey: ['all_address_user', userId],
-    queryFn: () => getAllUserAddressAPI(ownerType),
-    enabled: !!userId,
-    staleTime: 1000 * 30
-  })
+  const defaultFromList = allAddressUser.find((a) => a.isDefault || a.is_default) || allAddressUser[0] || null
+
   return {
-    addressUser,
+    addressUser: addressUser || defaultFromList,
     allAddressUser
   }
 }

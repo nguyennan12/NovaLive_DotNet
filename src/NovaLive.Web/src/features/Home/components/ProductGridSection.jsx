@@ -40,7 +40,7 @@ const ProductGridSection = ({ products = [], isLoading, lastItemRef, isFetchingN
             const isLast = index === products.length - 1
             return (
               <HomeProductCard
-                key={product.spu_code || product.mongo_id || product._id}
+                key={product.id || product.spu_code || product._id || product.mongo_id || index}
                 product={product}
                 variant="portrait"
                 ref={isLast ? lastItemRef : null}

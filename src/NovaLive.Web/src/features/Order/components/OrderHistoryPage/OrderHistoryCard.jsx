@@ -29,7 +29,7 @@ function StatusChip({ status }) {
   )
 }
 
-const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDetail, cancelMutation, retryVNPayMutation, onOrderUpdated }, ref) {
+const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDetail, cancelMutation, onOrderUpdated }, ref) {
   const [showCancel, setShowCancel] = useState(false)
   const [showPaymentQr, setShowPaymentQr] = useState(false)
   const user = useSelector(selectCurrentUser)

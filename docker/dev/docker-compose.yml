@@ -76,7 +76,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-      Redis__ConnectionString: "redis:6379"
+      Redis__ConnectionString: "redis:6379,abortConnect=false"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: "${RABBITMQ_DEFAULT_USER}"
       RabbitMQ__Password: "${RABBITMQ_DEFAULT_PASS}"

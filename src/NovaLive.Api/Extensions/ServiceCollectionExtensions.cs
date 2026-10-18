@@ -88,9 +88,16 @@ public static class ServiceCollectionExtensions
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
-            signalRBuilder.AddStackExchangeRedis(redisConnectionString, redisOptions =>
+            var signalRRedisOptions = StackExchange.Redis.ConfigurationOptions.Parse(redisConnectionString);
+            signalRRedisOptions.AbortOnConnectFail = false;
+            signalRRedisOptions.ConnectRetry = 5;
+            signalRRedisOptions.ConnectTimeout = 5000;
+            signalRRedisOptions.SyncTimeout = 5000;
+
+            signalRBuilder.AddStackExchangeRedis(options =>
             {
-                redisOptions.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NovaLive_SignalR");
+                options.Configuration = signalRRedisOptions;
+                options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NovaLive_SignalR");
             });
         }
 

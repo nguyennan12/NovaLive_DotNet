@@ -95,19 +95,25 @@ public static class DependencyInjection
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
         services.AddScoped<IDataSeeder, CategoryDataSeeder>();
+        services.AddScoped<IDataSeeder, ProductDataSeeder>();
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
-        if (!string.IsNullOrWhiteSpace(redisConnectionString))
-        {
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
-            services.AddSingleton<ICacheService, RedisCacheService>();
-            services.AddSingleton<IIdempotencyService, RedisIdempotencyService>();
-            services.AddSingleton<ILivestreamCacheManager, LivestreamCacheManager>();
-        }
+
+        var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+        redisOptions.AbortOnConnectFail = false;
+        redisOptions.ConnectRetry = 5;
+        redisOptions.ConnectTimeout = 5000;
+        redisOptions.SyncTimeout = 5000;
+        redisOptions.KeepAlive = 60;
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+        services.AddSingleton<ICacheService, RedisCacheService>();
+        services.AddSingleton<IIdempotencyService, RedisIdempotencyService>();
+        services.AddSingleton<ILivestreamCacheManager, LivestreamCacheManager>();
 
         // Outbox background worker
         services.AddHostedService<OutboxBackgroundWorker>();

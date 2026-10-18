@@ -14,9 +14,12 @@ const normalizeAddress = (addr) => {
     id,
     recipientName: name,
     name_user: name,
+    owner_name: name,
     phone,
     phone_user: phone,
+    owner_phone: phone,
     detailAddress: detail,
+    fullAddress: fullAddress || detail,
     address_user: fullAddress || detail,
     isDefault: addr.isDefault ?? addr.is_default ?? false,
     is_default: addr.isDefault ?? addr.is_default ?? false

@@ -20,7 +20,7 @@ export const createHubConnection = (hubPath, customOptions = {}) => {
     .withUrl(fullUrl, {
       accessTokenFactory: () => {
         const token = store.getState()?.user?.currentUser?.accessToken
-        return token || ''
+        return token || null
       },
       withCredentials: true,
       transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling,

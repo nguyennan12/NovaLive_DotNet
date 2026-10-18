@@ -1,14 +1,14 @@
-// authorizeAxios.js — import store thẳng, không cần injectStore
 import axios from 'axios'
 import { clearCurrentUser } from '~/store/user/userSlice'
 import { store } from '~/store/store'
 
-const backendUrl = (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_SOCKET_URL || '').replace(/\/$/, '')
-
 const authorizedAxiosInstance = axios.create({
-  baseURL: backendUrl ? `${backendUrl}/api/v1` : '/api/v1',
+  baseURL: '/api/v1',
   timeout: 1000 * 60 * 10,
-  withCredentials: true
+  withCredentials: true,
+  headers: {
+    'X-Requested-With': 'XMLHttpRequest'
+  }
 })
 
 authorizedAxiosInstance.interceptors.request.use((config) => {
@@ -30,26 +30,43 @@ authorizedAxiosInstance.interceptors.response.use(
     return response.data
   },
   (error) => {
-    if (error.response?.status === 401) {
-      store.dispatch(clearCurrentUser())
-      window.location.href = '/login'
-      return Promise.reject(error)
-    }
+    const originalRequest = error.config
+    const url = originalRequest?.url || ''
+    const isAuthRoute = url.includes('auth/login') || url.includes('auth/refresh') || url.includes('auth/register')
 
-    const originalRequests = error.config
-    if (error.response?.status === 410 && !originalRequests._retry) {
-      originalRequests._retry = true
+    // Handle 401 Unauthorized for expired tokens by attempting refresh once
+    if (error.response?.status === 401 && !isAuthRoute && !originalRequest?._retry) {
+      originalRequest._retry = true
       if (!refreshTokenPromise) {
         refreshTokenPromise = import('~/common/apis/services/userService')
           .then(({ refreshTokenAPI }) => refreshTokenAPI())
+          .then((res) => {
+            const raw = res?.data !== undefined ? res.data : res
+            if (raw?.accessToken) {
+              const current = store.getState()?.user?.currentUser
+              if (current) {
+                store.dispatch({
+                  type: 'user/setCurrentUser',
+                  payload: { ...current, accessToken: raw.accessToken }
+                })
+              }
+            }
+            return res
+          })
           .catch((_error) => {
             store.dispatch(clearCurrentUser())
             window.location.href = '/login'
             return Promise.reject(_error)
           })
-          .finally(() => { refreshTokenPromise = null })
+          .finally(() => {
+            refreshTokenPromise = null
+          })
       }
-      return refreshTokenPromise.then(() => authorizedAxiosInstance(originalRequests))
+      return refreshTokenPromise.then(() => authorizedAxiosInstance(originalRequest))
+    }
+
+    if (error.response?.status === 401 && (isAuthRoute || originalRequest?._retry)) {
+      store.dispatch(clearCurrentUser())
     }
 
     return Promise.reject(error)

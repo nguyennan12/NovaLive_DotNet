@@ -91,8 +91,9 @@ export const isDeliveredWithinReturnWindow = (status, deliveredAt) => {
 }
 
 export const getPaymentMethodLabel = (method) => {
-  const map = { cod: 'COD (Tiền mặt)', vnpay: 'VNPay', momo: 'MoMo', stripe: 'Stripe' }
-  return map[method] || method
+  const normalized = (method || '').toLowerCase()
+  const map = { cod: 'Thanh toán khi nhận hàng (COD)', vietqr: 'Chuyển khoản VietQR', momo: 'Ví điện tử MoMo' }
+  return map[normalized] || method
 }
 
 export const getPaymentStatusLabel = (status) => {
