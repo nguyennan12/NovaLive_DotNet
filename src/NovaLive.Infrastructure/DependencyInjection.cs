@@ -125,6 +125,7 @@ public static class DependencyInjection
         {
             bus.AddConsumer<OrderPlacedConsumer>();
             bus.AddConsumer<PaymentSuccessConsumer>();
+            bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration.GetValue<string>("RabbitMQ:Host")

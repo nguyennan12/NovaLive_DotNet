@@ -29,16 +29,37 @@ public sealed class HandleShippingWebhookCommandHandler(
         if (sub is null) return ShippingErrors.SubOrderNotFound;
 
         var now = clock.UtcNow;
-        if (!shipment.UpdateStatusFromWebhook(command.Status, command.RawPayload, now))
+        var shipmentUpdated = shipment.UpdateStatusFromWebhook(command.Status, command.RawPayload, now);
+        var isVerifiedDeliveredWebhook = command.Status == ShippingStatus.Delivered
+            && command.IsVerifiedWebhook;
+        if (isVerifiedDeliveredWebhook && !shipmentUpdated && shipment.Status != ShippingStatus.Delivered)
+        {
+            logger.LogWarning(
+                "Ignoring stale delivered webhook for {Provider}/{TrackingCode}; shipment is already {ShipmentStatus}",
+                command.Provider, command.TrackingCode, shipment.Status);
+            return Result.Success();
+        }
+        if (!shipmentUpdated && !isVerifiedDeliveredWebhook)
             return Result.Success();
 
-        if (command.Status == ShippingStatus.Delivered && sub.MarkAsDelivered(now))
+        if (command.Status == ShippingStatus.Delivered)
         {
-            await histories.AddAsync(OrderStatusHistory.Create(sub.Id, SubOrderStatus.Shipping,
-                SubOrderStatus.Delivered, null, OrderRole.System, "Shipment delivered", now), ct);
-            await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
-                new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
-                    shipment.Provider.ToString(), shipment.TrackingCode!, now), Json), now), ct);
+            var newlyDelivered = sub.MarkAsDelivered(now);
+            if (!newlyDelivered && sub.DeliveredAt is null)
+                return OrderStateErrors.InvalidStatusTransition;
+
+            if (newlyDelivered)
+                await histories.AddAsync(OrderStatusHistory.Create(sub.Id, SubOrderStatus.Shipping,
+                    SubOrderStatus.Delivered, null, OrderRole.System, "Shipment delivered", now), ct);
+
+            // A verified callback may arrive after polling has already marked delivery.
+            // Emit again so COD settlement can consume the authenticated signal; ledger
+            // idempotency in the consumer prevents duplicate wallet credits.
+            if (newlyDelivered || isVerifiedDeliveredWebhook)
+                await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
+                    new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
+                        shipment.Provider.ToString(), shipment.TrackingCode!, sub.DeliveredAt!.Value,
+                        command.IsVerifiedWebhook), Json), now), ct);
         }
         else if (command.Status is ShippingStatus.Failed or ShippingStatus.Returned or ShippingStatus.Cancelled)
             logger.LogWarning("Carrier reported {Status} for {Provider}/{TrackingCode}; SubOrder {SubOrderId} remains {SubOrderStatus}",

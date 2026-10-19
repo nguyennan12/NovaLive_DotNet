@@ -7,4 +7,5 @@ public sealed record ShipmentDeliveredEvent(
     Guid ShopId,
     string Provider,
     string TrackingCode,
-    DateTimeOffset DeliveredAt);
+    DateTimeOffset DeliveredAt,
+    bool IsVerifiedWebhook = false);

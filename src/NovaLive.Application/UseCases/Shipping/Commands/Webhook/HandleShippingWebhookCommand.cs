@@ -11,8 +11,9 @@ public sealed record HandleShippingWebhookCommand(
     string TrackingCode,
     ShippingStatus Status,
     string? RawPayload = null,
-    DateTimeOffset? EventTimestamp = null) : ICommand, ITransactionalCommand, IIdempotentCommand
+    DateTimeOffset? EventTimestamp = null,
+    bool IsVerifiedWebhook = false) : ICommand, ITransactionalCommand, IIdempotentCommand
 {
     public string IdempotencyKey => "shipping:webhook:" + Convert.ToHexString(SHA256.HashData(
-        Encoding.UTF8.GetBytes($"{Provider}|{TrackingCode.Trim()}|{Status}|{EventTimestamp?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? "none"}")));
+        Encoding.UTF8.GetBytes($"{Provider}|{TrackingCode.Trim()}|{Status}|{EventTimestamp?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) ?? "none"}|{IsVerifiedWebhook}")));
 }

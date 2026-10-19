@@ -52,7 +52,8 @@ public sealed class ShippingController(
         if (request is null || status is null) return Respond(Result.Failure(ShippingErrors.InvalidWebhook));
         var trackingCode = string.IsNullOrWhiteSpace(request.TrackingCode) ? request.OrderCode : request.TrackingCode;
         var result = await Sender.Send(new HandleShippingWebhookCommand(
-            ShippingProvider.GHN, trackingCode, status.Value, rawJson, request.UpdatedAt), ct);
+            ShippingProvider.GHN, trackingCode, status.Value, rawJson, request.UpdatedAt,
+            IsVerifiedWebhook: true), ct);
         return Respond(result, message: "Webhook processed successfully.");
     }
 }

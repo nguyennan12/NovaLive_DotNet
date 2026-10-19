@@ -60,6 +60,21 @@ public sealed class Payment : AuditableEntity
         return Result.Success();
     }
 
+    public Result MarkCodSuccess(DateTimeOffset paidAt)
+    {
+        if (Method != PaymentMethod.COD)
+            return Result.Failure(Error.Conflict("Payment.NotCod", "Chỉ thanh toán COD mới được đối soát qua vận chuyển."));
+        if (Status == PaymentStatus.Success) return Result.Success();
+        if (Status is PaymentStatus.Expired or PaymentStatus.Failed or PaymentStatus.Refunded)
+            return Result.Failure(Error.Conflict("Payment.TerminalState",
+                $"Không thể đối soát COD khi thanh toán đang ở trạng thái {Status}."));
+
+        Status = PaymentStatus.Success;
+        PaidAt = paidAt;
+        UpdatedAt = paidAt;
+        return Result.Success();
+    }
+
     public Result MarkFailed(string? gatewayResponse, DateTimeOffset now)
     {
         if (Status == PaymentStatus.Success)

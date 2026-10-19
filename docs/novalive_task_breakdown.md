@@ -175,7 +175,7 @@ NovaLive
 | **T45** | Rating Calculation Background Worker | WORKER | WORKER | MISSING | P2 | Dev C | T44 |
 | **T46** | OrderPlacedConsumer (Email/SMS + Push Noti) | WORKER | WORKER | MISSING | P1 | Dev C | T22 |
 | **T47** | InventorySyncConsumer (Deduct Stock After Paid) | WORKER | WORKER | MISSING | P0 | Dev C | T30, T22 |
-| **T48** | CODReconciliationConsumer (COD Settlement & Wallet Credit) | WORKER | WORKER | MISSING | P0 | Dev C | T32, T36 |
+| **T48** | CODReconciliationConsumer (COD Settlement & Wallet Credit) | WORKER | WORKER | COMPLETED | P0 | Dev C | T32, T36 |
 | **T49** | TimeoutOrderRollbackWorker & ProductSearchVectorConsumer | WORKER | WORKER | MISSING | P1 | Dev C | T22, T16 |
 | **T50** | Seller Performance Dashboard & Wallet Analytics | FEATURE | BE/API | MISSING | P2 | Dev B | T32, T36 |
 | **T51** | Admin Platform Executive Dashboard & Financial Reports | FEATURE | BE/API | MISSING | P2 | Dev B | T39, T48 |
@@ -901,12 +901,14 @@ NovaLive
 ---
 
 ### T48 — [WORKER] CODReconciliationConsumer (COD Order Settlement & Wallet Credit)
-- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev C
-- **SRS Requirement**: `FR-PAY-003`, `AC-008`
+- **Status**: COMPLETED | **Priority**: P0 | **Assign**: Dev C
+- **SRS Requirement**: `FR-PAY-006`, `FR-SHIP-006`, `AC-008`
 - **Detailed Technical Implementation**:
-  - Implement Background Job `CODReconciliationWorker` / Consumer xử lý khi nhận webhook xác nhận giao hàng thu tiền COD thành công từ ĐVVC.
-  - Khi đơn hàng COD chuyển trạng thái `Delivered`:
-  - Thực thi ghi nhận doanh thu: cộng tiền `ShopWallets.balance += shop_net_amount` cho ví Seller và ghi log sổ cái `ShopWalletTransactions` loại `OrderRevenue`.
+  - Implement Consumer xử lý `ShipmentDeliveredEvent` phát sinh từ webhook vận chuyển đã xác thực.
+  - Polling có thể đồng bộ `SubOrder` sang `Delivered`, nhưng không được dùng làm tín hiệu đối soát COD; webhook đã xác thực đến sau vẫn phải phát được event settlement.
+  - Khi đơn hàng COD chuyển trạng thái `Delivered` từ webhook đã xác thực:
+  - Thực thi ghi nhận doanh thu theo `SubOrder.SubTotal` (đồng nhất với luồng online hiện có): cộng vào `ShopWallets.balance` và ghi `ShopWalletTransactions` loại `OrderRevenue`.
+  - Chỉ đánh dấu `Payment` thành công và `ParentOrder` đã thanh toán sau khi tất cả SubOrder trong ParentOrder đã được giao và có ledger doanh thu.
 - **Dependencies**: T30, T36
 - **Estimated Size**: M
 

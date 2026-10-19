@@ -74,7 +74,7 @@ public sealed class ShippingStatusPollingWorker(
                     .Select(e => (DateTimeOffset?)e.OccurredAt).Max();
                 var result = await services.GetRequiredService<ISender>().Send(new HandleShippingWebhookCommand(
                     shipment.Provider, shipment.TrackingCode, status.Value,
-                    JsonSerializer.Serialize(tracking.Value), eventTime), ct);
+                    JsonSerializer.Serialize(tracking.Value), eventTime, IsVerifiedWebhook: false), ct);
                 if (result.IsFailure)
                     logger.LogWarning("Shipping polling update failed for {TrackingCode}: {Error}", shipment.TrackingCode, result.Error.Code);
             }
