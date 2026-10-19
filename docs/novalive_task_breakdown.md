@@ -178,7 +178,7 @@ NovaLive
 | **T48** | CODReconciliationConsumer (COD Settlement & Wallet Credit) | WORKER | WORKER | COMPLETED | P0 | Dev C | T32, T36 |
 | **T49** | TimeoutOrderRollbackWorker & ProductSearchVectorConsumer | WORKER | WORKER | MISSING | P1 | Dev C | T22, T16 |
 | **T50** | Seller Performance Dashboard & Wallet Analytics | FEATURE | BE/API | MISSING | P2 | Dev B | T32, T36 |
-| **T51** | Admin Platform Executive Dashboard & Financial Reports | FEATURE | BE/API | MISSING | P2 | Dev B | T39, T48 |
+| **T51** | Admin Platform Executive Dashboard & Financial Reports | FEATURE | BE/API | MISSING | P2 | Dev B | T32, T39, T48 |
 | **T52** | Domain & Application Unit Tests | TEST | TEST | MISSING | P1 | All | T20, T22, T27 |
 | **T53** | Integration Tests (Auth, Checkout, Webhooks) | TEST | TEST | MISSING | P1 | All | T08, T30, T36 |
 | **T54** | End-to-End Tests (Full Purchase to Direct Settlement Cycle) | TEST | TEST | MISSING | P1 | All | T39, T48 |
@@ -950,13 +950,14 @@ NovaLive
 - **SRS Requirement**: `FR-REPORT-001`, `FR-ADMIN-006`
 - **Detailed Technical Implementation**:
   - `GetAdminDashboardQuery`:
-    - GMV (Gross Merchandise Value) toàn sàn theo thời gian.
-    - Doanh thu hoa hồng thực nhận của Sàn (Net Platform Revenue = $\sum \text{platform\_fee}$ từ các đơn hàng hoàn tất).
+    - GMV = `ParentOrder.GrandTotal` của đơn có `PaymentStatus = Paid`, lọc kỳ theo `ParentOrder.CreatedAt`.
+    - Doanh thu hoa hồng thực nhận của Sàn = tổng `SubOrder.SubTotal - SubOrder.SellerEarnings` của các đơn đã thanh toán; chỉ khả dụng khi T32 đã ghi `SellerEarnings`.
     - Tổng số người dùng mới (Buyers, Sellers), tổng số gian hàng `Active`.
-    - Tỷ lệ hoàn hàng & Tỷ lệ tranh chấp toàn sàn.
+    - Tỷ lệ hoàn hàng = SubOrder đã giao có ít nhất một `OrderReturn` / tổng SubOrder đã giao trong kỳ; kỳ return/dispute lấy từ `OrderReturn.CreatedAt`.
+    - Tỷ lệ tranh chấp = SubOrder đã giao có `OrderReturn.status` thuộc `AdminDispute`, `AdminApproved`, `AdminRejected` / tổng SubOrder đã giao trong kỳ.
     - Danh sách các lệnh rút tiền `SellerPayouts` đang chờ duyệt.
   - Endpoint `AdminReportsController`: `GET /admin/reports/dashboard`.
-- **Dependencies**: T30, T39
+- **Dependencies**: T32, T39, T48
 - **API Contracts**: `AdminDashboardResponse` (`NovaLive.Contracts.V1.Dashboards`)
 - **Estimated Size**: M
 

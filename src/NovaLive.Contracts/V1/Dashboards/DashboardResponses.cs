@@ -1,13 +1,23 @@
 namespace NovaLive.Contracts.V1.Dashboards;
 
-public record AdminDashboardMetricsDto(
+public record AdminDashboardResponse(
     decimal TotalGmv,
     int TotalOrdersCount,
-    int TotalActiveUsersCount,
+    int NewBuyerCount,
+    int NewSellerCount,
     int TotalActiveShopsCount,
-    decimal TotalPlatformFeeRevenue,
-    decimal TotalDisputedAmount,
-    List<DailyRevenuePointDto> RevenueChart);
+    decimal? TotalPlatformFeeRevenue,
+    decimal ReturnRatePercent,
+    decimal DisputeRatePercent,
+    IReadOnlyList<PendingSellerPayoutDto> PendingPayouts);
+
+public record PendingSellerPayoutDto(
+    Guid Id,
+    Guid ShopId,
+    decimal Amount,
+    string BankName,
+    string BankAccount,
+    DateTime ScheduledAt);
 
 public record SellerDashboardAnalyticsDto(
     decimal TotalSalesRevenue,

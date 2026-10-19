@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
 
         // Repositories
+        services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
         services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
         services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
         services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
