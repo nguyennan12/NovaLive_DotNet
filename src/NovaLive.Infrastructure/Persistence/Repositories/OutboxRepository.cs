@@ -3,12 +3,23 @@ using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.UseCases.Orders;
 using NovaLive.Contracts.V1.Orders;
+using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.System;
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 public sealed class OutboxRepository(AppDbContext db) : IOutboxRepository
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     public async Task AddAsync(OutboxMessage entity, CancellationToken ct) => await db.OutboxMessages.AddAsync(entity, ct);
+    public Task<bool> HasVerifiedShipmentDeliveredEventAsync(Guid shipmentId, CancellationToken ct)
+    {
+        var shipmentIdText = shipmentId.ToString();
+        const string verifiedSignal = "\"isVerifiedWebhook\":true";
+        return db.OutboxMessages.AsNoTracking().AnyAsync(message =>
+            message.EventType == nameof(ShipmentDeliveredEvent)
+            && message.Payload.Contains(shipmentIdText)
+            && message.Payload.Contains(verifiedSignal), ct);
+    }
+
     public async Task<CheckoutResponse?> FindCheckoutReceiptAsync(string key, CancellationToken ct)
     {
         IQueryable<OutboxMessage> query = db.OutboxMessages.AsNoTracking();

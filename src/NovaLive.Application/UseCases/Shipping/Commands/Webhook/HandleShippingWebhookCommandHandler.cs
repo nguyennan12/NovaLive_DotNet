@@ -52,10 +52,12 @@ public sealed class HandleShippingWebhookCommandHandler(
                 await histories.AddAsync(OrderStatusHistory.Create(sub.Id, SubOrderStatus.Shipping,
                     SubOrderStatus.Delivered, null, OrderRole.System, "Shipment delivered", now), ct);
 
-            // A verified callback may arrive after polling has already marked delivery.
-            // Emit again so COD settlement can consume the authenticated signal; ledger
-            // idempotency in the consumer prevents duplicate wallet credits.
-            if (newlyDelivered || isVerifiedDeliveredWebhook)
+            // Polling may mark delivery before the carrier sends an authenticated callback.
+            // Emit that verified signal once so COD settlement can consume it; repeated
+            // callbacks must not enqueue duplicate settlement events.
+            var hasVerifiedDeliverySignal = isVerifiedDeliveredWebhook && !newlyDelivered
+                && await outbox.HasVerifiedShipmentDeliveredEventAsync(shipment.Id, ct);
+            if (newlyDelivered || (isVerifiedDeliveredWebhook && !hasVerifiedDeliverySignal))
                 await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
                     new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
                         shipment.Provider.ToString(), shipment.TrackingCode!, sub.DeliveredAt!.Value,
