@@ -6,13 +6,17 @@ import SearchIcon from '@mui/icons-material/Search'
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
 import { useTheme } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import Profiles from './Menu/Profile'
+import { selectCurrentUser } from '~/store/user/userSlice'
 import { gradientText } from '~/theme'
 
 const iconBoxSx = {
@@ -28,6 +32,7 @@ function AppBar() {
   const [searchValue, setSearchValue] = useState('')
   const navigate = useNavigate()
   const theme = useTheme()
+  const currentUser = useSelector(selectCurrentUser)
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -138,6 +143,22 @@ function AppBar() {
 
       {/* Right icons: thông báo, chat, cài đặt, profile */}
       <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: { xs: 0.25, sm: 0.5 } }}>
+
+        {currentUser
+          ? <Profiles />
+          : <Button
+            variant="contained"
+            onClick={() => navigate('/login')}
+            sx={{
+              borderRadius: '24px',
+              px: { xs: 1.5, sm: 2.25 },
+              minWidth: 'auto',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Đăng nhập
+          </Button>}
 
         <IconButton size="small">
           <Badge badgeContent={3} color="error" max={9}
