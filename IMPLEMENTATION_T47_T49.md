@@ -28,3 +28,89 @@
 - Build uses `dotnet build --no-restore -m:1 -p:UseSharedCompilation=false`; disabling shared compilation avoids sandbox compiler cancellation.
 - Tests must run outside the restricted process sandbox because testhost communication hangs inside it. No application behavior or security settings were changed for this.
 - T47 coverage: valid/invalid domain transitions and stock invariants; command validator; multiple shops/SKUs with aggregation and ordering; replay without Redis; cancelled SubOrder/late payment; reservation mismatch; consumer mapping and failure propagation; real SQLite rollback and cache-eviction replay through MediatR and transaction/idempotency behaviors.
+
+## T49: unpaid online payment timeout
+
+- `TimeoutOrderRollbackWorker` uses PeriodicTimer, one scan scope and a fresh dispatch scope per payment. Each command receives its own transaction. Exceptions/failed Results are logged per payment and do not interrupt subsequent candidates; scan exceptions retry on the next tick. Cancellation is propagated. Structured logs expose expired pending candidate count, failures, and actual expired payments/cancelled SubOrders.
+- `OrderTimeoutOptions` is shared in Application so the worker and command use the same timeout without reversing the dependency rule. Infrastructure binds/validates it from `OrderTimeout`; appsettings defaults: PollInterval 00:01:00, PaymentTimeout 00:15:00, BatchSize 100.
+- Scan and claim use the same predicate: Pending, method MoMo/VietQR, and explicit expiry at/before now OR null expiry with creation at/before now minus timeout. Explicit future expiry never uses the creation fallback. COD is excluded at selection, handler, and conditional UPDATE boundaries.
+- The handler reads the payment, locks the parent, then claims using conditional UPDATE Pending -> Expired (also rechecking method/deadline). A lost race changes nothing. Parent-first minimizes contention with existing cancellation/VietQR paths; the pre-existing reverse MoMo lock order remains a documented gap. Successful payments cannot match the claim predicate.
+- Only PendingPayment SubOrders are locked/rechecked and cancelled by the new domain method, with PaymentTimeout, null actor and System history. Inventory rows are locked in global ascending SKU order, released by the shared atomic repository operation, and guarded by `(Order, sub_order_id, sku_id, ReserveRelease)` ledger entries. Everything rolls back together on failed Results or exceptions.
+- Reuse T27 `ReleaseReservedAsync` in the same transaction. Existing OrderItem linkage and persisted Flash Sale state remove the missing-link concern in the request. Flash Sale failures propagate to rollback the entire payment operation.
+- Reuse the existing anonymous `OrderCancelledEvent` Outbox payload and event name, with changedByRole System and reason PaymentTimeout. Its dispatch/notification gap described above remains. No new event type, endpoint, wallet action or migration was introduced.
+- Discount used_count/DiscountUsages rollback is unspecified and remains unchanged. Another existing gap: the MoMo failure branch marks Payment Failed and cancels the parent without releasing reservations; the requested Pending-only worker intentionally does not expand into Failed payment recovery.
+- All new types use separate matching files. Existing `OrderErrors` was extracted from OrderSupport into its required matching file without changing error definitions; other pre-existing bundled types remain untouched. InventoryStockResult was likewise extracted from IInventoryRepository in T47 to keep the edited interface file compliant.
+- Transaction rollback tests live in Infrastructure.Tests and use the real SQLite transaction manager/pipeline rather than mocked rollback assertions in Application.Tests. Application.Tests verify business selection, lost claims, ordering, existing ledger guard and error propagation.
+
+## Files by commit
+
+T47 — `4d3f9f3`, `feat(inventory): implement inventory sync consumer to deduct stock after payment (T47)`:
+
+```text
+IMPLEMENTATION_T47_T49.md (added)
+src/NovaLive.Application/Abstractions/Persistence/Repositories/IInventoryHistoryRepository.cs
+src/NovaLive.Application/Abstractions/Persistence/Repositories/IInventoryRepository.cs
+src/NovaLive.Application/Abstractions/Persistence/Repositories/IPaymentRepository.cs
+src/NovaLive.Application/Abstractions/Persistence/Repositories/InventoryStockResult.cs (added)
+src/NovaLive.Application/UseCases/Inventory/Commands/ConfirmInventorySale/ConfirmInventorySaleCommand.cs (added)
+src/NovaLive.Application/UseCases/Inventory/Commands/ConfirmInventorySale/ConfirmInventorySaleCommandHandler.cs (added)
+src/NovaLive.Application/UseCases/Inventory/Commands/ConfirmInventorySale/ConfirmInventorySaleCommandValidator.cs (added)
+src/NovaLive.Application/UseCases/Inventory/InventoryErrors.cs
+src/NovaLive.Application/UseCases/Inventory/InventoryLedgerOperation.cs (added)
+src/NovaLive.Domain/Inventory/Inventory.cs
+src/NovaLive.Domain/Inventory/InventoryReservationErrors.cs
+src/NovaLive.Infrastructure/DependencyInjection.cs
+src/NovaLive.Infrastructure/Persistence/Repositories/InventoryHistoryRepository.cs
+src/NovaLive.Infrastructure/Persistence/Repositories/InventoryRepository.cs
+src/NovaLive.Infrastructure/Persistence/Repositories/PaymentRepository.cs
+src/NovaLive.Infrastructure/System/InventorySyncConsumer.cs (added)
+src/NovaLive.Infrastructure/System/InventorySyncConsumerDefinition.cs (added)
+tests/NovaLive.Application.Tests/Inventory/ConfirmInventorySaleCommandHandlerTests.cs (added)
+tests/NovaLive.Application.Tests/Inventory/InventorySaleTestContext.cs (added)
+tests/NovaLive.Domain.Tests/Inventory/ReservedStockTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/Inventory/InventoryLifecycleFixture.cs (added)
+tests/NovaLive.Infrastructure.Tests/Inventory/InventorySalePersistenceTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/System/InventorySyncConsumerTests.cs (added)
+```
+
+T49 — `feat(orders): add timeout order rollback worker to release reserved stock (T49)`:
+
+```text
+IMPLEMENTATION_T47_T49.md
+src/NovaLive.Api/appsettings.json
+src/NovaLive.Application/Abstractions/Persistence/Repositories/IPaymentRepository.cs
+src/NovaLive.Application/UseCases/Orders/OrderSupport.cs (extract existing OrderErrors only)
+src/NovaLive.Application/UseCases/Orders/OrderErrors.cs (added)
+src/NovaLive.Application/UseCases/Orders/OrderTimeoutOptions.cs (added)
+src/NovaLive.Application/UseCases/Orders/Commands/ExpireUnpaidPayment/ExpireUnpaidPaymentCommand.cs (added)
+src/NovaLive.Application/UseCases/Orders/Commands/ExpireUnpaidPayment/ExpireUnpaidPaymentCommandHandler.cs (added)
+src/NovaLive.Application/UseCases/Orders/Commands/ExpireUnpaidPayment/ExpireUnpaidPaymentCommandValidator.cs (added)
+src/NovaLive.Domain/Orders/SubOrder.cs
+src/NovaLive.Domain/Payments/Payment.cs
+src/NovaLive.Infrastructure/DependencyInjection.cs
+src/NovaLive.Infrastructure/Persistence/Repositories/PaymentRepository.cs
+src/NovaLive.Infrastructure/System/TimeoutOrderRollbackWorker.cs (added)
+tests/NovaLive.Application.Tests/UseCases/Orders/ExpireUnpaidPaymentCommandHandlerTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/Orders/OrderTimeoutOptionsTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/Orders/TimeoutOrderRollbackWorkerTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/Orders/TimeoutPaymentRepositoryTests.cs (added)
+tests/NovaLive.Infrastructure.Tests/Orders/TimeoutRollbackPersistenceTests.cs (added)
+```
+
+The pre-existing deletion of docs/T27_FLASH_SALE_IMPLEMENTATION.md was preserved and excluded from both commits. No docs file was edited, and no changes were pushed.
+
+## Final validation results
+
+`dotnet test --no-restore -m:1 -p:UseSharedCompilation=false -v minimal` completed successfully for the entire solution:
+
+| Project | Passed | Skipped | Failed |
+| --- | ---: | ---: | ---: |
+| Domain.Tests | 135 | 0 | 0 |
+| Application.Tests | 468 | 0 | 0 |
+| Infrastructure.Tests | 221 | 22 | 0 |
+| Api.Tests | 144 | 0 | 0 |
+| Total | 968 | 22 | 0 |
+
+All 46 new test cases passed. The 22 skipped cases are existing optional PostgreSQL tests requiring NOVALIVE_TEST_POSTGRES, covering Auth (2), Shops (3), Carts (2), Inventory (4), FlashSales (10), Checkout (1). PostgreSQL row-lock concurrency and live RabbitMQ error-queue delivery were not exercised; SQLite validates repository conditional updates and complete transaction rollback. No TestContainers harness is available, so no new PostgreSQL concurrency tests were written.
+
+Build succeeded with zero errors. A rebuild reports six pre-existing CS8602 warnings in UploadMediaTests, SearchProductsQueryHandlerTests and the MoMo/VietQR handler tests; there are no new warnings in this implementation. `git diff --check` passed.

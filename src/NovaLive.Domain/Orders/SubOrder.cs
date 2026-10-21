@@ -124,5 +124,16 @@ public sealed class SubOrder : AuditableEntity
             UpdatedAt = now;
         }
     }
+
+    public Result CancelForPaymentTimeout(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.PendingPayment) return OrderStateErrors.InvalidStatusTransition;
+        Status = SubOrderStatus.Cancelled;
+        CancelReason = "PaymentTimeout";
+        CancelledBy = null;
+        CancelledAt = now;
+        UpdatedAt = now;
+        return Result.Success();
+    }
 }
 

@@ -5,6 +5,8 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 public interface IPaymentRepository
 {
     Task<Payment?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<List<Guid>> GetExpiredOnlineIdsAsync(DateTimeOffset now, TimeSpan paymentTimeout, int batchSize, CancellationToken ct);
+    Task<bool> TryExpirePendingOnlineAsync(Guid id, DateTimeOffset now, TimeSpan paymentTimeout, CancellationToken ct);
     Task<List<Payment>> GetByParentIdsAsync(IEnumerable<Guid> ids, CancellationToken ct);
 
     Task<Payment?> GetForUpdateAsync(Guid parentId, CancellationToken ct);
