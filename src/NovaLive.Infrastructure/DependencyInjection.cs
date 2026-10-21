@@ -7,12 +7,14 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Application.Abstractions.Search;
 using NovaLive.Infrastructure.Auth;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Interceptors;
 using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Persistence.Seeding;
 using NovaLive.Infrastructure.Services;
+using NovaLive.Infrastructure.Search;
 using NovaLive.Infrastructure.System;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
@@ -61,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IAfterCommitActions, AfterCommitActions>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
+        services.AddScoped<IProductSearchIndexer, PostgresProductSearchIndexer>();
 
         // Repositories
         services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
@@ -135,6 +138,7 @@ public static class DependencyInjection
             bus.AddConsumer<OrderPlacedConsumer>();
             bus.AddConsumer<PaymentSuccessConsumer>();
             bus.AddConsumer<InventorySyncConsumer, InventorySyncConsumerDefinition>();
+            bus.AddConsumer<ProductSearchVectorConsumer, ProductSearchVectorConsumerDefinition>();
             bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
