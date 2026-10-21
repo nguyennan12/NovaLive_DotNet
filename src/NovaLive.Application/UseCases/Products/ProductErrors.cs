@@ -4,6 +4,9 @@ namespace NovaLive.Application.UseCases.Products;
 
 public static class ProductErrors
 {
+    public static readonly Error SearchIndexRebuildFailed =
+        Error.Failure("Product.SearchIndexRebuildFailed", "Không thể cập nhật chỉ mục tìm kiếm sản phẩm.");
+
     public static readonly Error NotFound =
         Error.NotFound("Product.NotFound", "Không tìm thấy sản phẩm hoặc sản phẩm đã bị ẩn/xóa.");
 

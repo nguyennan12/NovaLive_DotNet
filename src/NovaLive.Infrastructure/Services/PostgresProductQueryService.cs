@@ -7,6 +7,7 @@ using NovaLive.Contracts.V1.Products;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Shops;
 using NovaLive.Infrastructure.Persistence;
+using NovaLive.Infrastructure.Search;
 
 namespace NovaLive.Infrastructure.Services;
 
@@ -51,7 +52,7 @@ WITH filtered_spus AS (
         MIN(sk.sell_price) AS min_price,
         MAX(sk.sell_price) AS max_price,
         CASE 
-            WHEN @hasKeyword::boolean THEN ts_rank(COALESCE(s.search_vector, to_tsvector('vietnamese', s.name)), websearch_to_tsquery('vietnamese', @keyword))
+            WHEN @hasKeyword::boolean THEN ts_rank(COALESCE(s.search_vector, to_tsvector(@textSearchConfig::regconfig, s.name)), websearch_to_tsquery(@textSearchConfig::regconfig, @keyword))
             ELSE 0.0
         END AS rank
     FROM spus s
@@ -66,7 +67,7 @@ WITH filtered_spus AS (
       AND (@categoryId::uuid IS NULL OR s.category_id = @categoryId)
       AND (
           @hasKeyword::boolean = FALSE OR (
-              (s.search_vector IS NOT NULL AND s.search_vector @@ websearch_to_tsquery('vietnamese', @keyword))
+              (s.search_vector IS NOT NULL AND s.search_vector @@ websearch_to_tsquery(@textSearchConfig::regconfig, @keyword))
               OR s.name % @keyword
           )
       )
@@ -113,6 +114,7 @@ LIMIT @pageSize OFFSET @offset;";
         }
 
         AddParam("hasKeyword", hasKeyword, DbType.Boolean);
+        AddParam("textSearchConfig", PostgresSearchConfiguration.TextSearchConfig, DbType.String);
         AddParam("keyword", keyword, DbType.String);
         AddParam("shopId", request.ShopId, DbType.Guid);
         AddParam("categoryId", request.CategoryId, DbType.Guid);
