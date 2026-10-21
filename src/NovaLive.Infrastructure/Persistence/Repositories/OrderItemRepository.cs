@@ -5,6 +5,9 @@ using NovaLive.Domain.Common;
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 public sealed class OrderItemRepository(AppDbContext db) : IOrderItemRepository
 {
+    public Task<OrderItem?> GetByIdAsync(Guid id, CancellationToken ct) =>
+        db.OrderItems.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, ct);
+
     public Task<long> GetFlashSaleUsageAsync(Guid buyerId, Guid flashSaleItemId, CancellationToken ct) =>
         (from item in db.OrderItems.AsNoTracking()
          join sub in db.SubOrders.AsNoTracking() on item.SubOrderId equals sub.Id

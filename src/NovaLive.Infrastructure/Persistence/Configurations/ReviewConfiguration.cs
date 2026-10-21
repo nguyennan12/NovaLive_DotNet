@@ -13,7 +13,9 @@ public sealed class ReviewConfiguration :
         builder.ToTable("reviews");
         builder.HasKey(r => r.Id);
 
-        builder.Property(r => r.Title).HasMaxLength(200);
+        builder.Property(r => r.Title).HasMaxLength(ReviewLimits.TitleLength);
+        // Existing migrations have no mapped relationship. The repository persists the aggregate's media explicitly.
+        builder.Ignore(r => r.Images);
 
         builder.HasIndex(r => r.OrderItemId).IsUnique();
         builder.HasIndex(r => new { r.SkuId, r.Rating }).HasFilter("is_visible = TRUE");
@@ -25,7 +27,7 @@ public sealed class ReviewConfiguration :
         builder.ToTable("review_images");
         builder.HasKey(img => img.Id);
 
-        builder.Property(img => img.MediaUrl).HasMaxLength(500).IsRequired();
+        builder.Property(img => img.MediaUrl).HasMaxLength(ReviewLimits.MediaUrlLength).IsRequired();
         builder.Property(img => img.MediaType).HasConversion<string>().HasMaxLength(10);
 
         builder.HasIndex(img => img.ReviewId);
