@@ -119,6 +119,14 @@ public static class DependencyInjection
 
         // Outbox background worker
         services.AddHostedService<OutboxBackgroundWorker>();
+        services.AddOptions<NovaLive.Application.UseCases.Orders.OrderTimeoutOptions>()
+            .Bind(configuration.GetSection(NovaLive.Application.UseCases.Orders.OrderTimeoutOptions.SectionName))
+            .Validate(o => o.PollInterval > TimeSpan.Zero && o.PollInterval.TotalMilliseconds <= uint.MaxValue - 1,
+                "OrderTimeout:PollInterval must be a valid positive timer interval.")
+            .Validate(o => o.PaymentTimeout > TimeSpan.Zero, "OrderTimeout:PaymentTimeout must be positive.")
+            .Validate(o => o.BatchSize > 0, "OrderTimeout:BatchSize must be positive.")
+            .ValidateOnStart();
+        services.AddHostedService<TimeoutOrderRollbackWorker>();
         services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging
@@ -126,6 +134,7 @@ public static class DependencyInjection
         {
             bus.AddConsumer<OrderPlacedConsumer>();
             bus.AddConsumer<PaymentSuccessConsumer>();
+            bus.AddConsumer<InventorySyncConsumer, InventorySyncConsumerDefinition>();
             bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {

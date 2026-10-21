@@ -10,6 +10,47 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRepository
 {
+    public Task<Result<InventoryStockResult>> ConfirmReservedSaleAsync(Guid skuId, Guid shopId,
+        int quantity, DateTimeOffset now, CancellationToken ct) =>
+        ChangeReservationAsync(skuId, shopId, quantity, true, now, ct);
+
+    public Task<Result<InventoryStockResult>> ReleaseReservedAsync(Guid skuId, Guid shopId,
+        int quantity, DateTimeOffset now, CancellationToken ct) =>
+        ChangeReservationAsync(skuId, shopId, quantity, false, now, ct);
+
+    private async Task<Result<InventoryStockResult>> ChangeReservationAsync(Guid skuId, Guid shopId,
+        int quantity, bool confirmSale, DateTimeOffset now, CancellationToken ct)
+    {
+        if (quantity <= 0) return InventoryErrors.ReservationMismatch;
+        var query = dbContext.Inventories.Where(i => i.SkuId == skuId && i.ShopId == shopId);
+        Inventory? stock;
+        if (dbContext is DbContext db && db.Database.IsRelational())
+        {
+            var changed = await query.Where(i => i.ReservedQty >= quantity && i.QtyOnHand >= quantity
+                    && i.Version < int.MaxValue)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(i => i.QtyOnHand, i => i.QtyOnHand - (confirmSale ? quantity : 0))
+                    .SetProperty(i => i.ReservedQty, i => i.ReservedQty - quantity)
+                    .SetProperty(i => i.Version, i => i.Version + 1)
+                    .SetProperty(i => i.LastUpdated, now), ct);
+            if (changed == 0) return InventoryErrors.ReservationMismatch;
+
+            // Refresh a row previously locked by this transaction; SaveChanges must not overwrite SQL.
+            var tracked = db.ChangeTracker.Entries<Inventory>().SingleOrDefault(e => e.Entity.SkuId == skuId);
+            if (tracked is not null) await tracked.ReloadAsync(ct);
+            stock = await query.AsNoTracking().SingleAsync(ct);
+        }
+        else
+        {
+            stock = await query.SingleOrDefaultAsync(ct);
+            if (stock is null) return InventoryErrors.ReservationMismatch;
+            var result = confirmSale ? stock.TryConfirmSale(quantity, now) : stock.TryRelease(quantity, now);
+            if (result.IsFailure) return result.Error;
+        }
+        return new InventoryStockResult(stock.Id, stock.SkuId, stock.QtyOnHand, stock.ReservedQty,
+            stock.AvailableQty, stock.MinStock, stock.Version);
+    }
+
     public Task<List<Inventory>> GetByIdsForUpdateAsync(IEnumerable<Guid> skuIds, CancellationToken ct)
     {
         var ids = skuIds.Distinct().Order().ToArray();

@@ -32,6 +32,10 @@ public sealed class Payment : AuditableEntity
 
     public DateTimeOffset? ExpiredAt { get; private set; }
 
+    public bool IsDueForExpiry(DateTimeOffset now, TimeSpan paymentTimeout) =>
+        Status == PaymentStatus.Pending && Method is PaymentMethod.MoMo or PaymentMethod.VietQR
+        && (ExpiredAt is { } expiry ? expiry <= now : CreatedAt <= now - paymentTimeout);
+
     public void ExpirePending(DateTimeOffset now)
     {
         if (Status != PaymentStatus.Pending) return;

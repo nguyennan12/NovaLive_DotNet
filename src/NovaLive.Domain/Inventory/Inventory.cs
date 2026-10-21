@@ -179,4 +179,20 @@ public sealed class Inventory : Entity
         ReleaseReservation(quantity);
         return Result.Success();
     }
+
+    public Result TryRelease(int quantity, DateTimeOffset now) => ChangeReservation(quantity, false, now);
+
+    public Result TryConfirmSale(int quantity, DateTimeOffset now) => ChangeReservation(quantity, true, now);
+
+    private Result ChangeReservation(int quantity, bool confirmSale, DateTimeOffset now)
+    {
+        if (quantity <= 0 || ReservedQty < quantity || QtyOnHand < quantity || Version == int.MaxValue)
+            return InventoryReservationErrors.ReservationMismatch;
+
+        ReservedQty -= quantity;
+        if (confirmSale) QtyOnHand -= quantity;
+        Version++;
+        LastUpdated = now;
+        return Result.Success();
+    }
 }
