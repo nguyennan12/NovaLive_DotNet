@@ -10,6 +10,7 @@ public static class ShopErrors
     public static readonly Error SlugTaken = Error.Conflict("Shops.SlugTaken", "Đường dẫn gian hàng đã được sử dụng.");
     public static readonly Error NotFound = Error.NotFound("Shops.NotFound", "Không tìm thấy gian hàng.");
     public static readonly Error CannotManage = Error.Forbidden("Shops.CannotManage", "Gian hàng hiện không cho phép chỉnh sửa.");
+    public static readonly Error VerificationNotPending = Error.Validation("Shops.VerificationNotPending", "Hồ sơ KYC chưa được gửi hoặc không còn ở trạng thái chờ duyệt.");
     public static readonly Error AddressNotFound = Error.NotFound("Shops.AddressNotFound", "Không tìm thấy kho hàng.");
     public static readonly Error LastPrimary = Error.Validation("Shops.LastPrimary", "Không thể xóa kho chính duy nhất.");
     public static readonly Error SelfFollow = Error.Validation("Shops.SelfFollow", "Không thể theo dõi gian hàng của chính mình.");

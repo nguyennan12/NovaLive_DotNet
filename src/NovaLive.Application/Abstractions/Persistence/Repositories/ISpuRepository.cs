@@ -29,4 +29,6 @@ public interface ISpuRepository
     Task<bool> ExistsByCategoryIdAsync(Guid categoryId, CancellationToken ct = default);
 
     Task<Dictionary<Guid, int>> GetProductCountsByCategoryIdsAsync(IEnumerable<Guid> categoryIds, CancellationToken ct = default);
+
+    Task DeactivateByShopIdAsync(Guid shopId, CancellationToken ct = default);
 }

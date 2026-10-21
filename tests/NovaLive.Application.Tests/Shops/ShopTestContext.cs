@@ -8,6 +8,7 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.UseCases.Shops;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Products;
+using NovaLive.Domain.Rbac;
 using NovaLive.Domain.Shops;
 using NovaLive.Domain.System;
 using NovaLive.Domain.Users;
@@ -39,6 +40,24 @@ internal sealed class ShopTestContext : DbContext
             .Returns((Guid id, CancellationToken ct) => Set<Shop>().SingleOrDefaultAsync(s => s.OwnerId == id && s.DeletedAt == null, ct));
         Repository.Setup(x => x.GetActiveByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, CancellationToken ct) => Set<Shop>().AsNoTracking().SingleOrDefaultAsync(s => s.Id == id && s.Status == ShopStatus.Active && s.DeletedAt == null, ct));
+        Repository.Setup(x => x.GetTrackedByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<Shop>().SingleOrDefaultAsync(s => s.Id == id && s.DeletedAt == null, ct));
+        Repository.Setup(x => x.GetPagedAsync(It.IsAny<ShopStatus?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(async (ShopStatus? status, int page, int size, CancellationToken ct) =>
+            {
+                var query = Set<Shop>().AsNoTracking().Where(s => s.DeletedAt == null);
+                if (status.HasValue) query = query.Where(s => s.Status == status.Value);
+                var total = await query.LongCountAsync(ct);
+                var items = await query.OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id).Skip((page - 1) * size).Take(size).ToListAsync(ct);
+                return (items, total);
+            });
+        Products.Setup(x => x.DeactivateByShopIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Guid shopId, CancellationToken ct) =>
+            {
+                var activeSpus = await Set<Spu>().Where(s => s.ShopId == shopId && s.Status == ProductStatus.Active).ToListAsync(ct);
+                foreach (var spu in activeSpus) spu.SetStatus(ProductStatus.Inactive);
+                await SaveChangesAsync(ct);
+            });
         Repository.Setup(x => x.ExistsByOwnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, CancellationToken ct) => Set<Shop>().IgnoreQueryFilters().AnyAsync(s => s.OwnerId == id, ct));
         Repository.Setup(x => x.ExistsBySlugAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -51,6 +70,9 @@ internal sealed class ShopTestContext : DbContext
             .Returns(async (OutboxMessage message, CancellationToken ct) => { await Set<OutboxMessage>().AddAsync(message, ct); });
         Repository.Setup(x => x.GetLatestVerificationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, CancellationToken ct) => Set<ShopVerification>().AsNoTracking().Where(v => v.ShopId == id)
+                .OrderByDescending(v => v.SubmittedAt).ThenByDescending(v => v.Id).FirstOrDefaultAsync(ct));
+        Repository.Setup(x => x.GetLatestTrackedVerificationAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns((Guid id, CancellationToken ct) => Set<ShopVerification>().Where(v => v.ShopId == id)
                 .OrderByDescending(v => v.SubmittedAt).ThenByDescending(v => v.Id).FirstOrDefaultAsync(ct));
         Repository.Setup(x => x.GetAddressesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, CancellationToken ct) => Set<ShopAddress>().Where(a => a.ShopId == id).ToListAsync(ct));
@@ -82,11 +104,14 @@ internal sealed class ShopTestContext : DbContext
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
 
     }
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<ShopWallet> ShopWallets => Set<ShopWallet>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(connection);
     protected override void OnModelCreating(ModelBuilder model)
     {
         foreach (var type in new[] { typeof(User), typeof(Shop), typeof(ShopVerification), typeof(ShopFollower),
-                     typeof(ShopAddress), typeof(Spu), typeof(OutboxMessage) })
+                     typeof(ShopAddress), typeof(Spu), typeof(OutboxMessage), typeof(UserRole), typeof(ShopWallet) })
             model.Entity(type).Ignore(nameof(Entity.DomainEvents));
         model.Entity<Shop>().HasQueryFilter(s => s.DeletedAt == null);
         model.Entity<User>().HasQueryFilter(u => u.DeletedAt == null);

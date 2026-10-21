@@ -44,4 +44,20 @@ public sealed class ShopVerification : Entity
     public DateTimeOffset? ReviewedAt { get; private set; }
 
     public DateTimeOffset SubmittedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void Approve(Guid reviewerId, string? note, DateTimeOffset now)
+    {
+        Status = VerificationStatus.Approved;
+        ReviewerId = reviewerId;
+        ReviewerNote = note;
+        ReviewedAt = now;
+    }
+
+    public void Reject(Guid reviewerId, string reason, DateTimeOffset now)
+    {
+        Status = VerificationStatus.Rejected;
+        ReviewerId = reviewerId;
+        ReviewerNote = reason;
+        ReviewedAt = now;
+    }
 }

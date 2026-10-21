@@ -98,4 +98,12 @@ public sealed class SpuRepository(IAppDbContext dbContext) : ISpuRepository
             .Select(g => new { CategoryId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.CategoryId, x => x.Count, ct);
     }
+
+    public async Task DeactivateByShopIdAsync(Guid shopId, CancellationToken ct = default)
+    {
+        await dbContext.Spus
+            .Where(s => s.ShopId == shopId && s.Status == Domain.Common.ProductStatus.Active && s.DeletedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, Domain.Common.ProductStatus.Inactive)
+                                      .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow), ct);
+    }
 }

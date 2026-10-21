@@ -35,4 +35,31 @@ public sealed class ShopWallet : Entity
         Balance -= amount; UpdatedAt = now;
         return Result.Success();
     }
+
+    public Result LockPayout(decimal amount, DateTimeOffset now)
+    {
+        if (amount < 50_000m) return WalletStateErrors.MinimumPayoutAmount;
+        if (Balance < amount) return WalletStateErrors.InsufficientPayoutBalance;
+        Balance -= amount;
+        LockedBalance += amount;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    public Result UnlockPayout(decimal amount, DateTimeOffset now)
+    {
+        if (amount < 0 || LockedBalance < amount) return WalletStateErrors.InsufficientLockedBalance;
+        LockedBalance -= amount;
+        Balance += amount;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    public Result CompletePayout(decimal amount, DateTimeOffset now)
+    {
+        if (amount < 0 || LockedBalance < amount) return WalletStateErrors.InsufficientLockedBalance;
+        LockedBalance -= amount;
+        UpdatedAt = now;
+        return Result.Success();
+    }
 }

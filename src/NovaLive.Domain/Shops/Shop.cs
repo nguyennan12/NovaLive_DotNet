@@ -78,4 +78,9 @@ public sealed class Shop : AuditableEntity, ISoftDeletable
     {
         Status = ShopStatus.Suspended;
     }
+
+    public void Ban()
+    {
+        Status = ShopStatus.Banned;
+    }
 }
