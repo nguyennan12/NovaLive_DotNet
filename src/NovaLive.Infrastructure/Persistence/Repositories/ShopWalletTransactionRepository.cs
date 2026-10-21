@@ -43,12 +43,14 @@ public sealed class ShopWalletTransactionRepository(AppDbContext db) : IShopWall
 
         if (from.HasValue)
         {
-            query = query.Where(transaction => transaction.CreatedAt >= from.Value);
+            var fromUtc = from.Value.ToUniversalTime();
+            query = query.Where(transaction => transaction.CreatedAt >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            query = query.Where(transaction => transaction.CreatedAt <= to.Value);
+            var toUtc = to.Value.ToUniversalTime();
+            query = query.Where(transaction => transaction.CreatedAt <= toUtc);
         }
 
         var total = await query.LongCountAsync(ct);

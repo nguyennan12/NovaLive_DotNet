@@ -110,11 +110,74 @@ public sealed class WalletHandlerTests
     }
 
     [Fact]
+    public async Task GetWalletTransactions_WithLocalOffsets_ConvertsToUtcAndReturnsTransactions()
+    {
+        using var ctx = new WalletTestContext();
+        await ctx.AddUser();
+        var shop = await ctx.AddShop();
+        var wallet = await ctx.AddWallet(shop.Id);
+
+        var tx = ShopWalletTransaction.Create(
+            wallet.Id,
+            WalletTxType.PayoutLock,
+            -100_000m,
+            500_000m,
+            400_000m,
+            "SellerPayout",
+            Guid.NewGuid(),
+            "Rút tiền",
+            ctx.Now);
+
+        await ctx.Set<ShopWalletTransaction>().AddAsync(tx);
+        await ctx.SaveChangesAsync();
+
+        var handler = new GetWalletTransactionsQueryHandler(
+            ctx.WalletRepository.Object,
+            ctx.TransactionRepository.Object,
+            ctx.Access);
+
+        // Client sends +07:00 local time
+        var fromLocal = new DateTimeOffset(2026, 10, 21, 10, 0, 0, TimeSpan.FromHours(7));
+        var toLocal = new DateTimeOffset(2026, 10, 21, 23, 59, 59, TimeSpan.FromHours(7));
+
+        var request = new GetWalletTransactionsRequest(From: fromLocal, To: toLocal);
+        var result = await handler.Handle(new GetWalletTransactionsQuery(request), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Items.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task CreatePayoutRequest_WithoutKyc_ReturnsKycRequiredError()
     {
         using var ctx = new WalletTestContext();
         await ctx.AddUser();
         var shop = await ctx.AddShop();
+        await ctx.AddWallet(shop.Id, balance: 500_000m);
+
+        var handler = new CreatePayoutRequestCommandHandler(
+            ctx.WalletRepository.Object,
+            ctx.TransactionRepository.Object,
+            ctx.PayoutRepository.Object,
+            ctx.ShopRepository.Object,
+            ctx.UserRepository.Object,
+            ctx.Clock.Object,
+            ctx.Access);
+
+        var command = new CreatePayoutRequestCommand(new NovaLive.Contracts.V1.Shops.CreatePayoutRequest(100_000m));
+        var result = await handler.Handle(command, default);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(WalletErrors.KycRequired);
+    }
+
+    [Fact]
+    public async Task CreatePayoutRequest_WithPendingKyc_ReturnsKycRequiredError()
+    {
+        using var ctx = new WalletTestContext();
+        await ctx.AddUser();
+        var shop = await ctx.AddShop();
+        await ctx.AddKyc(shop.Id, status: VerificationStatus.Pending);
         await ctx.AddWallet(shop.Id, balance: 500_000m);
 
         var handler = new CreatePayoutRequestCommandHandler(

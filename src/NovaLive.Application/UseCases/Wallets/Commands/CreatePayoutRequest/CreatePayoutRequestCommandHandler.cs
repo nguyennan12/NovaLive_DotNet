@@ -28,18 +28,13 @@ public sealed class CreatePayoutRequestCommandHandler(
         var shop = owned.Value!;
 
         var verification = await shops.GetLatestVerificationAsync(shop.Id, ct);
-        if (verification is null)
+        if (verification is null || verification.Status != VerificationStatus.Approved)
         {
             return WalletErrors.KycRequired;
         }
 
-        var bankAccount = !string.IsNullOrWhiteSpace(command.Request.BankAccount)
-            ? command.Request.BankAccount
-            : verification.BankAccount;
-
-        var bankName = !string.IsNullOrWhiteSpace(command.Request.BankName)
-            ? command.Request.BankName
-            : verification.BankName;
+        var bankAccount = verification.BankAccount;
+        var bankName = verification.BankName;
 
         if (string.IsNullOrWhiteSpace(bankAccount) || string.IsNullOrWhiteSpace(bankName))
         {
@@ -47,9 +42,7 @@ public sealed class CreatePayoutRequestCommandHandler(
         }
 
         var user = await users.GetByIdAsync(shop.OwnerId, ct);
-        var bankHolder = !string.IsNullOrWhiteSpace(command.Request.BankHolder)
-            ? command.Request.BankHolder
-            : user?.FullName ?? shop.ShopName;
+        var bankHolder = user?.FullName ?? shop.ShopName;
 
         var wallet = await wallets.GetByShopIdForUpdateAsync(shop.Id, ct);
         if (wallet is null)

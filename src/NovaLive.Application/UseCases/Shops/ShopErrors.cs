@@ -14,4 +14,6 @@ public static class ShopErrors
     public static readonly Error AddressNotFound = Error.NotFound("Shops.AddressNotFound", "Không tìm thấy kho hàng.");
     public static readonly Error LastPrimary = Error.Validation("Shops.LastPrimary", "Không thể xóa kho chính duy nhất.");
     public static readonly Error SelfFollow = Error.Validation("Shops.SelfFollow", "Không thể theo dõi gian hàng của chính mình.");
+    public static readonly Error NotPending = Error.Conflict("Shops.NotPending", "Chỉ có thể phê duyệt gian hàng đang ở trạng thái chờ duyệt.");
+    public static readonly Error AlreadyBanned = Error.Conflict("Shops.AlreadyBanned", "Gian hàng đã bị cấm trước đó.");
 }

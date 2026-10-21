@@ -3,16 +3,10 @@ using NovaLive.Contracts.Common;
 namespace NovaLive.Contracts.V1.Shops;
 
 public record CreatePayoutRequest(
-    decimal Amount,
-    string? BankName = null,
-    string? BankAccount = null,
-    string? BankHolder = null);
+    decimal Amount);
 
 public record PayoutRequest(
-    decimal Amount,
-    string? BankName = null,
-    string? BankAccount = null,
-    string? BankHolder = null);
+    decimal Amount);
 
 public record GetWalletTransactionsRequest(
     string? Type = null,

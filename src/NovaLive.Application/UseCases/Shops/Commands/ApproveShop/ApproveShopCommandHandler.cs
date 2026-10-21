@@ -28,6 +28,11 @@ public sealed class ApproveShopCommandHandler(
             return ShopErrors.NotFound;
         }
 
+        if (shop.Status != ShopStatus.Pending)
+        {
+            return ShopErrors.NotPending;
+        }
+
         var verification = await shops.GetLatestTrackedVerificationAsync(shop.Id, ct);
         if (verification is null || verification.Status != VerificationStatus.Pending)
         {
@@ -37,7 +42,11 @@ public sealed class ApproveShopCommandHandler(
         var now = clock.UtcNow;
 
         // 1. Approve shop
-        shop.Approve();
+        var approveResult = shop.Approve();
+        if (approveResult.IsFailure)
+        {
+            return approveResult.Error;
+        }
 
         // 2. Approve latest verification
         verification.Approve(adminId, command.Request.Note, now);

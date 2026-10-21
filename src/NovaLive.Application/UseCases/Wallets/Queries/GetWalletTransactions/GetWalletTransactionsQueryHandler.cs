@@ -38,11 +38,14 @@ public sealed class GetWalletTransactionsQueryHandler(
             filterType = parsedType;
         }
 
+        var fromUtc = req.From?.ToUniversalTime();
+        var toUtc = req.To?.ToUniversalTime();
+
         var (transactions, totalCount) = await walletTransactions.GetPagedAsync(
             wallet.Id,
             filterType,
-            req.From,
-            req.To,
+            fromUtc,
+            toUtc,
             req.NormalizedPage,
             req.NormalizedSize,
             ct);

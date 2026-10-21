@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Moq;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
+using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.UseCases.Shops;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Products;
@@ -22,6 +23,8 @@ internal sealed class ShopTestContext : DbContext
     public Mock<ISpuRepository> Products { get; } = new();
     public Mock<ICurrentUser> User { get; } = new();
     public Mock<IShopRepository> Repository { get; } = new();
+    public Mock<IAuditLogRepository> AuditLogs { get; } = new();
+    public Mock<IDateTimeProvider> Clock { get; } = new();
     public ShopAccess Access => new(Repository.Object, User.Object);
     public ShopAddressDefaults Defaults => new(UnitOfWork.Object);
     public Guid UserId { get; } = Guid.NewGuid();
@@ -102,7 +105,7 @@ internal sealed class ShopTestContext : DbContext
             .Returns(async (CancellationToken ct) => { await SaveChangesAsync(ct); return (Error?)null; });
         Repository.Setup(x => x.SaveFollowAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) => SaveChangesAsync(ct));
-
+        Clock.SetupGet(x => x.UtcNow).Returns(new DateTimeOffset(2026, 10, 21, 14, 0, 0, TimeSpan.Zero));
     }
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<ShopWallet> ShopWallets => Set<ShopWallet>();

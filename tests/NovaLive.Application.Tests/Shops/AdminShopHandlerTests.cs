@@ -13,6 +13,7 @@ using NovaLive.Domain.Common;
 using NovaLive.Domain.Products;
 using NovaLive.Domain.Rbac;
 using NovaLive.Domain.Shops;
+using NovaLive.Domain.System;
 using NovaLive.Domain.Users;
 
 namespace NovaLive.Application.Tests.Shops;
@@ -113,7 +114,33 @@ public sealed class AdminShopHandlerTests
     }
 
     [Fact]
-    public async Task BanShop_ValidRequest_BansShopAndDeactivatesAllProducts()
+    public async Task ApproveShop_ShopNotPending_ReturnsNotPending()
+    {
+        using var db = new ShopTestContext();
+        var user = await db.AddUser();
+        var shop = await db.AddShop(user.Id, status: ShopStatus.Banned);
+
+        var walletMock = new Mock<IShopWalletRepository>();
+        var dbContextMock = new Mock<IAppDbContext>();
+        var clock = new Mock<IDateTimeProvider>();
+
+        var handler = new ApproveShopCommandHandler(
+            db.Repository.Object,
+            db.Users.Object,
+            walletMock.Object,
+            dbContextMock.Object,
+            db.User.Object,
+            clock.Object);
+
+        var request = new ApproveShopRequest(Note: "Hồ sơ");
+        var result = await handler.Handle(new ApproveShopCommand(shop.Id, request), default);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ShopErrors.NotPending);
+    }
+
+    [Fact]
+    public async Task BanShop_ValidRequest_BansShopAndDeactivatesAllProductsAndRecordsAuditLog()
     {
         using var db = new ShopTestContext();
         var user = await db.AddUser();
@@ -124,7 +151,12 @@ public sealed class AdminShopHandlerTests
         await db.Set<Spu>().AddRangeAsync(spu1, spu2);
         await db.SaveChangesAsync();
 
-        var handler = new BanShopCommandHandler(db.Repository.Object, db.Products.Object);
+        var handler = new BanShopCommandHandler(
+            db.Repository.Object,
+            db.Products.Object,
+            db.AuditLogs.Object,
+            db.User.Object,
+            db.Clock.Object);
 
         var request = new BanShopRequest(Reason: "Vi phạm chính sách nền tảng");
         var result = await handler.Handle(new BanShopCommand(shop.Id, request), default);
@@ -137,6 +169,31 @@ public sealed class AdminShopHandlerTests
         var updatedSpu2 = await db.Set<Spu>().FindAsync(spu2.Id);
         updatedSpu1!.Status.Should().Be(ProductStatus.Inactive);
         updatedSpu2!.Status.Should().Be(ProductStatus.Inactive);
+
+        db.AuditLogs.Verify(x => x.AddAsync(
+            It.Is<AuditLog>(l => l.Action == "Shop.Banned" && l.EntityId == shop.Id),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task BanShop_AlreadyBannedShop_ReturnsAlreadyBanned()
+    {
+        using var db = new ShopTestContext();
+        var user = await db.AddUser();
+        var shop = await db.AddShop(user.Id, status: ShopStatus.Banned);
+
+        var handler = new BanShopCommandHandler(
+            db.Repository.Object,
+            db.Products.Object,
+            db.AuditLogs.Object,
+            db.User.Object,
+            db.Clock.Object);
+
+        var request = new BanShopRequest(Reason: "Vi phạm tiếp");
+        var result = await handler.Handle(new BanShopCommand(shop.Id, request), default);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(ShopErrors.AlreadyBanned);
     }
 
     [Fact]
