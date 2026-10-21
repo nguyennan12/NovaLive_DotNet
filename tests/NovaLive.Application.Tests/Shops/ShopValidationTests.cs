@@ -107,7 +107,7 @@ public sealed class ShopValidationTests
         var requests = typeof(RegisterShopCommand).Assembly.GetTypes().Where(t =>
             t.Namespace?.StartsWith("NovaLive.Application.UseCases.Shops.") == true && !t.IsAbstract &&
             t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(MediatR.IRequest<>))).ToList();
-        requests.Should().HaveCount(11);
+        requests.Should().HaveCount(14);
         foreach (var request in requests)
         {
             var validatorType = typeof(IValidator<>).MakeGenericType(request);

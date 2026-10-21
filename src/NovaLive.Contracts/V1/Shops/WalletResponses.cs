@@ -26,3 +26,15 @@ public record SellerPayoutResponse(
     string? TransferRef,
     string? Reason,
     DateTime CreatedAt);
+
+public record PayoutResponse(
+    Guid Id,
+    Guid ShopId,
+    decimal Amount,
+    string BankName,
+    string BankAccount,
+    string BankHolder,
+    string Status,
+    string? TransferRef,
+    string? Reason,
+    DateTime CreatedAt);
