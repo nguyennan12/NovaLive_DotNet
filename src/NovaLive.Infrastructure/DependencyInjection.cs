@@ -7,12 +7,14 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Application.Abstractions.Search;
 using NovaLive.Infrastructure.Auth;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Interceptors;
 using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Persistence.Seeding;
 using NovaLive.Infrastructure.Services;
+using NovaLive.Infrastructure.Search;
 using NovaLive.Infrastructure.System;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
@@ -61,8 +63,11 @@ public static class DependencyInjection
         services.AddScoped<IAfterCommitActions, AfterCommitActions>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
+        services.AddScoped<IProductSearchIndexer, PostgresProductSearchIndexer>();
 
         // Repositories
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
         services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
         services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
@@ -120,6 +125,14 @@ public static class DependencyInjection
 
         // Outbox background worker
         services.AddHostedService<OutboxBackgroundWorker>();
+        services.AddOptions<NovaLive.Application.UseCases.Orders.OrderTimeoutOptions>()
+            .Bind(configuration.GetSection(NovaLive.Application.UseCases.Orders.OrderTimeoutOptions.SectionName))
+            .Validate(o => o.PollInterval > TimeSpan.Zero && o.PollInterval.TotalMilliseconds <= uint.MaxValue - 1,
+                "OrderTimeout:PollInterval must be a valid positive timer interval.")
+            .Validate(o => o.PaymentTimeout > TimeSpan.Zero, "OrderTimeout:PaymentTimeout must be positive.")
+            .Validate(o => o.BatchSize > 0, "OrderTimeout:BatchSize must be positive.")
+            .ValidateOnStart();
+        services.AddHostedService<TimeoutOrderRollbackWorker>();
         services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging
@@ -127,6 +140,8 @@ public static class DependencyInjection
         {
             bus.AddConsumer<OrderPlacedConsumer>();
             bus.AddConsumer<PaymentSuccessConsumer>();
+            bus.AddConsumer<InventorySyncConsumer, InventorySyncConsumerDefinition>();
+            bus.AddConsumer<ProductSearchVectorConsumer, ProductSearchVectorConsumerDefinition>();
             bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
@@ -220,6 +235,10 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<MinioFileStorageService>();
+        services.AddOptions<NovaLive.Application.UseCases.Reviews.ReviewMediaOptions>()
+            .Configure<IOptions<MinioOptions>>((options, minio) =>
+                options.BucketBaseUrl = string.IsNullOrWhiteSpace(minio.Value.CdnBaseUrl)
+                    ? null : minio.Value.CdnBaseUrl.TrimEnd('/') + "/" + StorageBuckets.Reviews + "/");
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
         services.AddHostedService<MinioBucketInitializer>();
 

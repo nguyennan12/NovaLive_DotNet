@@ -3,6 +3,7 @@ using NovaLive.Domain.Common;
 namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 public interface IOrderItemRepository
 {
+    Task<OrderItem?> GetByIdAsync(Guid id, CancellationToken ct);
     Task<long> GetFlashSaleUsageAsync(Guid buyerId, Guid flashSaleItemId, CancellationToken ct);
 
     Task<FlashSaleReservationState?> GetFlashSaleStateAsync(Guid orderItemId, CancellationToken ct);

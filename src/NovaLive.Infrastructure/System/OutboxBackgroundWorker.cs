@@ -9,6 +9,7 @@ using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Application.UseCases.Orders;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Contracts.V1.Payments;
+using NovaLive.Contracts.V1.Products;
 
 namespace NovaLive.Infrastructure.System;
 
@@ -87,6 +88,13 @@ public sealed class OutboxBackgroundWorker(
                         new JsonSerializerOptions(JsonSerializerDefaults.Web))
                         ?? throw new JsonException("Invalid payment success event.");
                     await publishEndpoint.Publish(paymentSuccess, cancellationToken);
+                }
+                else if (message.EventType == nameof(ProductUpdatedEvent))
+                {
+                    var productUpdated = JsonSerializer.Deserialize<ProductUpdatedEvent>(message.Payload,
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                        ?? throw new JsonException("Invalid product updated event.");
+                    await publishEndpoint.Publish(productUpdated, cancellationToken);
                 }
                 // Other event dispatch is owned by the existing event infrastructure tasks.
                 message.MarkAsProcessed(clock.UtcNow);
