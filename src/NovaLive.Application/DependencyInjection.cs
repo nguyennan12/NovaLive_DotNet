@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<UseCases.Auth.Common.AuthSessionService>();
         services.AddScoped<UseCases.Auth.Common.OtpFlowService>();
         services.AddOptions<UseCases.Shops.KycUrlOptions>();
+        services.AddOptions<UseCases.Reviews.ReviewMediaOptions>();
+        services.AddScoped<UseCases.Reviews.ReviewResponseReader>();
         services.AddScoped<UseCases.Shops.ShopAccess>();
         services.AddScoped<UseCases.Shops.ShopAddressDefaults>();
 

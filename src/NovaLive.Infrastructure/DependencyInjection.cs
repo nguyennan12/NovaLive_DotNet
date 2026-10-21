@@ -66,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<IProductSearchIndexer, PostgresProductSearchIndexer>();
 
         // Repositories
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
         services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
         services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
@@ -232,6 +234,10 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<MinioFileStorageService>();
+        services.AddOptions<NovaLive.Application.UseCases.Reviews.ReviewMediaOptions>()
+            .Configure<IOptions<MinioOptions>>((options, minio) =>
+                options.BucketBaseUrl = string.IsNullOrWhiteSpace(minio.Value.CdnBaseUrl)
+                    ? null : minio.Value.CdnBaseUrl.TrimEnd('/') + "/" + StorageBuckets.Reviews + "/");
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
         services.AddHostedService<MinioBucketInitializer>();
 
