@@ -4,6 +4,9 @@ namespace NovaLive.Application.UseCases.Inventory;
 
 public static class InventoryErrors
 {
+    public static readonly Error ReservationMismatch = NovaLive.Domain.Inventory.InventoryReservationErrors.ReservationMismatch;
+    public static readonly Error PaymentNotSuccessful = Error.Conflict("Inventory.PaymentNotSuccessful", "Thanh toán chưa thành công hoặc không tồn tại.");
+    public static readonly Error OrderNotFound = Error.NotFound("Inventory.OrderNotFound", "Không tìm thấy đơn hàng của giao dịch thanh toán.");
     public static readonly Error PendingChanges = Error.Conflict(
         "Inventory.PendingChanges", "Cần lưu thay đổi tồn kho hiện tại trong transaction trước khi giữ chỗ.");
 

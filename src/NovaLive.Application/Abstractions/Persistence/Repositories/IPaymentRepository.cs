@@ -4,6 +4,7 @@ namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
 public interface IPaymentRepository
 {
+    Task<Payment?> GetByIdAsync(Guid id, CancellationToken ct);
     Task<List<Payment>> GetByParentIdsAsync(IEnumerable<Guid> ids, CancellationToken ct);
 
     Task<Payment?> GetForUpdateAsync(Guid parentId, CancellationToken ct);

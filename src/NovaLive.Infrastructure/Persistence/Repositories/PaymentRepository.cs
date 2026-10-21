@@ -6,6 +6,8 @@ namespace NovaLive.Infrastructure.Persistence.Repositories;
 
 public sealed class PaymentRepository(AppDbContext db) : IPaymentRepository
 {
+    public Task<Payment?> GetByIdAsync(Guid id, CancellationToken ct) =>
+        db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id, ct);
     public async Task AddAsync(Payment entity, CancellationToken ct) => await db.Payments.AddAsync(entity, ct);
 
     public Task<List<Payment>> GetByParentIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)

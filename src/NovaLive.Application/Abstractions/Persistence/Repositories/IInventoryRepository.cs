@@ -4,18 +4,14 @@ using NovaLive.Domain.Products;
 
 namespace NovaLive.Application.Abstractions.Persistence.Repositories;
 
-public sealed record InventoryStockResult(
-    Guid InventoryId,
-    Guid SkuId,
-    int QtyOnHand,
-    int ReservedQty,
-    int AvailableQty,
-    int MinStock,
-    int Version,
-    bool AlreadyProcessed = false);
-
 public interface IInventoryRepository
 {
+    // Caller locks SKU rows in ascending order and writes the ledger in the same transaction.
+    Task<Result<InventoryStockResult>> ConfirmReservedSaleAsync(Guid skuId, Guid shopId, int quantity,
+        DateTimeOffset now, CancellationToken ct);
+    Task<Result<InventoryStockResult>> ReleaseReservedAsync(Guid skuId, Guid shopId, int quantity,
+        DateTimeOffset now, CancellationToken ct);
+
     Task<List<Inventory>> GetByIdsForUpdateAsync(IEnumerable<Guid> skuIds, CancellationToken ct);
 
     // Queries & Read

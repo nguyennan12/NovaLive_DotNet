@@ -126,6 +126,7 @@ public static class DependencyInjection
         {
             bus.AddConsumer<OrderPlacedConsumer>();
             bus.AddConsumer<PaymentSuccessConsumer>();
+            bus.AddConsumer<InventorySyncConsumer, InventorySyncConsumerDefinition>();
             bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
