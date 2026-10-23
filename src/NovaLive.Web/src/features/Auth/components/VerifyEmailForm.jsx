@@ -79,7 +79,7 @@ function VerifyEmailForm() {
         verifyUserAPI({ userId, email: registeredEmail, otpCode: code }),
         { pending: 'Verifying your code...' }
       )
-      navigate('/login')
+      navigate(`/login?verifiedEmail=${encodeURIComponent(registeredEmail)}`)
     } catch {
       // error handled by API Interceptor
     } finally {

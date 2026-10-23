@@ -17,7 +17,10 @@ import OrderPage from '~/features/Order/pages/OrderPage'
 import OrderHistoryPage from '~/features/Order/pages/OrderHistoryPage'
 import ConsumerLayout from '~/common/components/layout/ConsumerLayout/ConsumerLayout'
 import ProfilePage from '~/features/Profile/pages/ProfilePage'
+import AdminLayout from '~/features/Admin/components/AdminLayout'
+import AdminDashboardPage from '~/features/Admin/pages/AdminDashboardPage'
 import PrivateRoute from './PrivateRoute'
+import { Navigate } from 'react-router-dom'
 
 const AppRoutes = () => {
   return (
@@ -66,6 +69,21 @@ const AppRoutes = () => {
           <Route path="analytics" element={<Box sx={{ p: 2 }}>Analytics</Box>} />
           <Route path="finance" element={<Box sx={{ p: 2 }}>Finance</Box>} />
         </Route>
+      </Route>
+
+      {/* PLATFORM ADMIN DASHBOARD */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
+        <Route path="livestreams" element={<AdminDashboardPage />} />
+        <Route path="disputes" element={<AdminDashboardPage />} />
+        <Route path="shops" element={<AdminDashboardPage />} />
+        <Route path="reports" element={<AdminDashboardPage />} />
+        <Route path="categories" element={<AdminDashboardPage />} />
+        <Route path="flash-sales" element={<AdminDashboardPage />} />
+        <Route path="payouts" element={<AdminDashboardPage />} />
+        <Route path="reviews" element={<AdminDashboardPage />} />
+        <Route path="users" element={<AdminDashboardPage />} />
       </Route>
     </Routes>
   )

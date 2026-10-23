@@ -14,11 +14,14 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useSelector } from 'react-redux'
 import { uploadShopLogoAPI } from '~/common/apis/services/uploadService'
 import { updateShopAPI } from '~/common/apis/services/shopService'
 import { useUpload } from '~/common/hooks/useUpload'
 import { useShop, useShopMutation } from '~/features/Shop/hooks/useShop'
+import { useNavigate } from 'react-router-dom'
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
+import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/store/user/userSlice'
 import { glassSx } from '~/theme'
 
@@ -144,6 +147,7 @@ function ShopHeaderSkeleton() {
 }
 
 const ShopProfileHeader = () => {
+  const navigate = useNavigate()
   const currentUser = useSelector(selectCurrentUser)
   const queryClient = useQueryClient()
   const { shop, isLoading } = useShop()
@@ -241,14 +245,61 @@ const ShopProfileHeader = () => {
               </Box>
             </Box>
 
-            <Stack sx={{ gap: 1, flexDirection: 'row', alignItems: 'flex-start', pt: { xs: 0, sm: 0.5 } }}>
+            <Stack sx={{ gap: 1, flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', pt: { xs: 0, sm: 0.5 } }}>
               <Button
-                size="small" variant="outlined"
+                variant="contained"
+                size="small"
+                startIcon={<AdminPanelSettingsRoundedIcon sx={{ fontSize: '15px !important' }} />}
+                onClick={() => navigate('/admin/dashboard')}
+                sx={{
+                  background: 'linear-gradient(90deg, #3465c8 0%, #1e40af 100%)',
+                  color: '#fff',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  py: 0.6,
+                  px: 1.5,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
+                  '&:hover': { background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)' }
+                }}
+              >
+                Quản trị sàn (Admin)
+              </Button>
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DashboardRoundedIcon sx={{ fontSize: '15px !important' }} />}
+                onClick={() => navigate('/dashboard/shop')}
+                sx={{
+                  borderColor: '#8b5cf6',
+                  color: '#8b5cf6',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  py: 0.6,
+                  px: 1.5,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  '&:hover': { background: 'rgba(139,92,246,0.08)' }
+                }}
+              >
+                Kênh Người Bán
+              </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
                 startIcon={<EditIcon sx={{ fontSize: '15px !important' }} />}
                 onClick={() => setEditOpen(true)}
                 sx={{
-                  borderColor: '#8b5cf6', color: '#8b5cf6', fontSize: '0.8rem', py: 0.6,
-                  '&:hover': { background: 'rgba(139,92,246,0.08)' }
+                  borderColor: '#cbd5e1',
+                  color: '#475569',
+                  fontSize: '0.8rem',
+                  py: 0.6,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  '&:hover': { background: '#f8fafc' }
                 }}
               >
                 Chỉnh sửa shop
