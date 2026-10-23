@@ -19,6 +19,7 @@ using NovaLive.Infrastructure.System;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Minio;
 using NovaLive.Infrastructure.Storage;
 using NovaLive.Infrastructure.Livestreams.Agora;
@@ -32,7 +33,13 @@ namespace NovaLive.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration) =>
+        AddInfrastructure(services, configuration, environment: null);
+
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment? environment)
     {
         services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
@@ -103,7 +110,18 @@ public static class DependencyInjection
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
         services.AddScoped<IDataSeeder, CategoryDataSeeder>();
-        services.AddScoped<IDataSeeder, ProductDataSeeder>();
+        if (environment?.IsDevelopment() == true)
+        {
+            services.AddOptions<DemoDataOptions>()
+                .Bind(configuration.GetSection(DemoDataOptions.SectionName))
+                .Validate(options => !string.IsNullOrWhiteSpace(options.SellerEmail),
+                    "DemoData:SellerEmail is required in Development.")
+                .Validate(options => !string.IsNullOrWhiteSpace(options.SellerPassword),
+                    "DemoData:SellerPassword is required in Development.")
+                .ValidateOnStart();
+            services.AddScoped<IDataSeeder, DemoSellerShopDataSeeder>();
+            services.AddScoped<IDataSeeder, ProductDataSeeder>();
+        }
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency

@@ -70,6 +70,12 @@ services:
     container_name: novalive_api_dev
     ports:
       - "5001:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "--max-time", "5", "http://127.0.0.1:8080/health" ]
+      interval: 5s
+      timeout: 6s
+      start_period: 120s
+      retries: 12
     env_file:
       - ../../.env
     environment:

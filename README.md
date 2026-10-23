@@ -31,8 +31,10 @@ Hệ thống đã cấu hình sẵn file mẫu `.env.example` và tự động k
 cp .env.example .env
 
 # 2. Khởi chạy toàn bộ dịch vụ (PostgreSQL, Redis, RabbitMQ, MinIO, NovaLive API):
-docker compose up -d --build
+docker compose up -d --build --wait --wait-timeout 180
 ```
+
+Lệnh trên chờ API trả thành công tại `/health` trước khi hoàn tất. Sau đó mới chạy frontend (`npm run dev` trong `src/NovaLive.Web`) để tránh lỗi proxy `socket hang up` khi backend còn build, migrate hoặc seed dữ liệu.
 
 **Xem log ứng dụng theo thời gian thực:**
 ```bash

@@ -1,0 +1,87 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NovaLive.Application.Abstractions.Auth;
+using NovaLive.Application.Abstractions.Services;
+using NovaLive.Domain.Common;
+using NovaLive.Domain.Rbac;
+using NovaLive.Domain.Shops;
+using NovaLive.Domain.Users;
+
+namespace NovaLive.Infrastructure.Persistence.Seeding;
+
+public sealed class DemoSellerShopDataSeeder(
+    AppDbContext dbContext,
+    IPasswordHasher passwordHasher,
+    IDateTimeProvider clock,
+    IOptions<DemoDataOptions> options,
+    ILogger<DemoSellerShopDataSeeder> logger) : IDataSeeder
+{
+    public int Order => 3;
+
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = options.Value;
+        var email = settings.SellerEmail.Trim().ToLowerInvariant();
+
+        var seller = await dbContext.Users
+            .SingleOrDefaultAsync(user => user.Id == DemoDataIds.SellerId, cancellationToken);
+
+        if (seller is null)
+        {
+            seller = await dbContext.Users
+                .SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
+        }
+
+        if (seller is null)
+        {
+            seller = new User(email, passwordHasher.Hash(settings.SellerPassword), "NovaLive Demo Seller");
+            dbContext.Entry(seller).Property(user => user.Id).CurrentValue = DemoDataIds.SellerId;
+            seller.Activate();
+            seller.MarkAsSeller();
+            await dbContext.Users.AddAsync(seller, cancellationToken);
+        }
+        else
+        {
+            seller.Activate();
+            seller.MarkAsSeller();
+        }
+
+        if (!await dbContext.UserRoles.AnyAsync(
+                role => role.UserId == seller.Id && role.RoleId == SystemRoleIds.Seller,
+                cancellationToken))
+        {
+            await dbContext.UserRoles.AddAsync(
+                new UserRole(seller.Id, SystemRoleIds.Seller, clock.UtcNow),
+                cancellationToken);
+        }
+
+        var shop = await dbContext.Shops
+            .SingleOrDefaultAsync(candidate => candidate.Id == DemoDataIds.FlagshipShopId, cancellationToken);
+
+        if (shop is null)
+        {
+            shop = await dbContext.Shops
+                .SingleOrDefaultAsync(candidate => candidate.OwnerId == seller.Id || candidate.Slug == "novalive-flagship", cancellationToken);
+        }
+
+        if (shop is null)
+        {
+            shop = new Shop(seller.Id, "NovaLive Flagship Store", "novalive-flagship");
+            dbContext.Entry(shop).Property(candidate => candidate.Id).CurrentValue = DemoDataIds.FlagshipShopId;
+            shop.Approve();
+            await dbContext.Shops.AddAsync(shop, cancellationToken);
+        }
+        else if (shop.Status == ShopStatus.Pending)
+        {
+            shop.Approve();
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Development demo seller {SellerEmail} and shop {ShopId} are ready.",
+            email,
+            shop.Id);
+    }
+}

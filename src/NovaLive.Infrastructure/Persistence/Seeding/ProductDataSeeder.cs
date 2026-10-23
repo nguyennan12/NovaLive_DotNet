@@ -11,9 +11,8 @@ public sealed class ProductDataSeeder(
     AppDbContext dbContext,
     ILogger<ProductDataSeeder> logger) : IDataSeeder
 {
-    public int Order => 3;
+    public int Order => 4;
 
-    private static readonly Guid FlagshipShopId = Guid.Parse("a1111111-1111-1111-1111-111111111111");
     private static readonly Guid PhonesCatId = Guid.Parse("11111111-1111-1111-1111-111111111103");
     private static readonly Guid ElectronicsCatId = Guid.Parse("11111111-1111-1111-1111-111111111104");
 
@@ -21,8 +20,13 @@ public sealed class ProductDataSeeder(
     {
         logger.LogInformation("Starting Product data seeding from catalog backup...");
 
-        var shopExists = await dbContext.Shops.AnyAsync(s => s.Id == FlagshipShopId, cancellationToken);
-        if (!shopExists)
+        var shopId = await dbContext.Shops
+            .Where(shop => shop.Id == DemoDataIds.FlagshipShopId || shop.Slug == "novalive-flagship")
+            .OrderByDescending(shop => shop.Id == DemoDataIds.FlagshipShopId)
+            .Select(shop => shop.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (shopId == Guid.Empty)
         {
             logger.LogWarning("Flagship shop does not exist. Skipping product seeding.");
             return;
@@ -31,6 +35,7 @@ public sealed class ProductDataSeeder(
         var sampleProducts = GetSampleCatalog();
 
         var existingSpuNames = await dbContext.Spus
+            .Where(spu => spu.ShopId == shopId)
             .Select(s => s.Name)
             .ToHashSetAsync(cancellationToken);
 
@@ -50,7 +55,7 @@ public sealed class ProductDataSeeder(
 
             // Entity tự động sinh Id = Guid.NewGuid() qua base constructor
             var spu = new Spu(
-                shopId: FlagshipShopId,
+                shopId: shopId,
                 categoryId: p.CategoryId,
                 name: p.Name,
                 description: p.Description,
@@ -72,7 +77,7 @@ public sealed class ProductDataSeeder(
                 // Sku cũng tự sinh Id, liên kết spuId từ spu.Id vừa tạo
                 var sku = new Sku(
                     spuId: spu.Id,
-                    shopId: FlagshipShopId,
+                    shopId: shopId,
                     skuCode: skuDto.SkuCode,
                     attributesJson: skuDto.AttributesJson,
                     originalPrice: skuDto.OriginalPrice,
@@ -86,7 +91,7 @@ public sealed class ProductDataSeeder(
                 // Inventory quản lý tồn kho cho sku.Id
                 var inventory = new Inventory(
                     skuId: sku.Id,
-                    shopId: FlagshipShopId,
+                    shopId: shopId,
                     initialStock: skuDto.Stock,
                     minStock: 5);
 
