@@ -29,7 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ConfirmProvider>
               <CssBaseline />
               <ScrollToTop />
-              <SignalRProvider>
+              <SignalRProvider excludedOrderPaths={['/seller', '/dashboard/shop', '/manager/inventory', '/manager/discount', '/products/form']}>
                 <App />
               </SignalRProvider>
               <ToastContainer autoClose={2000} theme="colored" />
