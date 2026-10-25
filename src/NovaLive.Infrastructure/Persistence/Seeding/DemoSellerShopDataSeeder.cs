@@ -35,6 +35,12 @@ public sealed class DemoSellerShopDataSeeder(
 
         if (seller is null)
         {
+            if (string.IsNullOrWhiteSpace(settings.SellerPassword))
+            {
+                throw new InvalidOperationException(
+                    "DemoData:SellerPassword is required when demo seeding must create a new seller account.");
+            }
+
             seller = new User(email, passwordHasher.Hash(settings.SellerPassword), "NovaLive Demo Seller");
             dbContext.Entry(seller).Property(user => user.Id).CurrentValue = DemoDataIds.SellerId;
             seller.Activate();
@@ -80,7 +86,7 @@ public sealed class DemoSellerShopDataSeeder(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Development demo seller {SellerEmail} and shop {ShopId} are ready.",
+            "Demo seller {SellerEmail} and shop {ShopId} are ready.",
             email,
             shop.Id);
     }

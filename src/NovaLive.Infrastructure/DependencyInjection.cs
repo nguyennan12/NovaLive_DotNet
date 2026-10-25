@@ -119,8 +119,6 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(DemoDataOptions.SectionName))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.SellerEmail),
                     "DemoData:SellerEmail is required when demo data seeding is enabled.")
-                .Validate(options => !string.IsNullOrWhiteSpace(options.SellerPassword),
-                    "DemoData:SellerPassword is required when demo data seeding is enabled.")
                 .ValidateOnStart();
             services.AddScoped<IDataSeeder, DemoSellerShopDataSeeder>();
             services.AddScoped<IDataSeeder, ProductDataSeeder>();
