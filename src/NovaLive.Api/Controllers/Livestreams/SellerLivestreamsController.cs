@@ -13,6 +13,7 @@ using NovaLive.Application.UseCases.Livestreams.Commands.UpdateScheduledLiveSess
 using NovaLive.Application.UseCases.Livestreams.Commands.StartScheduledLiveSession;
 using NovaLive.Application.UseCases.Livestreams.Commands.UnpinProduct;
 using NovaLive.Application.UseCases.Livestreams.Queries.GetSellerLivestreams;
+using NovaLive.Application.UseCases.Livestreams.Queries.GetSellerLivestreamAnalytics;
 using NovaLive.Contracts.V1.Livestreams;
 
 namespace NovaLive.Api.Controllers.Livestreams;
@@ -26,6 +27,12 @@ public sealed class SellerLivestreamsController(ISender sender) : ApiControllerB
         [FromQuery] GetSellerLivestreamsRequest request,
         CancellationToken ct) =>
         Respond(await Sender.Send(new GetSellerLivestreamsQuery(request), ct));
+
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetSellerLiveAnalytics(
+        [FromQuery] GetSellerLivestreamAnalyticsRequest request,
+        CancellationToken ct) =>
+        Respond(await Sender.Send(new GetSellerLivestreamAnalyticsQuery(request), ct));
 
     [HttpPost("start")]
     public async Task<IActionResult> StartLive(

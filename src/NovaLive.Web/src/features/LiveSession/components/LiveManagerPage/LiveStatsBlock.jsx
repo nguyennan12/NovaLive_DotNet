@@ -104,7 +104,7 @@ const LiveStatsBlock = () => {
       icon: PeopleRoundedIcon,
       iconColor: '#8b5cf6',
       iconBg: '#f5f3ff',
-      label: 'Lượt Xem TB',
+      label: 'Đỉnh người xem TB',
       value: stats.avg_viewers,
       sub: 'người/phiên'
     },
@@ -112,9 +112,9 @@ const LiveStatsBlock = () => {
       icon: ShoppingCartRoundedIcon,
       iconColor: '#f59e0b',
       iconBg: '#fffaf4',
-      label: 'Giá Trị ĐH TB',
-      value: formatVND(stats.avg_order_value),
-      sub: ''
+      label: 'Sản phẩm bán qua live',
+      value: stats.total_units_sold,
+      sub: 'sản phẩm'
     }
   ]
 

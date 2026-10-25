@@ -25,3 +25,20 @@ public sealed record ScheduledLivestreamResponse(
     string ChannelName,
     string Status,
     DateTimeOffset ScheduledAt);
+
+public sealed record GetSellerLivestreamAnalyticsRequest(string Period = "week");
+
+public sealed record SellerLivestreamAnalyticsResponse(
+    int TotalSessions,
+    decimal TotalRevenue,
+    decimal AveragePeakViewers,
+    decimal AverageOrderValue,
+    int TotalUnitsSold,
+    IReadOnlyList<SellerLivestreamAnalyticsPoint> Points);
+
+public sealed record SellerLivestreamAnalyticsPoint(
+    string Label,
+    DateTimeOffset PeriodStart,
+    decimal Revenue,
+    int PeakViewers,
+    int UnitsSold);

@@ -195,9 +195,15 @@ export const getLiveHistoryAPI = async (params = {}) => {
 /**
  * Returns revenue analytics computed from real order statistics, never hardcoded mocks
  */
-export const getLiveRevenueChartAPI = async () => {
-  // Live-attributed revenue/viewer analytics are not available in the API yet.
-  return []
+export const getLiveRevenueChartAPI = async (period = 'week') => {
+  const response = await authorizedAxiosInstance.get('seller/livestreams/analytics', { params: { period } })
+  const raw = response?.data !== undefined ? response.data : response
+  return (raw?.points || []).map(point => ({
+    label: point.label,
+    revenue: point.revenue || 0,
+    viewers: point.peakViewers || 0,
+    units: point.unitsSold || 0
+  }))
 }
 
 export const getUpommingLiveSessionsAPI = async () => {
@@ -207,8 +213,15 @@ export const getUpommingLiveSessionsAPI = async () => {
 }
 
 export const getLiveStatsAPI = async () => {
-  // Hide unsupported aggregate metrics instead of presenting fabricated zeros.
-  return null
+  const response = await authorizedAxiosInstance.get('seller/livestreams/analytics', { params: { period: 'all' } })
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    total_sessions: raw?.totalSessions || 0,
+    total_revenue: raw?.totalRevenue || 0,
+    avg_viewers: raw?.averagePeakViewers || 0,
+    avg_order_value: raw?.averageRevenuePerSession || 0,
+    total_units_sold: raw?.totalUnitsSold || 0
+  }
 }
 
 export const updateLiveSessionAPI = async (liveId, payload) => {

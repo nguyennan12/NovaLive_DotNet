@@ -34,7 +34,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             }}
           />
           <Typography sx={{ fontSize: '0.78rem', color: '#4b5563', flex: 1 }}>
-            {p.dataKey === 'revenue' ? 'Doanh thu' : 'Lượt xem'}
+          {p.dataKey === 'revenue' ? 'Doanh thu' : 'Đỉnh người xem'}
           </Typography>
           <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: '#111' }}>
             {p.dataKey === 'revenue' ? formatVND(p.value) : p.value}
@@ -68,7 +68,7 @@ const LiveRevenueChart = () => {
   const totals = useMemo(
     () => ({
       revenue: data.reduce((s, d) => s + (d.revenue || 0), 0),
-      viewers: data.reduce((s, d) => s + (d.viewers || 0), 0),
+      viewers: data.reduce((max, d) => Math.max(max, d.viewers || 0), 0),
       sessions: data.filter((d) => d.revenue > 0).length
     }),
     [data]
@@ -110,11 +110,11 @@ const LiveRevenueChart = () => {
   return (
     <SectionCard
       title='Doanh Thu Theo Phiên Live'
-      subtitle='Doanh thu và lượt xem qua từng buổi'
+      subtitle='Doanh thu và đỉnh người xem theo ngày hoặc tháng'
       action={periodAction}
     >
       {data.length === 0
-        ? <Alert severity='info'>API hiện chưa cung cấp doanh thu và lượt xem gắn với từng phiên live.</Alert>
+        ? <Alert severity='info'>Chưa có phiên live đã bắt đầu trong khoảng thời gian này.</Alert>
         : <>
           <Box
             sx={{
@@ -128,7 +128,7 @@ const LiveRevenueChart = () => {
             }}
           >
             <StatPill label='Tổng doanh thu' value={formatVND(totals.revenue)} color='#3485f7' />
-            <StatPill label='Tổng lượt xem' value={totals.viewers} color='#8b5cf6' />
+            <StatPill label='Đỉnh người xem cao nhất' value={totals.viewers} color='#8b5cf6' />
             <StatPill label='Phiên có DT' value={totals.sessions} color='#10b981' />
           </Box>
 
@@ -165,7 +165,7 @@ const LiveRevenueChart = () => {
                 iconSize={8}
                 formatter={(v) => (
                   <span style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600 }}>
-                    {v === 'revenue' ? 'Doanh thu' : 'Lượt xem'}
+                    {v === 'revenue' ? 'Doanh thu' : 'Đỉnh người xem'}
                   </span>
                 )}
               />
