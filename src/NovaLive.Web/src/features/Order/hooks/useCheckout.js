@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { calculateCheckoutAPI } from '~/common/apis/services/orderService'
 
-export const useCheckout = (payload) => {
-  const enabled = !!payload && (
+export const useCheckout = (payload, fallbackSubtotal = 0) => {
+  const enabled = !!payload?.shippingAddressId && (
     (Array.isArray(payload.cartItemIds) && payload.cartItemIds.length > 0) ||
     !!payload.cartId
   )
 
-  const { data: checkout = {} } = useQuery({
+  const { data: checkout = {}, isFetching, isError, error } = useQuery({
     queryKey: ['checkout-preview', payload],
     queryFn: () => calculateCheckoutAPI(payload),
     enabled,
@@ -15,7 +15,7 @@ export const useCheckout = (payload) => {
   })
 
   // Normalize between new .NET DTO and legacy preview structure
-  const totalRawPrice = checkout.totalItemsAmount ?? checkout.checkoutOrder?.totalRawPrice ?? checkout.totalPrice ?? 0
+  const totalRawPrice = checkout.totalItemsAmount ?? checkout.checkoutOrder?.totalRawPrice ?? checkout.totalPrice ?? fallbackSubtotal
   const feeShip = checkout.totalShippingFee ?? checkout.checkoutOrder?.feeShip ?? checkout.feeShip ?? 0
   const totalShopDiscount = checkout.totalShopDiscount ?? checkout.checkoutOrder?.totalShopDiscount ?? 0
   const amoutGlobalDiscountProduct = checkout.totalPlatformDiscount ?? checkout.amoutGlobalDiscountProduct ?? 0
@@ -25,6 +25,8 @@ export const useCheckout = (payload) => {
   const totalFeeShip = Math.max(0, feeShip - amoutGlobalDiscountShipping)
   const totalDiscount = totalShopDiscount + amoutGlobalDiscountProduct + amoutGlobalDiscountShipping
   const hasFreeShip = amoutGlobalDiscountShipping > 0
+  const hasServerTotal = checkout.grandTotal != null || checkout.checkoutOrder?.finalCheckout != null
+  const isPreviewReady = enabled && !isFetching && !isError && hasServerTotal
 
   return {
     ...checkout,
@@ -36,6 +38,10 @@ export const useCheckout = (payload) => {
     totalFeeShip,
     totalDiscount,
     feeShip,
-    hasFreeShip
+    hasFreeShip,
+    isFetching,
+    isError,
+    error,
+    isPreviewReady
   }
 }

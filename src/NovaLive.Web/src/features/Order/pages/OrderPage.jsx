@@ -1,5 +1,5 @@
 import ShoppingCartCheckoutRoundedIcon from '@mui/icons-material/ShoppingCartCheckoutRounded'
-import { Box, Button, Container, Grid, Typography } from '@mui/material'
+import { Alert, Box, Button, Container, Grid, Typography } from '@mui/material'
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
@@ -29,6 +29,10 @@ function OrderPage() {
   // State giỏ hàng & sản phẩm được chọn
   const { selectedItems, cartId } = useCart()
   const canCheckout = selectedItems.length > 0
+  const localSubtotal = useMemo(() => selectedItems.reduce(
+    (sum, item) => sum + (item.isFlashSale ? item.flashSalePrice : item.price) * item.quantity,
+    0
+  ), [selectedItems])
   const { appliedshopDiscounts, appliedProductVoucher, appliedFreeshipVoucher } = useApplyDiscounts()
   const { control, handleSubmit } = useForm({
     mode: 'onChange',
@@ -82,7 +86,7 @@ function OrderPage() {
     }
   }, [canCheckout, cartItemIds, addressId, appliedshopDiscounts, appliedProductVoucher, appliedFreeshipVoucher, cartId, selectedItems])
 
-  const checkoutData = useCheckout(checkoutPayload)
+  const checkoutData = useCheckout(checkoutPayload, localSubtotal)
 
   // Mutation đặt hàng chính
   const { orderMutation } = useOrderMutation({
@@ -96,7 +100,21 @@ function OrderPage() {
   })
 
   const hasAddress = !!addressId
-  const canSubmit = canCheckout && hasAddress && !orderMutation.isPending
+  const canSubmit = canCheckout && hasAddress && checkoutData.isPreviewReady && !orderMutation.isPending
+  const shippingQuoteLabel = !hasAddress
+    ? 'Chọn địa chỉ để tính phí'
+    : checkoutData.isFetching
+      ? 'Đang tính phí...'
+      : checkoutData.isError
+        ? 'Không tính được phí'
+        : null
+  const totalLabel = !hasAddress
+    ? 'Chọn địa chỉ'
+    : checkoutData.isFetching
+      ? 'Đang tính...'
+      : checkoutData.isError
+        ? 'Không khả dụng'
+        : null
 
   const onSubmit = (formData) => {
     if (!hasAddress) {
@@ -164,6 +182,7 @@ function OrderPage() {
                 amountFreeShip={checkoutData?.amoutGlobalDiscountShipping}
                 feeShip={checkoutData.totalFeeShip}
                 hasFreeShip={checkoutData.hasFreeShip}
+                quoteLabel={shippingQuoteLabel}
               />
 
               {/* Voucher toàn sàn */}
@@ -189,9 +208,16 @@ function OrderPage() {
                 totalFeeShip={checkoutData.totalFeeShip}
                 totalDiscount={checkoutData.totalDiscount}
                 finalCheckout={checkoutData.finalCheckout}
+                totalLabel={totalLabel}
                 hasFreeShip={checkoutData.hasFreeShip}
                 itemCount={selectedItems.length}
               />
+
+              {checkoutData.isError && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                  {checkoutData.error?.response?.data?.message || 'Không thể tính tổng đơn hàng. Vui lòng thử lại.'}
+                </Alert>
+              )}
 
               {/* Nút đặt hàng trên desktop */}
               <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -238,7 +264,7 @@ function OrderPage() {
               Tổng thanh toán
             </Typography>
             <Typography sx={{ fontSize: '1.12rem', fontWeight: 800, color: 'secondary.main', lineHeight: 1.2 }}>
-              {formatVND(checkoutData.finalCheckout || checkoutData.totalPrice || 0)}
+              {totalLabel || formatVND(checkoutData.finalCheckout || checkoutData.totalPrice || 0)}
             </Typography>
           </Box>
 

@@ -14,7 +14,7 @@ const SHIPPING_POLICIES = [
   'Đóng gói cẩn thận, phụ phí bảo vệ hàng dễ vỡ: +10.000 ₫.'
 ]
 
-function OrderShippingInfo({ feeShip = 0, hasFreeShip = false, amountFreeShip = 0 }) {
+function OrderShippingInfo({ feeShip = 0, hasFreeShip = false, amountFreeShip = 0, quoteLabel = null }) {
   return (
     <Box sx={{
       bgcolor: 'primary.main', ...glassSx,
@@ -51,7 +51,11 @@ function OrderShippingInfo({ feeShip = 0, hasFreeShip = false, amountFreeShip = 
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            {hasFreeShip ? (
+            {quoteLabel ? (
+              <Typography sx={{ fontSize: '0.78rem', color: 'rgba(45,45,45,0.55)' }}>
+                {quoteLabel}
+              </Typography>
+            ) : hasFreeShip ? (
               <>
                 <Chip
                   label="FREESHIP"
