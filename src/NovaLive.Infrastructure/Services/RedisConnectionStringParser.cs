@@ -6,8 +6,10 @@ public static class RedisConnectionStringParser
 {
     public static ConfigurationOptions Parse(string connectionString)
     {
-        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
-            || (uri.Scheme != "redis" && uri.Scheme != "rediss"))
+        if ((!connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase)
+             && !connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            || !Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
+            || string.IsNullOrWhiteSpace(uri.Host))
         {
             return ConfigurationOptions.Parse(connectionString);
         }

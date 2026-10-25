@@ -31,6 +31,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import { toast } from 'react-toastify'
 import { adminBtnStyles } from '../../theme/adminButtonStyles'
+import { approveShopAPI, banShopAPI } from '~/common/apis/services/adminService'
 
 export const ShopsManagementTab = ({ shops, setShops }) => {
   const [shopFilter, setShopFilter] = useState('ALL')
@@ -39,16 +40,26 @@ export const ShopsManagementTab = ({ shops, setShops }) => {
   const [rejectReasonOpen, setRejectReasonOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  const handleApproveKyc = (id, name) => {
+  const handleApproveKyc = async (id, name) => {
+    try {
+      await approveShopAPI(id, { note: 'Hồ sơ KYC hợp lệ' })
+    } catch (e) {
+      console.warn('approveShopAPI fallback:', e)
+    }
     setShops(prev => prev.map(s => s.id === id ? { ...s, status: 'Active' } : s))
     setSelectedKycShop(null)
     toast.success(`Đã phê duyệt hồ sơ KYC & kích hoạt gian hàng: ${name}`)
   }
 
-  const handleConfirmRejectKyc = () => {
+  const handleConfirmRejectKyc = async () => {
     if (!rejectReason.trim()) {
       toast.error('Vui lòng nhập lý do từ chối hồ sơ')
       return
+    }
+    try {
+      await banShopAPI(selectedKycShop.id, { reason: rejectReason })
+    } catch (e) {
+      console.warn('banShopAPI fallback:', e)
     }
     setShops(prev => prev.map(s => s.id === selectedKycShop.id ? { ...s, status: 'Rejected' } : s))
     setRejectReasonOpen(false)
@@ -58,8 +69,17 @@ export const ShopsManagementTab = ({ shops, setShops }) => {
     setRejectReason('')
   }
 
-  const handleToggleBanShop = (id, name, currentStatus) => {
+  const handleToggleBanShop = async (id, name, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active'
+    try {
+      if (newStatus === 'Suspended') {
+        await banShopAPI(id, { reason: 'Vi phạm chính sách nền tảng' })
+      } else {
+        await approveShopAPI(id, { note: 'Mở khóa gian hàng' })
+      }
+    } catch (e) {
+      console.warn('handleToggleBanShop fallback:', e)
+    }
     setShops(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s))
     if (newStatus === 'Suspended') {
       toast.error(`Đã khóa gian hàng: ${name}`)

@@ -118,11 +118,21 @@ const HOURLY_TRAFFIC_DATA = [
   { hour: '21:00 - 24:00 (Đỉnh điểm Live)', ccu: 14250, orders: 690, liveSales: '112,000,000 đ' }
 ]
 
-export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout }) => {
+export const DashboardOverviewTab = ({ metrics, payouts, onApprovePayout, onRejectPayout }) => {
   const navigate = useNavigate()
   const [timeRange, setTimeRange] = useState('7d')
 
   const chartData = timeRange === '7d' ? REVENUE_DATA_7D : REVENUE_DATA_30D
+
+  // Real API metrics with fallback
+  const displayGmv = metrics ? `${Number(metrics.totalGmv || 0).toLocaleString('vi-VN')} đ` : '1,420,000,000 đ'
+  const displayFee = metrics ? `${Number(metrics.totalPlatformFeeRevenue || 0).toLocaleString('vi-VN')} đ` : '71,000,000 đ'
+  const displayOrders = metrics ? `${metrics.totalOrdersCount || 0} đơn thanh toán` : '4,052 đơn thanh toán'
+  const displayReturnRate = metrics ? `${metrics.returnRatePercent || 0}%` : '1.6%'
+  const displayDisputeRate = metrics ? `Tranh chấp: ${metrics.disputeRatePercent || 0}%` : 'Tranh chấp: 0.4%'
+  const displayNewBuyers = metrics ? `+${metrics.newBuyerCount || 0}` : '+1,248'
+  const displayNewSellers = metrics ? `+${metrics.newSellerCount || 0} Shop mới` : '+35 Shop mới'
+  const displayActiveShops = metrics ? `${metrics.totalActiveShopsCount || 0} Shop Active` : '142 Shop Active'
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5, width: '100%' }}>
@@ -175,7 +185,7 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
                   Tổng GMV Toàn Sàn
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', mt: 0.5, whiteSpace: 'nowrap' }}>
-                  1,420,000,000 đ
+                  {displayGmv}
                 </Typography>
               </Box>
               <Box sx={{ p: 1.2, borderRadius: '12px', bgcolor: 'rgba(0, 149, 255, 0.1)', color: '#0095ff', flexShrink: 0 }}>
@@ -184,7 +194,7 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, flexWrap: 'wrap' }}>
               <Chip label="+16.4%" size="small" sx={{ bgcolor: 'rgba(22, 163, 74, 0.1)', color: '#16a34a', fontWeight: 700, height: 22, whiteSpace: 'nowrap' }} />
-              <Typography variant="caption" sx={{ color: '#64748b', whiteSpace: 'nowrap' }}>4,052 đơn thanh toán</Typography>
+              <Typography variant="caption" sx={{ color: '#64748b', whiteSpace: 'nowrap' }}>{displayOrders}</Typography>
             </Box>
           </Card>
         </Grid>
@@ -210,7 +220,7 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
                   Doanh Thu Phí Sàn (Net)
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 800, color: '#10b981', mt: 0.5, whiteSpace: 'nowrap' }}>
-                  71,000,000 đ
+                  {displayFee}
                 </Typography>
               </Box>
               <Box sx={{ p: 1.2, borderRadius: '12px', bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', flexShrink: 0 }}>
@@ -246,10 +256,10 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
                   <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                    1.6%
+                    {displayReturnRate}
                   </Typography>
                   <Chip
-                    label="Tranh chấp: 0.4%"
+                    label={displayDisputeRate}
                     size="small"
                     sx={{ bgcolor: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', fontWeight: 700, fontSize: '0.72rem', height: 22, whiteSpace: 'nowrap' }}
                   />
@@ -288,10 +298,10 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
                   <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                    +1,248
+                    {displayNewBuyers}
                   </Typography>
                   <Chip
-                    label="+35 Shop mới"
+                    label={displayNewSellers}
                     size="small"
                     sx={{ bgcolor: 'rgba(0, 149, 255, 0.08)', color: '#0095ff', fontWeight: 700, fontSize: '0.72rem', height: 22, whiteSpace: 'nowrap' }}
                   />
@@ -302,7 +312,7 @@ export const DashboardOverviewTab = ({ payouts, onApprovePayout, onRejectPayout 
               </Box>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-              <Chip label="142 Shop Active" size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 600, height: 22, whiteSpace: 'nowrap' }} />
+              <Chip label={displayActiveShops} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 600, height: 22, whiteSpace: 'nowrap' }} />
               <Typography variant="caption" sx={{ color: '#64748b', whiteSpace: 'nowrap' }}>Tăng trưởng tuần +12%</Typography>
             </Box>
           </Card>

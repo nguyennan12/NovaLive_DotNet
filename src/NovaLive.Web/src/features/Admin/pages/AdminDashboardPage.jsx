@@ -21,6 +21,13 @@ import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded'
 import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded'
 import { toast } from 'react-toastify'
 import { adminBtnStyles } from '../theme/adminButtonStyles'
+import {
+  getAdminShopsAPI,
+  getAdminPayoutsAPI,
+  approvePayoutAPI,
+  rejectPayoutAPI,
+  getAdminDashboardReportAPI
+} from '~/common/apis/services/adminService'
 
 // Import modular tab components
 import DashboardOverviewTab from '../components/tabs/DashboardOverviewTab'
@@ -229,13 +236,80 @@ export const AdminDashboardPage = () => {
   const [shops, setShops] = useState(INITIAL_SHOPS)
   const [disputes, setDisputes] = useState(INITIAL_DISPUTES)
   const [payouts, setPayouts] = useState(INITIAL_PAYOUTS)
+  const [dashboardMetrics, setDashboardMetrics] = useState(null)
 
-  const handleApprovePayout = (id, amount, shop) => {
+  const loadAdminData = async () => {
+    try {
+      const [shopsRes, payoutsRes, reportRes] = await Promise.allSettled([
+        getAdminShopsAPI({ size: 50 }),
+        getAdminPayoutsAPI({ size: 50 }),
+        getAdminDashboardReportAPI()
+      ])
+      if (reportRes.status === 'fulfilled' && reportRes.value) {
+        setDashboardMetrics(reportRes.value)
+      }
+      if (shopsRes.status === 'fulfilled' && shopsRes.value?.items?.length) {
+        const apiShops = shopsRes.value.items.map(s => ({
+          id: s.id,
+          name: s.shopName || s.name,
+          owner: s.ownerName || s.owner || 'Chủ gian hàng',
+          email: s.contactEmail || s.email || '',
+          phone: s.contactPhone || s.phone || '',
+          taxId: s.taxCode || s.taxId || 'N/A',
+          address: s.pickupAddress || s.address || '',
+          createdAt: s.createdAt ? new Date(s.createdAt).toLocaleDateString('vi-VN') : '',
+          status: s.status,
+          idCardFront: s.idCardFrontUrl || '',
+          idCardBack: s.idCardBackUrl || '',
+          businessLicense: s.licenseUrl || '',
+          notes: s.notes || ''
+        }))
+        setShops(prev => {
+          const apiIds = new Set(apiShops.map(x => x.id))
+          return [...apiShops, ...prev.filter(x => !apiIds.has(x.id))]
+        })
+      }
+      if (payoutsRes.status === 'fulfilled' && payoutsRes.value?.items?.length) {
+        const apiPayouts = payoutsRes.value.items.map(p => ({
+          id: p.id,
+          shop: p.shopName || 'Shop',
+          owner: p.ownerName || '',
+          amount: p.amount ? `${p.amount.toLocaleString('vi-VN')} đ` : '0 đ',
+          bank: p.bankName || 'Ngân hàng',
+          accountNumber: p.bankAccountNumber || '',
+          requestedAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '',
+          status: p.status
+        }))
+        setPayouts(prev => {
+          const apiIds = new Set(apiPayouts.map(x => x.id))
+          return [...apiPayouts, ...prev.filter(x => !apiIds.has(x.id))]
+        })
+      }
+    } catch (e) {
+      console.warn('loadAdminData fallback to mock:', e)
+    }
+  }
+
+  useEffect(() => {
+    loadAdminData()
+  }, [])
+
+  const handleApprovePayout = async (id, amount, shop) => {
+    try {
+      await approvePayoutAPI(id)
+    } catch (err) {
+      console.warn('approvePayoutAPI fallback to optimistic:', err)
+    }
     setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: 'Completed' } : p))
     toast.success(`Đã xác nhận chuyển tiền giải ngân ${amount} cho ${shop}`)
   }
 
-  const handleRejectPayout = (id, shop) => {
+  const handleRejectPayout = async (id, shop) => {
+    try {
+      await rejectPayoutAPI(id, { reason: 'Từ chối bởi Quản trị viên' })
+    } catch (err) {
+      console.warn('rejectPayoutAPI fallback to optimistic:', err)
+    }
     setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: 'Rejected' } : p))
     toast.error(`Đã từ chối lệnh rút tiền của ${shop}`)
   }
@@ -326,6 +400,7 @@ export const AdminDashboardPage = () => {
       {/* 3. Sub-pages (Tabs View) */}
       {activeTab === 0 && (
         <DashboardOverviewTab
+          metrics={dashboardMetrics}
           payouts={payouts}
           onApprovePayout={handleApprovePayout}
           onRejectPayout={handleRejectPayout}

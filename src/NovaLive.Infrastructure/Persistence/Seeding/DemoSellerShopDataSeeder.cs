@@ -23,7 +23,70 @@ public sealed class DemoSellerShopDataSeeder(
     {
         var settings = options.Value;
         var email = settings.SellerEmail.Trim().ToLowerInvariant();
+        var adminEmail = "admin@novalive.vn";
+        var buyerEmail = "buyer@novalive.vn";
+        if (string.IsNullOrWhiteSpace(settings.SellerPassword))
+        {
+            throw new InvalidOperationException("DemoData:SellerPassword is required when demo data seeding is enabled.");
+        }
+        var passwordHash = passwordHasher.Hash(settings.SellerPassword);
 
+        if (!email.EndsWith("@novalive.local", StringComparison.OrdinalIgnoreCase))
+        {
+            // 1. Seed Admin User
+            var admin = await dbContext.Users
+                .SingleOrDefaultAsync(user => user.Id == DemoDataIds.AdminId || user.Email == adminEmail, cancellationToken);
+
+            if (admin is null)
+            {
+                admin = new User(adminEmail, passwordHash, "NovaLive Administrator", "0900000001");
+                dbContext.Entry(admin).Property(user => user.Id).CurrentValue = DemoDataIds.AdminId;
+                admin.Activate();
+                await dbContext.Users.AddAsync(admin, cancellationToken);
+            }
+            else
+            {
+                admin.Activate();
+                admin.ChangePassword(passwordHash);
+            }
+
+            if (!await dbContext.UserRoles.AnyAsync(
+                    role => role.UserId == admin.Id && role.RoleId == SystemRoleIds.Admin,
+                    cancellationToken))
+            {
+                await dbContext.UserRoles.AddAsync(
+                    new UserRole(admin.Id, SystemRoleIds.Admin, clock.UtcNow),
+                    cancellationToken);
+            }
+
+            // 2. Seed Buyer User
+            var buyer = await dbContext.Users
+                .SingleOrDefaultAsync(user => user.Id == DemoDataIds.BuyerId || user.Email == buyerEmail, cancellationToken);
+
+            if (buyer is null)
+            {
+                buyer = new User(buyerEmail, passwordHash, "Nguyễn Văn Khách", "0900000003");
+                dbContext.Entry(buyer).Property(user => user.Id).CurrentValue = DemoDataIds.BuyerId;
+                buyer.Activate();
+                await dbContext.Users.AddAsync(buyer, cancellationToken);
+            }
+            else
+            {
+                buyer.Activate();
+                buyer.ChangePassword(passwordHash);
+            }
+
+            if (!await dbContext.UserRoles.AnyAsync(
+                    role => role.UserId == buyer.Id && role.RoleId == SystemRoleIds.Buyer,
+                    cancellationToken))
+            {
+                await dbContext.UserRoles.AddAsync(
+                    new UserRole(buyer.Id, SystemRoleIds.Buyer, clock.UtcNow),
+                    cancellationToken);
+            }
+        }
+
+        // 3. Seed Seller User
         var seller = await dbContext.Users
             .SingleOrDefaultAsync(user => user.Id == DemoDataIds.SellerId, cancellationToken);
 
@@ -35,13 +98,7 @@ public sealed class DemoSellerShopDataSeeder(
 
         if (seller is null)
         {
-            if (string.IsNullOrWhiteSpace(settings.SellerPassword))
-            {
-                throw new InvalidOperationException(
-                    "DemoData:SellerPassword is required when demo seeding must create a new seller account.");
-            }
-
-            seller = new User(email, passwordHasher.Hash(settings.SellerPassword), "NovaLive Demo Seller");
+            seller = new User(email, passwordHash, "NovaLive Demo Seller", "0900000002");
             dbContext.Entry(seller).Property(user => user.Id).CurrentValue = DemoDataIds.SellerId;
             seller.Activate();
             seller.MarkAsSeller();
@@ -51,6 +108,7 @@ public sealed class DemoSellerShopDataSeeder(
         {
             seller.Activate();
             seller.MarkAsSeller();
+            seller.ChangePassword(passwordHash);
         }
 
         if (!await dbContext.UserRoles.AnyAsync(
@@ -86,7 +144,9 @@ public sealed class DemoSellerShopDataSeeder(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Demo seller {SellerEmail} and shop {ShopId} are ready.",
+            "Demo accounts ready: Admin ({AdminEmail}), Buyer ({BuyerEmail}), Seller ({SellerEmail}), and Shop {ShopId}.",
+            adminEmail,
+            buyerEmail,
             email,
             shop.Id);
     }

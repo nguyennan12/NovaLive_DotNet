@@ -9,6 +9,7 @@ import ProductsListPage from '~/features/Product/pages/ProductsListPage'
 import CartPage from '~/features/Cart/pages/CartPage'
 import OrderPage from '~/features/Order/pages/OrderPage'
 import OrderHistoryPage from '~/features/Order/pages/OrderHistoryPage'
+import BuyerReturnsPage from '~/features/Order/pages/BuyerReturnsPage'
 import ConsumerLayout from '~/common/components/layout/ConsumerLayout/ConsumerLayout'
 import ProfilePage from '~/features/Profile/pages/ProfilePage'
 import AdminLayout from '~/features/Admin/components/AdminLayout'
@@ -31,6 +32,8 @@ const AppRoutes = () => {
           <Route path="/order" element={<OrderPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/user/returns" element={<BuyerReturnsPage />} />
+          <Route path="/returns" element={<Navigate to="/user/returns" replace />} />
         </Route>
       </Route>
 
