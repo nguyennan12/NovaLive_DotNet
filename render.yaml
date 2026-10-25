@@ -52,6 +52,10 @@ services:
         generateValue: true
       - key: Cookies__SameSite
         value: None
+      - key: Email__Provider
+        value: Logging
+      - key: Email__LogOtp
+        value: "false"
       - key: Cors__AllowedOrigins__0
         sync: false
       - key: Minio__AccessKey
