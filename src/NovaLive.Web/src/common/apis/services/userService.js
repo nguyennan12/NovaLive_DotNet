@@ -13,10 +13,10 @@ export const loginAPI = async (data) => {
 
 export const registerUserAPI = async (data) => {
   const payload = {
-    email: data.email,
-    phone: data.phone || '',
+    email: data.email.trim(),
+    phone: data.phone.trim(),
     password: data.password,
-    fullName: data.fullName || data.name || data.email.split('@')[0]
+    fullName: data.fullName.trim()
   }
   const response = await authorizedAxiosInstance.post('auth/register', payload)
   toast.success('Đăng ký tài khoản thành công! Vui lòng kiểm tra mã OTP để kích hoạt.', { theme: 'colored' })

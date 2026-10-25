@@ -14,6 +14,8 @@ import {
   EMAIL_RULE,
   EMAIL_RULE_MESSAGE,
   FIELD_REQUIRED_MESSAGE,
+  PHONE_RULE,
+  PHONE_RULE_MESSAGE,
   PASSWORD_RULE,
   PASSWORD_RULE_MESSAGE
 } from '~/common/utils/validators'
@@ -23,8 +25,8 @@ function RegisterForm() {
   const navigate = useNavigate()
 
   const onSubmitRegister = (data) => {
-    const { email, password } = data
-    toast.promise(registerUserAPI({ email, password }),
+    const { email, phone, fullName, password } = data
+    toast.promise(registerUserAPI({ email, phone, fullName, password }),
       { pending: 'Registration is in progress...' }
     ).then((response) => {
       const emailTarget = response?.email || response?.user?.user_email || email
@@ -43,8 +45,8 @@ function RegisterForm() {
           boxShadow: '0 0 3px 0.5px rgba(0,0,0,0.15)'
         }}>
           <Box sx={{ margin: '1em', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography variant='h6' sx={{ fontWeight: '600' }}>Welcome Back!</Typography>
-            <Typography variant='b2' sx={{ color: '#838383' }}>Enter your credentials to access your account</Typography>
+            <Typography variant='h6' sx={{ fontWeight: '600' }}>Create your account</Typography>
+            <Typography variant='b2' sx={{ color: '#838383' }}>Enter your details to get started</Typography>
           </Box>
 
 
@@ -54,7 +56,8 @@ function RegisterForm() {
                 autoFocus
                 fullWidth
                 label="Enter Email..."
-                type="text"
+                type="email"
+                autoComplete="email"
                 variant="outlined"
                 error={!!errors['email']}
                 {...register('email', {
@@ -69,10 +72,40 @@ function RegisterForm() {
             </Box>
             <Box sx={{ marginTop: '1em' }}>
               <TextField
-                autoFocus
+                fullWidth
+                label="Full name"
+                type="text"
+                autoComplete="name"
+                variant="outlined"
+                error={!!errors['fullName']}
+                {...register('fullName', {
+                  required: FIELD_REQUIRED_MESSAGE,
+                  maxLength: { value: 200, message: 'Full name must be at most 200 characters.' }
+                })}
+              />
+              <FieldErrorAlert errors={errors} fieldName={'fullName'} />
+            </Box>
+            <Box sx={{ marginTop: '1em' }}>
+              <TextField
+                fullWidth
+                label="Phone number"
+                type="tel"
+                autoComplete="tel"
+                variant="outlined"
+                error={!!errors['phone']}
+                {...register('phone', {
+                  required: FIELD_REQUIRED_MESSAGE,
+                  pattern: { value: PHONE_RULE, message: PHONE_RULE_MESSAGE }
+                })}
+              />
+              <FieldErrorAlert errors={errors} fieldName={'phone'} />
+            </Box>
+            <Box sx={{ marginTop: '1em' }}>
+              <TextField
                 fullWidth
                 label="Enter Password..."
-                type="text"
+                type="password"
+                autoComplete="new-password"
                 variant="outlined"
                 error={!!errors['password']}
                 {...register('password', {
@@ -87,20 +120,21 @@ function RegisterForm() {
             </Box>
             <Box sx={{ marginTop: '1em' }}>
               <TextField
-                autoFocus
                 fullWidth
-                label="Enter Password Cofirmation..."
-                type="text"
+                label="Confirm password"
+                type="password"
+                autoComplete="new-password"
                 variant="outlined"
-                error={!!errors['password_cofimation']}
-                {...register('password_cofimation', {
+                error={!!errors['passwordConfirmation']}
+                {...register('passwordConfirmation', {
+                  required: FIELD_REQUIRED_MESSAGE,
                   validate: (value) => {
                     if (value === getValues('password')) return true
                     return 'Password Confirmation does not match!'
                   }
                 })}
               />
-              <FieldErrorAlert errors={errors} fieldName={'password_cofimation'} />
+              <FieldErrorAlert errors={errors} fieldName={'passwordConfirmation'} />
             </Box>
           </Box>
           <CardActions sx={{ padding: '0 1em 1em 1em' }}>
