@@ -38,6 +38,10 @@ function CartSummary() {
 
   let payload = {}
   const canCheckout = selectedItems.length > 0
+  const localSubtotal = selectedItems.reduce(
+    (sum, item) => sum + (item.isFlashSale ? item.flashSalePrice : item.price) * item.quantity,
+    0
+  )
   if (canCheckout) {
     payload = {
       cartId,
@@ -47,7 +51,7 @@ function CartSummary() {
       shippingDiscountCode: appliedFreeshipVoucher?.code ?? ''
     }
   }
-  const { totalRawPrice, totalShopDiscount, finalCheckout, totalFeeShip, amoutGlobalDiscountProduct, totalDiscount, hasFreeShip } = useCheckout(payload)
+  const { totalRawPrice, totalShopDiscount, finalCheckout, totalFeeShip, amoutGlobalDiscountProduct, totalDiscount, hasFreeShip } = useCheckout(payload, localSubtotal)
   // const canCheckout = selectedItems.length > 0
   // const totalDiscount = (shopDiscountTotal || 0) + (productVoucherDiscount || 0)
 

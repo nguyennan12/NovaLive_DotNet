@@ -80,16 +80,15 @@ function AddressModal({ open, onClose, onSelect, selectedAddress, userId, addres
   const onSubmit = (formData) => {
     const payload = {
       owner_type: ownerType,
-      ...(formData.owner_name && { owner_name: formData.owner_name }),
-      ...(formData.owner_phone && { owner_phone: formData.owner_phone }),
-      province: selectedProvince.ProvinceName,
-      province_id: selectedProvince.ProvinceID,
-      district: selectedDistrict.DistrictName,
-      district_id: selectedDistrict.DistrictID,
-      ward: selectedWard.WardName,
-      ward_code: String(selectedWard.WardCode),
-      street: formData.street,
-      fullAddress: `${formData.street}, ${selectedWard.WardName}, ${selectedDistrict.DistrictName}, ${selectedProvince.ProvinceName}`
+      recipientName: formData.owner_name,
+      phone: formData.owner_phone,
+      provinceId: selectedProvince.ProvinceID,
+      provinceName: selectedProvince.ProvinceName,
+      districtId: selectedDistrict.DistrictID,
+      districtName: selectedDistrict.DistrictName,
+      wardCode: String(selectedWard.WardCode),
+      wardName: selectedWard.WardName,
+      detailAddress: formData.street
     }
     createAddress(payload, {
       onSuccess: (created) => {

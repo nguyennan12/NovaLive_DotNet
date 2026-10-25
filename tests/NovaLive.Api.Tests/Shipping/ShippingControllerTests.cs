@@ -2,6 +2,8 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using NovaLive.Api.Controllers.Shipping;
 using NovaLive.Application.UseCases.Shipping.Commands.Webhook;
@@ -20,11 +22,17 @@ public class ShippingControllerTests
 {
     private readonly Mock<ISender> _senderMock = new();
     private readonly Mock<IGhnChecksumValidator> _validatorMock = new();
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock = new();
     private readonly ShippingController _controller;
 
     public ShippingControllerTests()
     {
-        _controller = new ShippingController(_senderMock.Object, _validatorMock.Object)
+        _controller = new ShippingController(
+            _senderMock.Object,
+            _validatorMock.Object,
+            _httpClientFactoryMock.Object,
+            Options.Create(new GhnOptions()),
+            NullLogger<ShippingController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
