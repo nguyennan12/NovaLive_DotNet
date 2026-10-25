@@ -9,6 +9,14 @@ import { toQueryString } from '~/common/utils/converter'
 export const normalizeProduct = (p) => {
   if (!p) return p
   const spuId = p.id || p._id
+  const sourceSkus = p.skus || p.sku_list || []
+  const skuPrices = sourceSkus
+    .map((sku) => Number(sku.sellPrice ?? sku.price ?? sku.sku_price))
+    .filter((price) => Number.isFinite(price) && price > 0)
+  const totalStock = p.totalStock ?? p.stock ?? p.spu_quantity ?? sourceSkus.reduce(
+    (total, sku) => total + Number(sku.availableQty ?? ((sku.qtyOnHand ?? sku.initialStock ?? sku.stock ?? sku.sku_stock ?? 0) - (sku.reservedQty ?? 0))),
+    0
+  )
   return {
     ...p,
     _id: spuId,
@@ -28,10 +36,10 @@ export const normalizeProduct = (p) => {
     categoryId: p.categoryId || p.spu_category,
     categoryName: p.categoryName || '',
     total_sold: p.soldCount ?? p.total_sold ?? 0,
-    spu_price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
-    price: p.minPrice ?? p.price ?? p.spu_price ?? 0,
-    spu_quantity: p.totalStock ?? p.stock ?? p.spu_quantity,
-    sku_list: (p.skus || p.sku_list || []).map((s) => {
+    spu_price: p.minPrice ?? p.price ?? p.spu_price ?? (skuPrices.length ? Math.min(...skuPrices) : 0),
+    price: p.minPrice ?? p.price ?? p.spu_price ?? (skuPrices.length ? Math.min(...skuPrices) : 0),
+    spu_quantity: totalStock,
+    sku_list: sourceSkus.map((s) => {
       const skuId = s.id || s._id || s.sku_id
       let attrName = ''
       try {
@@ -52,7 +60,7 @@ export const normalizeProduct = (p) => {
         sku_name: attrName || s.skuCode || s.name || 'Mặc định',
         sku_price: s.sellPrice ?? s.price ?? s.sku_price,
         sku_original_price: s.originalPrice ?? s.sku_original_price,
-        sku_stock: s.availableQty ?? s.initialStock ?? s.stock ?? s.sku_stock
+        sku_stock: s.availableQty ?? ((s.qtyOnHand ?? s.initialStock ?? s.stock ?? s.sku_stock ?? 0) - (s.reservedQty ?? 0))
       }
     })
   }
@@ -130,24 +138,19 @@ export const getAllProductWithStockAPI = async (query = '') => {
 }
 
 export const getSellerProductsAPI = async (params = {}) => {
-  try {
-    const rawParams = typeof params === 'object' && params !== null ? { ...params } : {}
-    if (rawParams.limit && !rawParams.size) rawParams.size = rawParams.limit
-    const query = typeof params === 'string' ? params : toQueryString(rawParams)
-    const response = await authorizedAxiosInstance.get(`seller/products?${query}`)
-    const raw = response?.data !== undefined ? response.data : response
-    const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
-    return {
-      ...raw,
-      products: items,
-      items,
-      totalCount: raw?.totalCount ?? items.length,
-      page: raw?.page ?? 1,
-      size: raw?.size ?? items.length
-    }
-  } catch (error) {
-    console.error('getSellerProductsAPI error:', error)
-    return { products: [], items: [], totalCount: 0, page: 1, size: 0 }
+  const rawParams = typeof params === 'object' && params !== null ? { ...params } : {}
+  if (rawParams.limit && !rawParams.size) rawParams.size = rawParams.limit
+  const query = typeof params === 'string' ? params : toQueryString(rawParams)
+  const response = await authorizedAxiosInstance.get(`seller/products?${query}`)
+  const raw = response?.data !== undefined ? response.data : response
+  const items = (raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])).map(normalizeProduct)
+  return {
+    ...raw,
+    products: items,
+    items,
+    totalCount: raw?.totalCount ?? items.length,
+    page: raw?.page ?? 1,
+    size: raw?.size ?? items.length
   }
 }
 
@@ -205,14 +208,18 @@ export const queryProductAPI = async (query = '') => {
 
 export const getProductStatsAPI = async () => {
   try {
-    const response = await authorizedAxiosInstance.get('seller/products?page=1&size=100')
-    const raw = response?.data !== undefined ? response.data : response
-    const items = raw?.items ?? raw?.products ?? (Array.isArray(raw) ? raw : [])
+    const [productResponse, inventoryResponse] = await Promise.all([
+      authorizedAxiosInstance.get('seller/products?page=1&size=100'),
+      authorizedAxiosInstance.get('seller/inventory?page=1&size=100')
+    ])
+    const productRaw = productResponse?.data !== undefined ? productResponse.data : productResponse
+    const inventoryRaw = inventoryResponse?.data !== undefined ? inventoryResponse.data : inventoryResponse
+    const inventory = inventoryRaw?.items ?? (Array.isArray(inventoryRaw) ? inventoryRaw : [])
+    const available = (item) => Number(item.availableQty ?? ((item.qtyOnHand ?? item.stock ?? 0) - (item.reservedQty ?? 0)))
     return {
-      totalProducts: raw?.totalCount ?? items.length,
-      lowStockCount: items.filter(p => (p.totalStock ?? p.spu_quantity ?? 0) < 10 && (p.totalStock ?? p.spu_quantity ?? 0) > 0).length,
-      outOfStockCount: items.filter(p => (p.totalStock ?? p.spu_quantity ?? 0) === 0).length,
-      products: items
+      totalProducts: productRaw?.totalCount ?? productRaw?.items?.length ?? 0,
+      lowStockCount: inventory.filter(item => available(item) > 0 && available(item) <= Number(item.minStock ?? 0)).length,
+      outOfStockCount: inventory.filter(item => available(item) <= 0).length
     }
   } catch (_e) {
     return { totalProducts: 0, lowStockCount: 0, outOfStockCount: 0, products: [] }

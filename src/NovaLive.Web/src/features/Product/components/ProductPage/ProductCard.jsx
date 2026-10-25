@@ -30,6 +30,8 @@ const ProductCard = ({ product }) => {
     await toast.promise(deleteProductAPI(selectedId), { pending: 'Deleting...' })
     setOpenDialog(false)
     setSelectedId(null)
+    await queryClient.invalidateQueries({ queryKey: ['seller_product_cards'] })
+    await queryClient.invalidateQueries({ queryKey: ['products_stats'] })
     await queryClient.refetchQueries({
       queryKey: ['products'],
       type: 'active'
