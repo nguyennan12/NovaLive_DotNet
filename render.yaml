@@ -33,7 +33,7 @@ services:
         fromService:
           type: keyvalue
           name: novalive-redis
-          property: host
+          property: connectionString
       - key: RabbitMQ__Host
         sync: false
       - key: RabbitMQ__Username

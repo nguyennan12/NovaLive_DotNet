@@ -132,7 +132,7 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
 
-        var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+        var redisOptions = RedisConnectionStringParser.Parse(redisConnectionString);
         redisOptions.AbortOnConnectFail = false;
         redisOptions.ConnectRetry = 5;
         redisOptions.ConnectTimeout = 5000;
@@ -388,8 +388,7 @@ public static class DependencyInjection
             Database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/')),
             Username = credentials[0],
             Password = credentials[1],
-            SslMode = SslMode.Require,
-            TrustServerCertificate = true
+            SslMode = SslMode.Require
         };
 
         return builder.ConnectionString;
