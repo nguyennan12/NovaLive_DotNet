@@ -22,7 +22,7 @@ const LiveHost = ({ liveId, liveProducts = [], onOpenProducts }) => {
     videoContainerRef,
     startLive, endLive,
     toggleMic, toggleCam
-  } = useLiveHost({ liveId, userId: currentUser?._id })
+  } = useLiveHost({ liveId, userId: currentUser?.id || currentUser?._id })
 
   return (
     <Box sx={{

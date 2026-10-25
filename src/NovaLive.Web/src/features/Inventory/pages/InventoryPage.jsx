@@ -33,7 +33,7 @@ const InventoryPage = () => {
         <Breadcrumbs sx={{ mb: 1.5 }}>
           <Link
             component={RouterLink}
-            to="/dashboard/shop/products"
+            to="/seller/products"
             underline="hover"
             sx={{
               display: 'flex',

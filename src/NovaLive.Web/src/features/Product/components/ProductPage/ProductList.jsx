@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Typography } from '@mui/material'
+import { Alert, Box, CircularProgress, Typography } from '@mui/material'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { useSelector } from 'react-redux'
 import { useInfiniteScroll } from '~/common/hooks/useScroll'
@@ -16,7 +16,7 @@ const ProductList = () => {
     shopId: user.user_shop
   }
 
-  const { isFiltering, filteredProducts, fetchNextPage, hasNextPage, isFetchingNextPage } = useHomeProducts(filters)
+  const { isFiltering, filteredProducts, isLoading, filterLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useHomeProducts(filters)
   const lastProductRef = useInfiniteScroll({ isFiltering, isFetchingNextPage, hasNextPage, fetchNextPage })
 
   return (
@@ -51,10 +51,24 @@ const ProductList = () => {
             </Box>
           )
         })}
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
-          <CircularProgress size={20} />
-        </Box>
+        {(isLoading || filterLoading || isFetchingNextPage) && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+            <CircularProgress size={20} />
+          </Box>
+        )}
       </Box>
+      {!isLoading && !filterLoading && filteredProducts.length === 0 && (
+        <Alert severity='info' sx={{ mt: 1 }}>
+          {isFiltering ? 'Không tìm thấy sản phẩm khớp với bộ lọc.' : 'Shop chưa có sản phẩm.'}
+        </Alert>
+      )}
+      {!isFiltering && hasNextPage && !isFetchingNextPage && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+          <Typography onClick={() => fetchNextPage()} role='button' tabIndex={0} sx={{ cursor: 'pointer', color: 'secondary.main' }}>
+            Tải thêm sản phẩm
+          </Typography>
+        </Box>
+      )}
     </>
   )
 }

@@ -97,7 +97,7 @@ export const DiscountPage = () => {
         <Breadcrumbs sx={{ mb: 1 }}>
           <Link
             component={RouterLink}
-            to="/dashboard/shop/products"
+            to="/seller/products"
             underline="hover"
             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.8rem', color: 'primary.contrastText' }}
           >

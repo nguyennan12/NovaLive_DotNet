@@ -109,7 +109,7 @@ const ProductCard = ({ product }) => {
               <IconButton
                 size='small'
                 onClick={() => {
-                  return navigate(`/products/form/${product.spu_code}`)
+                  return navigate(`/seller/products/${product.id || product._id || product.spu_code}/edit`)
                 }}
                 sx={{
                   width: { xs: 28, sm: 32 },
@@ -126,7 +126,7 @@ const ProductCard = ({ product }) => {
               <IconButton
                 size='small'
                 onClick={() => {
-                  setSelectedId(product.mongo_id)
+                  setSelectedId(product.id || product._id || product.mongo_id)
                   setOpenDialog(true)
                 }}
                 sx={{

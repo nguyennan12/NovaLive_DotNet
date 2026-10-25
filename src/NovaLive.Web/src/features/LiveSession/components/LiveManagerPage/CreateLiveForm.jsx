@@ -1,53 +1,35 @@
 import { Box, Button, TextField } from '@mui/material'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 import SectionCard from '~/features/Inventory/components/shared/SectionCard'
-import { useCreateSession, useUpdateSession } from '../../hooks/useLiveSessions'
+import { useCreateSession } from '../../hooks/useLiveSessions'
 
-const DEFAULT_VALUES = { title: '', scheduledAt: '', description: '' }
+const DEFAULT_VALUES = { title: '' }
 
-const CreateLiveForm = ({ editData, onCancelEdit }) => {
-  const isEditing = !!editData
-
-  const { control, handleSubmit, reset, formState: { errors } } = useForm({
-    values: isEditing
-      ? {
-        title: editData.live_title,
-        scheduledAt: editData.live_scheduled_at ? editData.live_scheduled_at.slice(0, 16) : '',
-        description: editData.live_description || ''
-      }
-      : DEFAULT_VALUES
-  })
+const CreateLiveForm = () => {
+  const { control, handleSubmit, reset, formState: { errors } } = useForm({ defaultValues: DEFAULT_VALUES })
 
   const createSession = useCreateSession()
-  const updateSession = useUpdateSession()
+  const navigate = useNavigate()
 
   const onSubmit = async (data) => {
-    const payload = { ...data, scheduledAt: new Date(data.scheduledAt).toISOString() }
-    if (isEditing) {
-      await toast.promise(
-        updateSession.mutateAsync({ sessionId: editData._id, data: payload }),
-        { pending: 'Updating...', success: 'Live session updated successfully!', error: 'Update failed' }
-      )
-      onCancelEdit?.()
-    } else {
-      await toast.promise(
-        createSession.mutateAsync(payload),
-        { pending: 'Scheduling...', success: 'Live session scheduled successfully!', error: 'Scheduling failed' }
-      )
+    const session = await toast.promise(
+      createSession.mutateAsync({ title: data.title }),
+      { pending: 'Đang tạo phòng live...', success: 'Đã tạo phòng live.', error: 'Không thể tạo phòng live.' }
+    )
+    if (!session?.id) {
+      toast.error('API tạo live không trả về mã phiên.')
+      return
     }
     reset(DEFAULT_VALUES)
-  }
-
-  const handleCancel = () => {
-    onCancelEdit?.()
-    reset(DEFAULT_VALUES)
+    navigate(`/shop/live/${session.id}`)
   }
 
   return (
     <SectionCard
-      title={isEditing ? 'Edit Live Session' : 'Schedule New Live'}
-      subtitle='Fill in the details for your livestream'
+      title='Start New Live'
+      subtitle='Tạo phiên live ngay bây giờ rồi mở Live Studio để bật camera và microphone.'
     >
       <Box
         component='form'
@@ -70,50 +52,12 @@ const CreateLiveForm = ({ editData, onCancelEdit }) => {
           )}
         />
 
-        <Controller
-          name='scheduledAt'
-          control={control}
-          rules={{ required: 'Start time is required' }}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label='Start time *'
-              type='datetime-local'
-              fullWidth
-              size='small'
-              slotProps={{ inputLabel: { shrink: true } }}
-              error={!!errors.scheduledAt}
-              helperText={errors.scheduledAt?.message}
-            />
-          )}
-        />
-
-        <Controller
-          name='description'
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label='Description (optional)'
-              fullWidth
-              size='small'
-              multiline
-              rows={3}
-            />
-          )}
-        />
-
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', mt: 0.5 }}>
-          {isEditing && (
-            <Button variant='outlined' color='inherit' onClick={handleCancel} sx={{ borderRadius: '8px' }}>
-              Cancel
-            </Button>
-          )}
           <Button
             type='submit'
             variant='contained'
             disableElevation
-            disabled={createSession.isPending || updateSession.isPending}
+            disabled={createSession.isPending}
             sx={{
               background: 'linear-gradient(90deg, #74a2ffff, #69aedc, #8acdde)',
               borderRadius: '8px',
@@ -122,7 +66,7 @@ const CreateLiveForm = ({ editData, onCancelEdit }) => {
               color: '#fff'
             }}
           >
-            {isEditing ? 'Save Changes' : 'Schedule Live'}
+            Tạo phòng & mở Live Studio
           </Button>
         </Box>
       </Box>

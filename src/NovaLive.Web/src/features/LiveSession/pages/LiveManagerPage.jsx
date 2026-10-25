@@ -1,6 +1,5 @@
 import LiveTvRoundedIcon from '@mui/icons-material/LiveTvRounded'
 import { Box, Grid, Typography } from '@mui/material'
-import { useState } from 'react'
 import CreateLiveForm from '../components/LiveManagerPage/CreateLiveForm'
 import LiveHistoryTable from '../components/LiveManagerPage/LiveHistoryTable'
 import LiveRevenueChart from '../components/LiveManagerPage/LiveRevenueChart'
@@ -8,8 +7,6 @@ import LiveStatsBlock from '../components/LiveManagerPage/LiveStatsBlock'
 import UpcomingLiveCard from '../components/LiveManagerPage/UpcomingLiveCard'
 
 const LiveManagerPage = () => {
-  const [editData, setEditData] = useState(null)
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pb: 4 }}>
       {/* Page header */}
@@ -52,10 +49,10 @@ const LiveManagerPage = () => {
       {/*Create Live Form */}
       <Grid container spacing={2.5} alignItems='stretch'>
         <Grid size={{ xs: 12, md: 7 }}>
-          <CreateLiveForm editData={editData} onCancelEdit={() => setEditData(null)} />
+          <CreateLiveForm />
         </Grid>
         <Grid size={{ xs: 12, md: 5 }}>
-          <UpcomingLiveCard onEdit={setEditData} />
+          <UpcomingLiveCard />
         </Grid>
       </Grid>
 

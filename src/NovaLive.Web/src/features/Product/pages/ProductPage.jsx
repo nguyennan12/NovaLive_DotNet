@@ -23,15 +23,10 @@ const ProductsPage = () => {
   })
 
   const stats = {
-    totalProducts: serverStats?.totalProducts || 0,
-    lowStockCount: serverStats?.lowStockCount || 0,
-    outOfStockCount: serverStats?.outOfStockCount || 0,
-    addedThisWeek: 0,
-    activeDiscounts: 0,
-    endingSoonDiscounts: 0,
-    nextEventDate: 'Oct 30',
-    nextEventTitle: 'Flash Sale',
-    daysRemaining: 5
+    totalProducts: serverStats?.totalProducts ?? 0,
+    lowStockCount: serverStats?.lowStockCount ?? 0,
+    outOfStockCount: serverStats?.outOfStockCount ?? 0,
+    loading: isLoading
   }
 
   return (

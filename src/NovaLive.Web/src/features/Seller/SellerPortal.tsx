@@ -10,18 +10,19 @@ import { SellerErrorBoundary } from './components/layout/SellerErrorBoundary'
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
-const ProductsPage = lazy(() => import('./pages/ProductsPage'))
+// Keep the seller portal routes while reusing the richer pages from the original seller UI.
+const ProductsPage = lazy(() => import('~/features/Product/pages/ProductPage'))
 const ProductFormPage = lazy(() => import('./pages/ProductFormPage'))
-const InventoryPage = lazy(() => import('./pages/InventoryPage'))
+const InventoryPage = lazy(() => import('~/features/Inventory/pages/InventoryPage'))
 const OrdersPage = lazy(() => import('./pages/OrdersPage'))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'))
 const CustomersPage = lazy(() => import('./pages/CustomersPage'))
-const DiscountsPage = lazy(() => import('./pages/DiscountsPage'))
+const DiscountsPage = lazy(() => import('~/features/Discount/pages/DiscountPage').then(module => ({ default: module.DiscountPage })))
 const FlashSalesPage = lazy(() => import('./pages/FlashSalesPage'))
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
 const WalletPage = lazy(() => import('./pages/WalletPage'))
-const LivePage = lazy(() => import('./pages/LivePage'))
+const LivePage = lazy(() => import('~/features/LiveSession/pages/LiveManagerPage'))
 const MarketingPage = lazy(() => import('./pages/MarketingPage'))
 
 export default function SellerPortal() {

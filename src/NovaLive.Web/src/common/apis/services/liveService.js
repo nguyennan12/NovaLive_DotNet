@@ -150,32 +150,18 @@ export const removeProductFromLiveSessionAPI = async (liveId, skuId) => {
  * Livestream history - fetched from real backend orders/livestreams, no mock data
  */
 export const getLiveHistoryAPI = async (params = {}) => {
-  const q = new URLSearchParams(params).toString()
-  const response = await authorizedAxiosInstance.get(`seller/orders?${q}`)
-  const raw = response?.data !== undefined ? response.data : response
-  return {
-    lives: raw?.items ?? (Array.isArray(raw) ? raw : []),
-    totalPages: raw?.totalPages ?? 1,
-    ...raw
-  }
+  // The .NET API does not expose seller livestream history yet. Do not label
+  // seller orders as livestream sessions.
+  void params
+  return { lives: [], totalPages: 1, totalCount: 0 }
 }
 
 /**
  * Returns revenue analytics computed from real order statistics, never hardcoded mocks
  */
 export const getLiveRevenueChartAPI = async () => {
-  try {
-    const response = await authorizedAxiosInstance.get('seller/orders?size=100')
-    const raw = response?.data !== undefined ? response.data : response
-    const orders = raw?.items ?? []
-    return orders.map(o => ({
-      label: o.orderCode ? o.orderCode.slice(-4) : '',
-      revenue: Number(o.totalPrice || o.grandTotal || 0),
-      viewers: 0
-    }))
-  } catch (_e) {
-    return []
-  }
+  // Live-attributed revenue/viewer analytics are not available in the API yet.
+  return []
 }
 
 export const getUpommingLiveSessionsAPI = async () => {
@@ -183,12 +169,8 @@ export const getUpommingLiveSessionsAPI = async () => {
 }
 
 export const getLiveStatsAPI = async () => {
-  return {
-    totalRevenue: 0,
-    totalViewers: 0,
-    peakViewers: 0,
-    totalOrders: 0
-  }
+  // Hide unsupported aggregate metrics instead of presenting fabricated zeros.
+  return null
 }
 
 export const updateLiveSessionAPI = async () => {
