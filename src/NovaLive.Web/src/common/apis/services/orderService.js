@@ -40,7 +40,21 @@ export const normalizeOrder = (o) => {
   const id = o.id || o._id
   const total = o.grandTotal ?? o.order_checkout?.finalCheckout ?? o.order_checkout?.finalTotal ?? o.total ?? 0
   const code = o.orderCode || o.order_trackingNumber || o.code || id
-  const status = (o.status || o.order_status || o.paymentStatus || 'pending').toLowerCase()
+  const subStatuses = (o.subOrders || []).map((sub) => String(sub.status || '').toLowerCase())
+  const detailStatus = subStatuses.length === 0
+    ? null
+    : subStatuses.every((value) => value === 'cancelled')
+      ? 'cancelled'
+      : subStatuses.includes('pendingpayment')
+        ? 'pending'
+        : subStatuses.some((value) => ['confirmed', 'processing'].includes(value))
+          ? 'processing'
+          : subStatuses.includes('shipping')
+            ? 'shipped'
+            : subStatuses.every((value) => ['delivered', 'completed', 'cancelled'].includes(value))
+              ? 'delivered'
+              : 'processing'
+  const status = String(o.status || o.order_status || detailStatus || o.paymentStatus || 'pending').toLowerCase()
 
   let rawItems = o.items || o.order_products || []
   if ((!rawItems || rawItems.length === 0) && Array.isArray(o.subOrders)) {

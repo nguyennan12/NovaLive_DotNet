@@ -44,8 +44,19 @@ public sealed class OrderDetailsReader(IParentOrderRepository parents, ISubOrder
 public static class OrderMappings
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    public static ParentOrderListItemResponse ToListItem(this ParentOrder p) =>
-        new(p.Id, p.OrderCode, p.GrandTotal, p.PaymentStatus.ToString(), p.CreatedAt);
+    public static ParentOrderListItemResponse ToListItem(this ParentOrder p, IReadOnlyCollection<SubOrder> children) =>
+        new(p.Id, p.OrderCode, p.GrandTotal, children.AggregateBuyerStatus(), p.PaymentStatus.ToString(), p.CreatedAt);
+
+    public static string AggregateBuyerStatus(this IReadOnlyCollection<SubOrder> children)
+    {
+        if (children.Count == 0) return "pending";
+        if (children.All(s => s.Status == SubOrderStatus.Cancelled)) return "cancelled";
+        if (children.Any(s => s.Status == SubOrderStatus.PendingPayment)) return "pending";
+        if (children.Any(s => s.Status is SubOrderStatus.Confirmed or SubOrderStatus.Processing)) return "processing";
+        if (children.Any(s => s.Status == SubOrderStatus.Shipping)) return "shipped";
+        if (children.All(s => s.Status is SubOrderStatus.Delivered or SubOrderStatus.Completed or SubOrderStatus.Cancelled)) return "delivered";
+        return "processing";
+    }
     public static SubOrderListItemResponse ToListItem(this SubOrder s) =>
         new(s.Id, s.ParentOrderId, s.SubOrderCode, s.ShopId, s.SubTotal, s.Status.ToString(), s.CreatedAt);
     public static OrderRecipientResponse Recipient(this ParentOrder p) =>
