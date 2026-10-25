@@ -32,7 +32,7 @@ services:
       - key: Redis__ConnectionString
         fromService:
           type: keyvalue
-          name: novalive-redis-demo
+          name: novalive-redis
           property: host
       - key: RabbitMQ__Host
         sync: false
@@ -66,13 +66,6 @@ services:
           envVarKey: MINIO_ROOT_PASSWORD
       - key: MINIO_PUBLIC_URL
         sync: false
-
-  - type: keyvalue
-    name: novalive-redis-demo
-    region: singapore
-    plan: free
-    persistenceMode: off
-    ipAllowList: []
 
 databases:
   - name: novalive-db-demo
