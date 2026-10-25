@@ -10,7 +10,7 @@
     "lint:seller": "eslint src/features/Seller --max-warnings=0",
     "type-check": "tsc --noEmit",
     "preview:seller": "node src/features/Seller/mocks/preview-server.mjs",
-    "test:seller": "node --test src/features/Seller/tests/*.test.mjs",
+    "test:seller": "node --test --test-concurrency=1 src/features/Seller/tests/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

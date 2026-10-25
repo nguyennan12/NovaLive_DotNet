@@ -108,3 +108,11 @@ test('Datetime-local inputs round-trip with UTC+7, independent of host timezone'
   assert.equal(format.dayToUtc('2026-10-24'), '2026-10-23T17:00:00.000Z')
   assert.equal(format.dayToUtc('2026-10-24', true), '2026-10-24T16:59:59.999Z')
 })
+
+test('Seller tracking accepts the backend list contract and reports missing shipments clearly', () => {
+  const event = { status: 'Shipping', description: 'Đang giao', occurredAt: '2026-10-24T01:05:00Z' }
+  const tracking = { subOrderId: 'sub-order', provider: 'GHN', trackingCode: 'GHN-123', status: 'Shipping', events: [event], isStale: false }
+  assert.deepEqual(format.normalizeSellerTracking([tracking]), tracking)
+  assert.deepEqual(format.normalizeSellerTracking(tracking), tracking)
+  assert.throws(() => format.normalizeSellerTracking([]), /chưa có thông tin vận chuyển/)
+})

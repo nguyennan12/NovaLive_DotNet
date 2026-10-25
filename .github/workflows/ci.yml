@@ -79,3 +79,6 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
+      - name: Run seller contract tests
+        run: npm run test:seller
+

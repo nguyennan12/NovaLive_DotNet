@@ -1,4 +1,5 @@
 import { SELLER_TIMEZONE, RETURN_RESPONSE_MS } from '../constants'
+import type { Tracking } from '../types/contracts'
 
 export const money = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Object.is(amount, -0) ? 0 : amount)
 export function dateText(value: string | null | undefined, withTime = true) {
@@ -24,6 +25,12 @@ export function localInput(value: string) {
 export const inputToUtc = (value: string) => new Date(`${value}+07:00`).toISOString()
 export const dayToUtc = (value: string, end = false) => value ? new Date(`${value}T${end ? '23:59:59.999' : '00:00:00'}+07:00`).toISOString() : undefined
 export const todayInput = () => new Intl.DateTimeFormat('sv-SE', { timeZone: SELLER_TIMEZONE }).format(new Date())
+export function normalizeSellerTracking(result: Tracking | Tracking[] | null | undefined): Tracking {
+  // The shared backend query returns a list; each seller sub-order has one shipment.
+  const tracking = Array.isArray(result) ? result[0] : result
+  if (!tracking) throw new Error('Đơn hàng chưa có thông tin vận chuyển.')
+  return tracking
+}
 export function snapshot(json: string): { name: string; variant: string; image: string } {
   try {
     const value: unknown = JSON.parse(json)

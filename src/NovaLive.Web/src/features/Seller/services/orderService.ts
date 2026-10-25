@@ -3,6 +3,7 @@ import { request } from './transport'
 
 import type { CreateShippingRequest, OrderDetail, OrderFilters, OrderStatus, OrderSummary, PagedResult, ShippingOrder, Tracking } from '../types/contracts'
 import { ORDER_STATUSES } from '../constants'
+import { normalizeSellerTracking } from '../utils/format'
 
 export const getOrders = (params: OrderFilters) => request<PagedResult<OrderSummary>>('Đơn hàng', { url: 'seller/orders', params }, () => mocks.mockGetOrders(params))
 export const getOrder = (id: string) => request<OrderDetail>('Đơn hàng', { url: `seller/orders/${id}` }, () => mocks.mockGetOrder(id))
@@ -15,7 +16,10 @@ export const getOrderCounts = async (range: Pick<OrderFilters, 'from' | 'to'>) =
 export const confirmOrder = (id: string, warehouseAddressId: string) => request<unknown>('Đơn hàng', { method: 'PUT', url: `seller/orders/${id}/confirm`, data: { warehouseAddressId } }, () => mocks.mockConfirmOrder(id, warehouseAddressId))
 export const cancelOrder = (id: string, reason: string) => request<unknown>('Đơn hàng', { method: 'POST', url: `seller/orders/${id}/cancel`, data: { reason } }, () => mocks.mockCancelOrder(id, reason))
 export const createShipment = (data: CreateShippingRequest) => request<ShippingOrder>('Vận chuyển', { method: 'POST', url: 'seller/shipping/create-order', data }, () => mocks.mockCreateShipment(data))
-export const getTracking = (id: string) => request<Tracking>('Vận chuyển', { url: `seller/shipping/${id}/tracking` }, () => mocks.mockGetTracking(id))
+export async function getTracking(id: string): Promise<Tracking> {
+  const result = await request<Tracking | Tracking[]>('Vận chuyển', { url: `seller/shipping/${id}/tracking` }, () => mocks.mockGetTracking(id))
+  return normalizeSellerTracking(result)
+}
 // Minimal A6 PDF for mock mode only; real labels are the backend's unmodified PDF blob.
 
 export const getShippingLabel = (id: string) => request<Blob>('Vận chuyển', { url: `seller/shipping/${id}/label`, responseType: 'blob' }, () => mocks.mockGetShippingLabel(id))

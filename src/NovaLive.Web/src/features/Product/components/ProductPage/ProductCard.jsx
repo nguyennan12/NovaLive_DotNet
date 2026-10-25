@@ -23,6 +23,8 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
+  const [failedImage, setFailedImage] = useState(null)
+  const imageFailed = failedImage === product.spu_thumb
   const stock = product.spu_quantity == null ? null : stockConfig[getStockStatus(product.spu_quantity)]
   const queryClient = useQueryClient()
 
@@ -62,17 +64,36 @@ const ProductCard = ({ product }) => {
             overflow: 'hidden'
           }}
         >
-          <Box
-            component="img"
-            src={product.spu_thumb}
-            alt={product.spu_name}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              borderRadius: { xs: '8px', sm: '10px' }
-            }}
-          />
+          {product.spu_thumb && !imageFailed
+            ? <Box
+                component="img"
+                src={product.spu_thumb}
+                alt={product.spu_name}
+                onError={() => setFailedImage(product.spu_thumb)}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: { xs: '8px', sm: '10px' }
+                }}
+              />
+            : <Box
+                role="img"
+                aria-label={`Chưa có ảnh cho ${product.spu_name}`}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'text.secondary',
+                  bgcolor: 'rgba(120, 144, 156, 0.12)',
+                  fontSize: { xs: '2.5rem', sm: '3.5rem' },
+                  fontWeight: 700,
+                  borderRadius: { xs: '8px', sm: '10px' }
+                }}
+              >
+                {product.spu_name?.trim()?.[0]?.toUpperCase() || '?'}
+              </Box>}
 
           {/* Edit */}
           <Box
