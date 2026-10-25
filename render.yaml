@@ -1,0 +1,85 @@
+services:
+  - type: web
+    name: novalive-minio-demo
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./docker/production/minio.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: MINIO_ROOT_USER
+        generateValue: true
+      - key: MINIO_ROOT_PASSWORD
+        generateValue: true
+
+  - type: web
+    name: novalive-api-demo
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./docker/production/api.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: novalive-db-demo
+          property: connectionString
+      - key: Redis__ConnectionString
+        fromService:
+          type: keyvalue
+          name: novalive-redis
+          property: connectionString
+      - key: RabbitMQ__Host
+        sync: false
+      - key: RabbitMQ__Username
+        sync: false
+      - key: RabbitMQ__Password
+        sync: false
+      - key: RabbitMQ__Port
+        value: "5671"
+      - key: RabbitMQ__VirtualHost
+        sync: false
+      - key: RabbitMQ__UseSsl
+        value: "true"
+      - key: Jwt__Secret
+        generateValue: true
+      - key: Otp__Pepper
+        generateValue: true
+      - key: Cookies__SameSite
+        value: None
+      - key: Email__Provider
+        value: Logging
+      - key: Email__LogOtp
+        value: "false"
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      - key: Minio__AccessKey
+        fromService:
+          type: web
+          name: novalive-minio-demo
+          envVarKey: MINIO_ROOT_USER
+      - key: Minio__SecretKey
+        fromService:
+          type: web
+          name: novalive-minio-demo
+          envVarKey: MINIO_ROOT_PASSWORD
+      - key: MINIO_PUBLIC_URL
+        sync: false
+      - key: DemoData__Enabled
+        value: "false"
+      - key: DemoData__SellerEmail
+        sync: false
+      - key: DemoData__SellerPassword
+        sync: false
+
+databases:
+  - name: novalive-db-demo
+    databaseName: novalive
+    user: novalive
+    region: singapore
+    plan: free

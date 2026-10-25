@@ -22,6 +22,8 @@ import {
   PHONE_RULE,
   PHONE_RULE_MESSAGE,
   FIELD_REQUIRED_MESSAGE,
+  PHONE_RULE,
+  PHONE_RULE_MESSAGE,
   PASSWORD_RULE,
   PASSWORD_RULE_MESSAGE
 } from '~/common/utils/validators'
@@ -34,7 +36,7 @@ function RegisterForm() {
 
   const onSubmitRegister = (data) => {
     const { fullName, phone, email, password } = data
-    toast.promise(registerUserAPI({ fullName, phone, email, password }),
+    toast.promise(registerUserAPI({ email, phone, fullName, password }),
       { pending: 'Registration is in progress...' }
     ).then((response) => {
       const emailTarget = response?.email || response?.user?.user_email || email

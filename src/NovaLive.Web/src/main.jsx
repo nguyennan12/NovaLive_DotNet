@@ -31,7 +31,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <CssBaseline />
               <ScrollToTop />
               <ErrorBoundary>
-                <SignalRProvider>
+                <SignalRProvider excludedOrderPaths={['/seller', '/dashboard/shop', '/manager/inventory', '/manager/discount', '/products/form']}>
                   <App />
                 </SignalRProvider>
               </ErrorBoundary>

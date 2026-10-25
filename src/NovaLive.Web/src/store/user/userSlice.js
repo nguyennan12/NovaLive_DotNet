@@ -5,10 +5,25 @@ const initialState = { currentUser: null }
 
 export const loginUserAPI = createAsyncThunk(
   'user/loginUserAPI',
-  async (data) => {
+  async (data, { rejectWithValue }) => {
     const { loginAPI } = await import('~/common/apis/services/userService')
-    const response = await loginAPI(data)
-    return response
+    try {
+      return await loginAPI(data)
+    } catch (error) {
+      const status = error?.response?.status
+      const problem = error?.response?.data
+      const message = status === 401
+        ? 'Email hoặc số điện thoại hoặc mật khẩu không đúng.'
+        : status === 423
+          ? problem?.detail || 'Tài khoản đang bị khóa. Vui lòng thử lại sau.'
+          : status === 429
+            ? problem?.detail || 'Bạn thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.'
+            : problem?.detail || problem?.message || (error?.response
+                ? 'Đăng nhập thất bại. Vui lòng thử lại.'
+                : 'Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.')
+
+      return rejectWithValue(message)
+    }
   }
 )
 

@@ -20,6 +20,7 @@ using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Hosting;
+using System.Security.Authentication;
 using Minio;
 using NovaLive.Infrastructure.Storage;
 using NovaLive.Infrastructure.Livestreams.Agora;
@@ -27,6 +28,7 @@ using NovaLive.Infrastructure.Payments.Momo;
 using NovaLive.Infrastructure.Payments.VietQr;
 
 using StackExchange.Redis;
+using Npgsql;
 
 namespace NovaLive.Infrastructure;
 
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+        connectionString = NormalizePostgresConnectionString(connectionString);
 
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
@@ -110,14 +113,12 @@ public static class DependencyInjection
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
         services.AddScoped<IDataSeeder, CategoryDataSeeder>();
-        if (environment?.IsDevelopment() == true)
+        if (configuration.GetValue<bool>($"{DemoDataOptions.SectionName}:Enabled"))
         {
             services.AddOptions<DemoDataOptions>()
                 .Bind(configuration.GetSection(DemoDataOptions.SectionName))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.SellerEmail),
-                    "DemoData:SellerEmail is required in Development.")
-                .Validate(options => !string.IsNullOrWhiteSpace(options.SellerPassword),
-                    "DemoData:SellerPassword is required in Development.")
+                    "DemoData:SellerEmail is required when demo data seeding is enabled.")
                 .ValidateOnStart();
             services.AddScoped<IDataSeeder, DemoSellerShopDataSeeder>();
             services.AddScoped<IDataSeeder, ProductDataSeeder>();
@@ -129,7 +130,7 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
 
-        var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+        var redisOptions = RedisConnectionStringParser.Parse(redisConnectionString);
         redisOptions.AbortOnConnectFail = false;
         redisOptions.ConnectRetry = 5;
         redisOptions.ConnectTimeout = 5000;
@@ -169,10 +170,22 @@ public static class DependencyInjection
                     ?? throw new InvalidOperationException("RabbitMQ:Username is required.");
                 var password = configuration.GetValue<string>("RabbitMQ:Password")
                     ?? throw new InvalidOperationException("RabbitMQ:Password is required.");
-                cfg.Host(host, "/", h =>
+                var port = configuration.GetValue<ushort?>("RabbitMQ:Port") ?? 5672;
+                var virtualHost = configuration.GetValue<string>("RabbitMQ:VirtualHost") ?? "/";
+                var useSsl = configuration.GetValue<bool>("RabbitMQ:UseSsl");
+                var virtualHostPath = virtualHost == "/"
+                    ? "/"
+                    : $"/{Uri.EscapeDataString(virtualHost.TrimStart('/'))}";
+                var brokerAddress = new UriBuilder("rabbitmq", host, port, virtualHostPath).Uri;
+
+                cfg.Host(brokerAddress, h =>
                 {
                     h.Username(username);
                     h.Password(password);
+                    if (useSsl)
+                    {
+                        h.UseSsl(ssl => ssl.Protocol = SslProtocols.Tls12);
+                    }
                 });
                 cfg.ConfigureEndpoints(context);
             });
@@ -214,6 +227,15 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(MinioOptions.SectionName))
             .PostConfigure(options =>
             {
+                var publicUrl = configuration["MINIO_PUBLIC_URL"];
+                if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var publicUri)
+                    && publicUri.Scheme is "http" or "https")
+                {
+                    options.Endpoint = publicUri.Authority;
+                    options.UseSsl = publicUri.Scheme == Uri.UriSchemeHttps;
+                    options.CdnBaseUrl = publicUri.GetLeftPart(UriPartial.Authority);
+                }
+
                 var envEndpoint = configuration["MINIO_ENDPOINT"];
                 if (!string.IsNullOrWhiteSpace(envEndpoint))
                 {
@@ -343,6 +365,31 @@ public static class DependencyInjection
         services.AddSingleton<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
 
         return services;
+    }
+
+    private static string NormalizePostgresConnectionString(string connectionString)
+    {
+        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
+            || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
+        {
+            return connectionString;
+        }
+
+        var credentials = Uri.UnescapeDataString(uri.UserInfo).Split(':', 2);
+        if (credentials.Length != 2)
+            throw new InvalidOperationException("The PostgreSQL URL must include a username and password.");
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.IsDefaultPort ? 5432 : uri.Port,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/')),
+            Username = credentials[0],
+            Password = credentials[1],
+            SslMode = SslMode.Require
+        };
+
+        return builder.ConnectionString;
     }
 }
 

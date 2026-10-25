@@ -5,6 +5,7 @@ using NovaLive.Api.Auth;
 using NovaLive.Api.Middleware;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Domain.Common;
+using NovaLive.Infrastructure.Services;
 
 namespace NovaLive.Api.Extensions;
 
@@ -88,7 +89,7 @@ public static class ServiceCollectionExtensions
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
-            var signalRRedisOptions = StackExchange.Redis.ConfigurationOptions.Parse(redisConnectionString);
+            var signalRRedisOptions = RedisConnectionStringParser.Parse(redisConnectionString);
             signalRRedisOptions.AbortOnConnectFail = false;
             signalRRedisOptions.ConnectRetry = 5;
             signalRRedisOptions.ConnectTimeout = 5000;

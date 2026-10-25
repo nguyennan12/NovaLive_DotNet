@@ -3,7 +3,9 @@ import { clearCurrentUser } from '~/store/user/userSlice'
 import { store } from '~/store/store'
 
 const authorizedAxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_BACKEND_URL
+    ? `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}/api/v1`
+    : '/api/v1',
   timeout: 1000 * 60 * 10,
   withCredentials: true,
   headers: {
@@ -42,14 +44,15 @@ authorizedAxiosInstance.interceptors.response.use(
           .then(({ refreshTokenAPI }) => refreshTokenAPI())
           .then((res) => {
             const raw = res?.data !== undefined ? res.data : res
-            if (raw?.accessToken) {
-              const current = store.getState()?.user?.currentUser
-              if (current) {
-                store.dispatch({
-                  type: 'user/setCurrentUser',
-                  payload: { ...current, accessToken: raw.accessToken }
-                })
-              }
+            const current = store.getState()?.user?.currentUser
+            const token = raw?.accessToken || raw?.tokens?.accessToken
+            if (current && (token || raw?.user)) {
+              // Cookie sessions intentionally return no token in JSON. Drop a
+              // legacy Bearer token so it cannot override the renewed cookie.
+              const next = { ...current, ...raw?.user }
+              if (token) next.accessToken = token
+              else delete next.accessToken
+              store.dispatch({ type: 'user/setCurrentUser', payload: next })
             }
             return res
           })
@@ -62,7 +65,11 @@ authorizedAxiosInstance.interceptors.response.use(
             refreshTokenPromise = null
           })
       }
-      return refreshTokenPromise.then(() => authorizedAxiosInstance(originalRequest))
+      return refreshTokenPromise.then(() => {
+        // The failed request still holds the old header even after Redux updates.
+        delete originalRequest.headers.Authorization
+        return authorizedAxiosInstance(originalRequest)
+      })
     }
 
     if (error.response?.status === 401 && (isAuthRoute || originalRequest?._retry)) {

@@ -3,6 +3,7 @@ import globals from 'globals'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 
 export default [
   { ignores: ['dist'] },
@@ -20,7 +21,7 @@ export default [
         ecmaFeatures: { jsx: true }
       }
     },
-    settings: { react: { version: '18.2' } },
+    settings: { react: { version: 'detect' } },
     plugins: {
       react,
       'react-hooks': reactHooks,
@@ -56,6 +57,18 @@ export default [
       'comma-dangle': 1,
       'comma-spacing': 1,
       'arrow-spacing': 1
+    }
+  },
+  ...tseslint.configs.recommended.map(config => ({ ...config, files: ['src/features/Seller/**/*.{ts,tsx}'] })),
+  {
+    files: ['src/features/Seller/**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.browser, ...globals.es2022 } },
+    plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   }
 ]

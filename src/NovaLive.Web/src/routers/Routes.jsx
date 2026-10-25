@@ -1,14 +1,8 @@
-import { Box } from '@mui/material'
 import { Routes, Route } from 'react-router-dom'
 import Auth from '~/features/Auth/pages/Auth'
 import LiveFeedPage from '~/features/LiveSession/pages/LiveFeedPage'
 import ShopLive from '~/features/Shop/pages/ShopLive'
-import ProductFormPage from '~/features/Product/pages/ProductFormPage'
-import DashboardShop from '~/common/components/layout/DashBoard/DashBoardShop'
-import ProductsPage from '~/features/Product/pages/ProductPage'
-import InventoryPage from '~/features/Inventory/pages/InventoryPage'
-import { DiscountPage } from '~/features/Discount/pages/DiscountPage'
-import LiveManagerPage from '~/features/LiveSession/pages/LiveManagerPage'
+import SellerPortal, { LegacySellerRedirect } from '~/features/Seller/SellerPortal'
 import { HomePage } from '~/features/Home/pages/HomePage'
 import ProductDetailPage from '~/features/Product/pages/ProductDetailPage'
 import ProductsListPage from '~/features/Product/pages/ProductsListPage'
@@ -52,24 +46,14 @@ const AppRoutes = () => {
       <Route element={<PrivateRoute allowedRoles={['Seller', 'Admin']} />}>
         {/* Host Live session */}
         <Route path="/shop/live/:liveId" element={<ShopLive />} />
-
-        {/* Product & Warehouse manager forms */}
-        <Route path="/products/form" element={<ProductFormPage />} />
-        <Route path="/products/form/:id" element={<ProductFormPage />} />
-        <Route path="/manager/inventory" element={<InventoryPage />} />
-        <Route path="/manager/discount" element={<DiscountPage />} />
-
-        {/* SHOP DASHBOARD */}
-        <Route path="/dashboard/shop" element={<DashboardShop />}>
-          <Route index element={<Box sx={{ p: 2 }}>Dashboard Overview</Box>} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="orders" element={<Box sx={{ p: 2 }}>Orders Management</Box>} />
-          <Route path="customers" element={<Box sx={{ p: 2 }}>Customers</Box>} />
-          <Route path="live" element={<LiveManagerPage />} />
-          <Route path="analytics" element={<Box sx={{ p: 2 }}>Analytics</Box>} />
-          <Route path="finance" element={<Box sx={{ p: 2 }}>Finance</Box>} />
-        </Route>
       </Route>
+
+      <Route path="/seller/*" element={<SellerPortal />} />
+      <Route path="/dashboard/shop/*" element={<LegacySellerRedirect />} />
+      <Route path="/products/form" element={<LegacySellerRedirect target="product-form" />} />
+      <Route path="/products/form/:id" element={<LegacySellerRedirect target="product-form" />} />
+      <Route path="/manager/inventory" element={<LegacySellerRedirect target="inventory" />} />
+      <Route path="/manager/discount" element={<LegacySellerRedirect target="discounts" />} />
 
       {/* PLATFORM ADMIN DASHBOARD */}
       <Route path="/admin" element={<AdminLayout />}>

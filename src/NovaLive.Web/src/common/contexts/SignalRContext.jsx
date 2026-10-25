@@ -3,10 +3,13 @@ import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '~/store/user/userSlice'
 import { useOrderHub } from '../hooks/useSignalR'
 import { toast } from 'react-toastify'
+import { useLocation } from 'react-router-dom'
 
 const SignalRContext = createContext(null)
 
-export const SignalRProvider = ({ children }) => {
+export const SignalRProvider = ({ children, excludedOrderPaths = [] }) => {
+  const { pathname } = useLocation()
+  const orderHubExcluded = excludedOrderPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))
   const currentUser = useSelector(selectCurrentUser)
   const userId = currentUser?._id || currentUser?.id
   const shopId = currentUser?.shopId || currentUser?.ShopId
@@ -33,7 +36,7 @@ export const SignalRProvider = ({ children }) => {
     customerId: userId,
     onOrderPlaced: handleOrderPlaced,
     onOrderStatusChanged: handleOrderStatusChanged,
-    enabled: !!(userId || shopId)
+    enabled: !orderHubExcluded && !!(userId || shopId)
   })
 
   const contextValue = useMemo(() => ({

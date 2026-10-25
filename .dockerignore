@@ -1,0 +1,14 @@
+.git
+.vs
+.idea
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
+**/TestResults/
+.env
+.env.*
+!**/.env.example
+secrets.json
+docker-compose.override.yml
