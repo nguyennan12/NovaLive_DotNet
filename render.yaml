@@ -74,8 +74,15 @@ services:
           type: web
           name: novalive-minio-demo
           envVarKey: MINIO_ROOT_PASSWORD
-      - key: MINIO_PUBLIC_URL
-        sync: false
+      - key: Minio__Endpoint
+        fromService:
+          type: web
+          name: novalive-minio-demo
+          property: hostport
+      - key: Minio__UseSsl
+        value: "false"
+      - key: Minio__CdnBaseUrl
+        value: https://novalive-minio-demo.onrender.com
       - key: DemoData__Enabled
         value: "true"
       - key: DemoData__SellerEmail
