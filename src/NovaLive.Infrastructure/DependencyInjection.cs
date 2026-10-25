@@ -20,6 +20,7 @@ using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Hosting;
+using System.Security.Authentication;
 using Minio;
 using NovaLive.Infrastructure.Storage;
 using NovaLive.Infrastructure.Livestreams.Agora;
@@ -169,10 +170,22 @@ public static class DependencyInjection
                     ?? throw new InvalidOperationException("RabbitMQ:Username is required.");
                 var password = configuration.GetValue<string>("RabbitMQ:Password")
                     ?? throw new InvalidOperationException("RabbitMQ:Password is required.");
-                cfg.Host(host, "/", h =>
+                var port = configuration.GetValue<ushort?>("RabbitMQ:Port") ?? 5672;
+                var virtualHost = configuration.GetValue<string>("RabbitMQ:VirtualHost") ?? "/";
+                var useSsl = configuration.GetValue<bool>("RabbitMQ:UseSsl");
+                var virtualHostPath = virtualHost == "/"
+                    ? "/"
+                    : $"/{Uri.EscapeDataString(virtualHost.TrimStart('/'))}";
+                var brokerAddress = new UriBuilder("rabbitmq", host, port, virtualHostPath).Uri;
+
+                cfg.Host(brokerAddress, h =>
                 {
                     h.Username(username);
                     h.Password(password);
+                    if (useSsl)
+                    {
+                        h.UseSsl(ssl => ssl.Protocol = SslProtocols.Tls12);
+                    }
                 });
                 cfg.ConfigureEndpoints(context);
             });
@@ -214,6 +227,15 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(MinioOptions.SectionName))
             .PostConfigure(options =>
             {
+                var publicUrl = configuration["MINIO_PUBLIC_URL"];
+                if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var publicUri)
+                    && publicUri.Scheme is "http" or "https")
+                {
+                    options.Endpoint = publicUri.Authority;
+                    options.UseSsl = publicUri.Scheme == Uri.UriSchemeHttps;
+                    options.CdnBaseUrl = publicUri.GetLeftPart(UriPartial.Authority);
+                }
+
                 var envEndpoint = configuration["MINIO_ENDPOINT"];
                 if (!string.IsNullOrWhiteSpace(envEndpoint))
                 {

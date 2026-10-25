@@ -3,7 +3,9 @@ import { clearCurrentUser } from '~/store/user/userSlice'
 import { store } from '~/store/store'
 
 const authorizedAxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_BACKEND_URL
+    ? `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')}/api/v1`
+    : '/api/v1',
   timeout: 1000 * 60 * 10,
   withCredentials: true,
   headers: {
