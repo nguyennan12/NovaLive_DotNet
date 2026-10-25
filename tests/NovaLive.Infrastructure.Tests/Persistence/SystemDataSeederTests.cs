@@ -36,6 +36,7 @@ public sealed class SystemDataSeederTests
         (await context.Permissions.Select(permission => permission.Code).Distinct().CountAsync()).Should().Be(58);
         (await context.Users.CountAsync()).Should().Be(1);
         (await context.Shops.CountAsync()).Should().Be(1);
+        (await context.ShopAddresses.CountAsync()).Should().Be(1);
         (await context.Spus.CountAsync()).Should().Be(7);
         (await context.Skus.CountAsync()).Should().Be(10);
         (await context.Inventories.CountAsync()).Should().Be(10);
@@ -49,6 +50,11 @@ public sealed class SystemDataSeederTests
         var demoShop = await context.Shops.SingleAsync();
         demoShop.OwnerId.Should().Be(demoSeller.Id);
         demoShop.Status.Should().Be(ShopStatus.Active);
+
+        var demoWarehouse = await context.ShopAddresses.SingleAsync();
+        demoWarehouse.ShopId.Should().Be(demoShop.Id);
+        demoWarehouse.IsPrimary.Should().BeTrue();
+        demoWarehouse.IsReturn.Should().BeTrue();
 
         var roles = await context.Roles.ToDictionaryAsync(role => role.Name);
         roles.Keys.Should().BeEquivalentTo("Admin", "Seller", "Buyer");

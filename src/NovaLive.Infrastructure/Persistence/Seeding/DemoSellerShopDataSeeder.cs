@@ -83,6 +83,40 @@ public sealed class DemoSellerShopDataSeeder(
             shop.Approve();
         }
 
+        var hasPrimaryWarehouse = await dbContext.ShopAddresses
+            .AnyAsync(address => address.ShopId == shop.Id && address.IsPrimary, cancellationToken);
+        if (!hasPrimaryWarehouse)
+        {
+            var warehouse = await dbContext.ShopAddresses
+                .Where(address => address.ShopId == shop.Id)
+                .OrderBy(address => address.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (warehouse is null)
+            {
+                warehouse = new ShopAddress(
+                    shop.Id,
+                    "Kho demo NovaLive",
+                    "NovaLive Demo Seller",
+                    "0900000000",
+                    202,
+                    "Hồ Chí Minh",
+                    3695,
+                    "Thành Phố Thủ Đức",
+                    "90768",
+                    "Phường An Khánh",
+                    "123 Đường Kiểm Thử");
+                await dbContext.ShopAddresses.AddAsync(warehouse, cancellationToken);
+            }
+
+            warehouse.SetPrimary(true);
+            if (!await dbContext.ShopAddresses
+                    .AnyAsync(address => address.ShopId == shop.Id && address.IsReturn, cancellationToken))
+            {
+                warehouse.SetReturn(true);
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
