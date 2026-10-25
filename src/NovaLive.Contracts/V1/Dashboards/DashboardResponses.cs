@@ -19,6 +19,18 @@ public record PendingSellerPayoutDto(
     string BankAccount,
     DateTime ScheduledAt);
 
+public record SellerDashboardResponse(
+    decimal TotalSalesRevenue,
+    int TotalOrdersCount,
+    decimal WalletAvailableBalance,
+    int PendingOrdersCount,
+    IReadOnlyList<DailyRevenuePointDto> DailyRevenue,
+    IReadOnlyList<OrderStatusBreakdownDto> OrderStatuses,
+    IReadOnlyList<TopSellingSkuDto> TopSkus,
+    IReadOnlyList<LivestreamPerformanceSummaryDto> RecentLives,
+    SellerActionSummaryDto Actions,
+    WalletOverviewDto? WalletOverview = null);
+
 public record SellerDashboardAnalyticsDto(
     decimal TotalSalesRevenue,
     int TotalOrdersCount,
@@ -27,9 +39,13 @@ public record SellerDashboardAnalyticsDto(
     List<LivestreamPerformanceSummaryDto> RecentLives);
 
 public record DailyRevenuePointDto(
-    DateTime Date,
+    string Date,
     decimal Revenue,
     int OrdersCount);
+
+public record OrderStatusBreakdownDto(
+    string Status,
+    int Count);
 
 public record TopSellingSkuDto(
     Guid SkuId,
@@ -44,4 +60,23 @@ public record LivestreamPerformanceSummaryDto(
     int PeakViewers,
     int TotalOrdersCount,
     decimal TotalRevenue,
-    DateTime Date);
+    string Date);
+
+public record SellerActionSummaryDto(
+    int PendingOrders,
+    int ExpiringReturns,
+    int LowStockSkus);
+
+public record WalletOverviewDto(
+    decimal Balance,
+    decimal LockedBalance,
+    string Currency,
+    IReadOnlyList<WalletTransactionSummaryDto> RecentTransactions);
+
+public record WalletTransactionSummaryDto(
+    Guid Id,
+    string Type,
+    decimal Amount,
+    decimal BalanceAfter,
+    string? Description,
+    DateTime CreatedAt);

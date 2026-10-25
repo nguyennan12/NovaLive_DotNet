@@ -81,6 +81,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      DemoData__Enabled: "${DEMODATA_ENABLED:-true}"
+      DemoData__SellerEmail: "${DEMODATA_SELLER_EMAIL:-seller@novalive.vn}"
+      DemoData__SellerPassword: "${DEMODATA_SELLER_PASSWORD:-${POSTGRES_PASSWORD}}"
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       Redis__ConnectionString: "redis:6379,abortConnect=false"
       RabbitMQ__Host: "rabbitmq"

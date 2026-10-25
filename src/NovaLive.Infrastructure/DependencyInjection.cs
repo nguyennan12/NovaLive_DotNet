@@ -79,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
+        services.AddScoped<ISellerDashboardReadRepository, SellerDashboardReadRepository>();
         services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
         services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
         services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();

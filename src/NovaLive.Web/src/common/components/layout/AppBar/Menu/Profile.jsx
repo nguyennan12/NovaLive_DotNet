@@ -1,6 +1,8 @@
 import Logout from '@mui/icons-material/Logout'
 import PersonIcon from '@mui/icons-material/Person'
 import Settings from '@mui/icons-material/Settings'
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
+import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
@@ -9,6 +11,7 @@ import ListItemIcon from '@mui/material/ListItemIcon'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
+import Chip from '@mui/material/Chip'
 import { useConfirm } from 'material-ui-confirm'
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -76,6 +79,28 @@ function Profiles() {
           </ListItemIcon>
           Hồ sơ cá nhân
         </MenuItem>
+
+        <Divider />
+
+        <MenuItem onClick={() => { handleClose(); navigate('/admin/dashboard') }} sx={{ bgcolor: 'rgba(52, 101, 200, 0.04)' }}>
+          <ListItemIcon sx={{ color: '#2563eb' }}>
+            <AdminPanelSettingsRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <span>Quản trị sàn (Admin)</span>
+            <Chip label="Admin" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, ml: 1 }} />
+          </Box>
+        </MenuItem>
+
+        <MenuItem onClick={() => { handleClose(); navigate('/dashboard/shop') }}>
+          <ListItemIcon sx={{ color: '#8b5cf6' }}>
+            <StorefrontRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          Kênh Người Bán (Shop)
+        </MenuItem>
+
+        <Divider />
+
         <MenuItem>
           <ListItemIcon>
             <Settings fontSize="small" />
