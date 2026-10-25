@@ -28,6 +28,7 @@ using NovaLive.Infrastructure.Payments.Momo;
 using NovaLive.Infrastructure.Payments.VietQr;
 
 using StackExchange.Redis;
+using Npgsql;
 
 namespace NovaLive.Infrastructure;
 
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+        connectionString = NormalizePostgresConnectionString(connectionString);
 
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
@@ -365,6 +367,32 @@ public static class DependencyInjection
         services.AddSingleton<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
 
         return services;
+    }
+
+    private static string NormalizePostgresConnectionString(string connectionString)
+    {
+        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
+            || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
+        {
+            return connectionString;
+        }
+
+        var credentials = Uri.UnescapeDataString(uri.UserInfo).Split(':', 2);
+        if (credentials.Length != 2)
+            throw new InvalidOperationException("The PostgreSQL URL must include a username and password.");
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.IsDefaultPort ? 5432 : uri.Port,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/')),
+            Username = credentials[0],
+            Password = credentials[1],
+            SslMode = SslMode.Require,
+            TrustServerCertificate = true
+        };
+
+        return builder.ConnectionString;
     }
 }
 
