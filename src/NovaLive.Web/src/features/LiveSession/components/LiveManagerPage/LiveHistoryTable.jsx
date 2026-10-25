@@ -133,10 +133,8 @@ const LiveHistoryTable = () => {
   const handlePageChange = (event, value) => {
     setPage(value)
   }
-  const params = { page, limt: LIMIT.INVENTORY, status }
-
-  const queryString = new URLSearchParams(params).toString()
-  const { sessions, totalPages } = useSessionHistory(queryString)
+  const params = { page, size: LIMIT.INVENTORY, status: status === 'all' ? undefined : status }
+  const { sessions, totalPages } = useSessionHistory(params)
 
   return (
     <SectionCard title='Lịch Sử Phiên Live' subtitle='Danh sách các buổi live đã diễn ra'

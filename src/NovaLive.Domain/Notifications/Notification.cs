@@ -33,4 +33,15 @@ public sealed class Notification : Entity
     public DateTimeOffset? ReadAt { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void MarkAsRead(DateTimeOffset now)
+    {
+        if (IsRead)
+        {
+            return;
+        }
+
+        IsRead = true;
+        ReadAt = now;
+    }
 }

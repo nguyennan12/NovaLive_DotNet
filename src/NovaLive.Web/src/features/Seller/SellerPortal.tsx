@@ -13,7 +13,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 // Keep the seller portal routes while reusing the richer pages from the original seller UI.
 const ProductsPage = lazy(() => import('~/features/Product/pages/ProductPage'))
 const ProductFormPage = lazy(() => import('./pages/ProductFormPage'))
-const InventoryPage = lazy(() => import('~/features/Inventory/pages/InventoryPage'))
+const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const OrdersPage = lazy(() => import('./pages/OrdersPage'))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'))

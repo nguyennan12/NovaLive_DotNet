@@ -51,4 +51,7 @@ public static class LivestreamErrors
 
     public static readonly Error CommentTooLong =
         Error.Validation("Livestream.CommentTooLong", "Nội dung bình luận tối đa 500 ký tự.");
+
+    public static readonly Error InvalidSchedule =
+        Error.Validation("Livestream.InvalidSchedule", "Thời gian live phải ở tương lai và tiêu đề cần ít nhất 3 ký tự.");
 }

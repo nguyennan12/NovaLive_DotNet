@@ -6,7 +6,9 @@ import {
   getLiveRevenueChartAPI,
   getLiveStatsAPI,
   getUpommingLiveSessionsAPI,
+  scheduleLiveSessionAPI,
   startLiveAPI,
+  startScheduledLiveAPI,
   updateLiveSessionAPI
 } from '~/common/apis/services/liveService'
 
@@ -51,6 +53,14 @@ export const useCreateSession = () => {
   })
 }
 
+export const useScheduleSession = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: scheduleLiveSessionAPI,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['live'] })
+  })
+}
+
 export const useUpdateSession = () => {
   const queryClient = useQueryClient()
   return useMutation({
@@ -67,4 +77,18 @@ export const useCancelSession = () => {
   })
 }
 
-export const useStartSession = () => useMutation({ mutationFn: startLiveAPI })
+export const useStartSession = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: startLiveAPI,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['live'] })
+  })
+}
+
+export const useStartScheduledSession = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: startScheduledLiveAPI,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['live'] })
+  })
+}

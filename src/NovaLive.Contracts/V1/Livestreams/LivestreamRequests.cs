@@ -5,6 +5,16 @@ public record StartLivestreamRequest(
     string? ThumbnailUrl,
     Guid? WarehouseAddressId);
 
+public sealed record ScheduleLivestreamRequest(
+    string Title,
+    string? ThumbnailUrl,
+    DateTimeOffset ScheduledAt);
+
+public sealed record UpdateScheduledLivestreamRequest(
+    string Title,
+    string? ThumbnailUrl,
+    DateTimeOffset ScheduledAt);
+
 public record PinProductRequest(
     Guid SkuId,
     decimal? FlashPrice,

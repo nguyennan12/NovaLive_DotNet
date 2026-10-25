@@ -3,17 +3,37 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 import SectionCard from '~/features/Inventory/components/shared/SectionCard'
-import { useCreateSession } from '../../hooks/useLiveSessions'
+import { useCreateSession, useScheduleSession } from '../../hooks/useLiveSessions'
 
-const DEFAULT_VALUES = { title: '' }
+const DEFAULT_VALUES = { title: '', scheduledAt: '' }
+
+const toLocalDateTime = (date) => {
+  const offset = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
 
 const CreateLiveForm = () => {
   const { control, handleSubmit, reset, formState: { errors } } = useForm({ defaultValues: DEFAULT_VALUES })
 
   const createSession = useCreateSession()
+  const scheduleSession = useScheduleSession()
   const navigate = useNavigate()
 
   const onSubmit = async (data) => {
+    if (data.scheduledAt) {
+      const scheduledAt = new Date(data.scheduledAt)
+      if (Number.isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+        toast.error('Thời gian lên lịch phải ở tương lai.')
+        return
+      }
+      await toast.promise(
+        scheduleSession.mutateAsync({ title: data.title, scheduledAt: scheduledAt.toISOString() }),
+        { pending: 'Đang lên lịch live...', success: 'Đã lên lịch phiên live.', error: 'Không thể lên lịch phiên live.' }
+      )
+      reset(DEFAULT_VALUES)
+      return
+    }
+
     const session = await toast.promise(
       createSession.mutateAsync({ title: data.title }),
       { pending: 'Đang tạo phòng live...', success: 'Đã tạo phòng live.', error: 'Không thể tạo phòng live.' }
@@ -28,8 +48,8 @@ const CreateLiveForm = () => {
 
   return (
     <SectionCard
-      title='Start New Live'
-      subtitle='Tạo phiên live ngay bây giờ rồi mở Live Studio để bật camera và microphone.'
+      title='Tạo phiên livestream'
+      subtitle='Bắt đầu ngay hoặc chọn thời gian để lên lịch phiên live.'
     >
       <Box
         component='form'
@@ -43,11 +63,28 @@ const CreateLiveForm = () => {
           render={({ field }) => (
             <TextField
               {...field}
-              label='Live session title *'
+              label='Tên phiên live *'
               fullWidth
               size='small'
               error={!!errors.title}
               helperText={errors.title?.message}
+            />
+          )}
+        />
+
+        <Controller
+          name='scheduledAt'
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              type='datetime-local'
+              label='Lên lịch (để trống để bắt đầu ngay)'
+              fullWidth
+              size='small'
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: toLocalDateTime(new Date()) }}
+              helperText='Thời gian được tính theo múi giờ thiết bị.'
             />
           )}
         />
@@ -57,7 +94,7 @@ const CreateLiveForm = () => {
             type='submit'
             variant='contained'
             disableElevation
-            disabled={createSession.isPending}
+            disabled={createSession.isPending || scheduleSession.isPending}
             sx={{
               background: 'linear-gradient(90deg, #74a2ffff, #69aedc, #8acdde)',
               borderRadius: '8px',
@@ -66,7 +103,7 @@ const CreateLiveForm = () => {
               color: '#fff'
             }}
           >
-            Tạo phòng & mở Live Studio
+            {scheduleSession.isPending ? 'Đang lên lịch…' : 'Tạo phiên live'}
           </Button>
         </Box>
       </Box>

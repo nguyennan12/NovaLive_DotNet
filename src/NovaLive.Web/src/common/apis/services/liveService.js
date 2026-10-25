@@ -18,6 +18,15 @@ export const normalizeLiveSession = (session) => {
     status: session.status || session.live_status,
     live_viewer_count: session.viewerCount ?? session.live_viewer_count ?? 0,
     viewerCount: session.viewerCount ?? session.live_viewer_count ?? 0,
+    live_code: session.channelName || session.live_code || (session.id || session._id || '').toString(),
+    live_schedule_at: session.scheduledAt || session.startedAt || session.createdAt || session.live_schedule_at,
+    live_actual_start: session.startedAt || session.live_actual_start,
+    live_actual_end: session.endedAt || session.live_actual_end,
+    live_metrics: session.live_metrics || {
+      peak_viewers: session.peakViewers ?? session.peakViewerCount ?? 0,
+      total_orders: session.totalOrdersCount ?? 0,
+      total_revenue: session.totalRevenue ?? 0
+    },
     channelName: session.channelName || (session.id ? session.id.toString() : ''),
     shop: {
       _id: session.shopId,
@@ -61,6 +70,16 @@ export const createLiveSessionAPI = async (payload) => {
   }
 }
 
+export const scheduleLiveSessionAPI = async (payload) => {
+  const response = await authorizedAxiosInstance.post('seller/livestreams/schedule', {
+    title: payload.title,
+    thumbnailUrl: payload.thumbnailUrl || null,
+    scheduledAt: payload.scheduledAt
+  })
+  const raw = response?.data !== undefined ? response.data : response
+  return normalizeLiveSession(raw)
+}
+
 /**
  * Seller renews publisher token for an ongoing livestream
  */
@@ -72,6 +91,17 @@ export const startLiveAPI = async (liveId) => {
     publisherToken: raw?.token,
     channelName: raw?.channelName || (liveId ? liveId.toString() : ''),
     ...raw
+  }
+}
+
+export const startScheduledLiveAPI = async (liveId) => {
+  const response = await authorizedAxiosInstance.post(`seller/livestreams/${liveId}/start`)
+  const raw = response?.data !== undefined ? response.data : response
+  return {
+    token: raw?.publisherToken,
+    publisherToken: raw?.publisherToken,
+    channelName: raw?.channelName || (liveId ? liveId.toString() : ''),
+    ...normalizeLiveSession(raw)
   }
 }
 
@@ -150,10 +180,16 @@ export const removeProductFromLiveSessionAPI = async (liveId, skuId) => {
  * Livestream history - fetched from real backend orders/livestreams, no mock data
  */
 export const getLiveHistoryAPI = async (params = {}) => {
-  // The .NET API does not expose seller livestream history yet. Do not label
-  // seller orders as livestream sessions.
-  void params
-  return { lives: [], totalPages: 1, totalCount: 0 }
+  const response = await authorizedAxiosInstance.get('seller/livestreams', { params })
+  const raw = response?.data !== undefined ? response.data : response
+  const lives = (raw?.items || []).map(normalizeLiveSession)
+  return {
+    lives,
+    totalPages: raw?.totalPages ?? 1,
+    totalCount: raw?.total ?? lives.length,
+    page: raw?.page ?? params.page ?? 1,
+    size: raw?.size ?? params.size ?? lives.length
+  }
 }
 
 /**
@@ -165,7 +201,9 @@ export const getLiveRevenueChartAPI = async () => {
 }
 
 export const getUpommingLiveSessionsAPI = async () => {
-  return []
+  const response = await authorizedAxiosInstance.get('seller/livestreams', { params: { page: 1, size: 100, status: 'scheduled' } })
+  const raw = response?.data !== undefined ? response.data : response
+  return (raw?.items || []).map(normalizeLiveSession)
 }
 
 export const getLiveStatsAPI = async () => {
@@ -173,10 +211,16 @@ export const getLiveStatsAPI = async () => {
   return null
 }
 
-export const updateLiveSessionAPI = async () => {
-  return null
+export const updateLiveSessionAPI = async (liveId, payload) => {
+  const response = await authorizedAxiosInstance.put(`seller/livestreams/${liveId}/schedule`, {
+    title: payload.title,
+    thumbnailUrl: payload.thumbnailUrl || null,
+    scheduledAt: payload.scheduledAt
+  })
+  return response?.data !== undefined ? response.data : response
 }
 
-export const cancelLiveSessionAPI = async () => {
-  return null
+export const cancelLiveSessionAPI = async (liveId) => {
+  const response = await authorizedAxiosInstance.delete(`seller/livestreams/${liveId}/schedule`)
+  return response?.data !== undefined ? response.data : response
 }
