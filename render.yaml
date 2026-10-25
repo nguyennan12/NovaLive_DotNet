@@ -77,7 +77,7 @@ services:
       - key: MINIO_PUBLIC_URL
         sync: false
       - key: DemoData__Enabled
-        value: "false"
+        value: "true"
       - key: DemoData__SellerEmail
         sync: false
       - key: DemoData__SellerPassword
