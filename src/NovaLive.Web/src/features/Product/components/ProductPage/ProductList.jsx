@@ -2,7 +2,8 @@ import { Alert, Box, CircularProgress, Typography } from '@mui/material'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useInfiniteScroll } from '~/common/hooks/useScroll'
-import { getSellerProductDetailAPI, getSellerProductsAPI } from '~/common/apis/services/productService'
+import { normalizeProduct } from '~/common/apis/services/productService'
+import { getProductTablePage } from '~/features/Seller/services/productService'
 import { useDebounce } from '~/common/hooks/useDebounce'
 import ProductCard from './ProductCard'
 
@@ -26,13 +27,18 @@ const ProductList = () => {
     keyword,
     categoryId: labelFiltler.category === 'all' ? undefined : labelFiltler.category
   }
+  const status = labelFiltler.status === 'published'
+    ? 'Active'
+    : labelFiltler.status === 'draft'
+      ? 'Draft'
+      : undefined
   const query = useInfiniteQuery({
-    queryKey: ['seller_product_cards', filters],
+    queryKey: ['seller_product_cards', filters, status],
     queryFn: async ({ pageParam = 1 }) => {
-      const result = await getSellerProductsAPI({ ...filters, page: pageParam, size: PAGE_SIZE })
+      const result = await getProductTablePage({ ...filters, page: pageParam, size: PAGE_SIZE }, status)
       return {
         ...result,
-        items: await Promise.all(result.items.map((product) => getSellerProductDetailAPI(product.id)))
+        items: result.items.map(normalizeProduct)
       }
     },
     initialPageParam: 1,
