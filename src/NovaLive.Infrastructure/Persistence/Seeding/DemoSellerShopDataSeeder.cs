@@ -89,7 +89,6 @@ public sealed class DemoSellerShopDataSeeder(
         {
             var warehouse = await dbContext.ShopAddresses
                 .Where(address => address.ShopId == shop.Id)
-                .OrderBy(address => address.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (warehouse is null)
