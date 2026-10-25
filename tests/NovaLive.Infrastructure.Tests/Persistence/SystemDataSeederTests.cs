@@ -166,7 +166,11 @@ public sealed class SystemDataSeederTests
                 context,
                 new PasswordHasher(),
                 new FixedDateTimeProvider(SeedTime),
-                Options.Create(new DemoDataOptions()),
+                Options.Create(new DemoDataOptions
+                {
+                    SellerEmail = "seller@novalive.local",
+                    SellerPassword = "Test-only-password-123!"
+                }),
                 NullLogger<DemoSellerShopDataSeeder>.Instance);
             var productSeeder = new ProductDataSeeder(
                 context,
