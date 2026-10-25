@@ -33,7 +33,7 @@ services:
         fromService:
           type: keyvalue
           name: novalive-redis-demo
-          property: hostport
+          property: host
       - key: RabbitMQ__Host
         sync: false
       - key: RabbitMQ__Username
@@ -65,10 +65,7 @@ services:
           name: novalive-minio-demo
           envVarKey: MINIO_ROOT_PASSWORD
       - key: MINIO_PUBLIC_URL
-        fromService:
-          type: web
-          name: novalive-minio-demo
-          property: url
+        sync: false
 
   - type: keyvalue
     name: novalive-redis-demo
