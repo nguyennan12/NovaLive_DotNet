@@ -80,7 +80,7 @@ export const toApiPayloadDiscountUpdate = (data) => ({
 })
 
 export const slugCateToNameCate = (categoriesSlug = [], categories = []) =>
-  categoriesSlug.map((catId) => {
+  (Array.isArray(categoriesSlug) ? categoriesSlug : categoriesSlug ? [categoriesSlug] : []).map((catId) => {
     const found = categories.find((c) => c.cat_slug === catId)
     return { id: catId, label: found?.cat_name ?? catId.slice(-6) }
   })
