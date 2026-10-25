@@ -36,11 +36,12 @@ function LoginForm() {
 
   const onSubmitLogin = (data) => {
     const { email, password } = data
-    toast.promise(dispatch(loginUserAPI({ email, password })),
-      { pending: 'Logging in...' }
-    ).then(res => {
-      if (!res.error) navigate('/')
-    })
+    const loginPromise = dispatch(loginUserAPI({ email, password })).unwrap()
+    toast.promise(loginPromise, {
+      pending: 'Logging in...',
+      success: 'Đăng nhập thành công!',
+      error: { render: ({ data: message }) => message || 'Đăng nhập thất bại. Vui lòng thử lại.' }
+    }).then(() => navigate('/')).catch(() => {})
   }
 
   return (

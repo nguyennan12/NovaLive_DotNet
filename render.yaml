@@ -70,6 +70,12 @@ services:
           envVarKey: MINIO_ROOT_PASSWORD
       - key: MINIO_PUBLIC_URL
         sync: false
+      - key: DemoData__Enabled
+        value: "false"
+      - key: DemoData__SellerEmail
+        sync: false
+      - key: DemoData__SellerPassword
+        sync: false
 
 databases:
   - name: novalive-db-demo

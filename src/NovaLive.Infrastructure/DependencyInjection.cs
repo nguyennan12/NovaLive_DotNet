@@ -113,14 +113,14 @@ public static class DependencyInjection
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
         services.AddScoped<IDataSeeder, CategoryDataSeeder>();
-        if (environment?.IsDevelopment() == true)
+        if (configuration.GetValue<bool>($"{DemoDataOptions.SectionName}:Enabled"))
         {
             services.AddOptions<DemoDataOptions>()
                 .Bind(configuration.GetSection(DemoDataOptions.SectionName))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.SellerEmail),
-                    "DemoData:SellerEmail is required in Development.")
+                    "DemoData:SellerEmail is required when demo data seeding is enabled.")
                 .Validate(options => !string.IsNullOrWhiteSpace(options.SellerPassword),
-                    "DemoData:SellerPassword is required in Development.")
+                    "DemoData:SellerPassword is required when demo data seeding is enabled.")
                 .ValidateOnStart();
             services.AddScoped<IDataSeeder, DemoSellerShopDataSeeder>();
             services.AddScoped<IDataSeeder, ProductDataSeeder>();
