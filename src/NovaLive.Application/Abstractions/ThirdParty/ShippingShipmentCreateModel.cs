@@ -1,0 +1,25 @@
+namespace NovaLive.Application.Abstractions.ThirdParty;
+
+public sealed record ShippingShipmentCreateModel(
+    string OrderCode,
+    string FromName,
+    string FromPhone,
+    string FromAddress,
+    string FromWardName,
+    string FromDistrictName,
+    int FromDistrictId,
+    string FromWardCode,
+    string ToName,
+    string ToPhone,
+    string ToAddress,
+    string ToWardCode,
+    int ToDistrictId,
+    decimal CodAmount,
+    int WeightGram,
+    string RequiredNote,
+    List<ShippingItemModel> Items,
+    int LengthCm = 10,
+    int WidthCm = 10,
+    int HeightCm = 10,
+    int? ServiceTypeId = null,
+    string? ServiceCode = null);

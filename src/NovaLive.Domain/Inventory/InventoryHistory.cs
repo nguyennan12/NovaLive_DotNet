@@ -19,7 +19,8 @@ public sealed class InventoryHistory : Entity
         string? refType = null,
         Guid? refId = null,
         string? note = null,
-        Guid? createdBy = null)
+        Guid? createdBy = null,
+        DateTimeOffset? createdAt = null)
     {
         InventoryId = inventoryId;
         SkuId = skuId;
@@ -34,7 +35,7 @@ public sealed class InventoryHistory : Entity
         RefId = refId;
         Note = note;
         CreatedBy = createdBy;
-        CreatedAt = DateTimeOffset.UtcNow;
+        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
     }
 
     public Guid InventoryId { get; private set; }

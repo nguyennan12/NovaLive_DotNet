@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
+using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
 using Npgsql;
 
@@ -43,10 +44,26 @@ public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderReposit
     }
 
     public async Task<(IReadOnlyList<ParentOrder> Items, long Total)> GetMinePagedAsync(Guid buyerId,
-        NovaLive.Domain.Common.ParentOrderPaymentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct)
+        string? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct)
     {
         var query = db.ParentOrders.AsNoTracking().Where(p => p.BuyerId == buyerId);
-        if (status is not null) query = query.Where(p => p.PaymentStatus == status);
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            // Each parent tab reflects fulfilment progress; COD payment state remains independent.
+            query = status.ToLowerInvariant() switch
+            {
+                "pending" => query.Where(p => db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.PendingPayment)),
+                "processing" => query.Where(p => !db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.PendingPayment)
+                    && db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.Confirmed || s.Status == SubOrderStatus.Processing))),
+                "shipped" => query.Where(p => !db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.PendingPayment || s.Status == SubOrderStatus.Confirmed || s.Status == SubOrderStatus.Processing))
+                    && db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.Shipping)),
+                "delivered" => query.Where(p => db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.Delivered || s.Status == SubOrderStatus.Completed))
+                    && !db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.PendingPayment || s.Status == SubOrderStatus.Confirmed || s.Status == SubOrderStatus.Processing || s.Status == SubOrderStatus.Shipping))),
+                "cancelled" => query.Where(p => db.SubOrders.Any(s => s.ParentOrderId == p.Id)
+                    && !db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status != SubOrderStatus.Cancelled)),
+                _ => query
+            };
+        }
         if (from is not null) query = query.Where(p => p.CreatedAt >= from);
         if (to is not null) query = query.Where(p => p.CreatedAt <= to);
         var count = await query.LongCountAsync(ct);

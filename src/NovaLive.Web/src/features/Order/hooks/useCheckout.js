@@ -1,29 +1,47 @@
 import { useQuery } from '@tanstack/react-query'
-import { checkoutAPI } from '~/common/apis/services/orderService'
+import { calculateCheckoutAPI } from '~/common/apis/services/orderService'
 
-export const useCheckout = (payload) => {
-  const enabled = !!payload?.cartId
-  const { data: checkout = {} } = useQuery({
-    queryKey: ['checkout', payload],
-    queryFn: () => checkoutAPI(payload),
+export const useCheckout = (payload, fallbackSubtotal = 0) => {
+  const enabled = !!payload?.shippingAddressId && (
+    (Array.isArray(payload.cartItemIds) && payload.cartItemIds.length > 0) ||
+    !!payload.cartId
+  )
+
+  const { data: checkout = {}, isFetching, isError, error } = useQuery({
+    queryKey: ['checkout-preview', payload],
+    queryFn: () => calculateCheckoutAPI(payload),
     enabled,
-    staleTime: 0
+    staleTime: 1000 * 5
   })
 
-  const { amoutGlobalDiscountProduct = 0, amoutGlobalDiscountShipping = 0, checkoutOrder = {} } = checkout
-  const { totalRawPrice = 0, feeShip = 0, totalShopDiscount = 0, finalCheckout = 0 } = checkoutOrder
+  // Normalize between new .NET DTO and legacy preview structure
+  const totalRawPrice = checkout.totalItemsAmount ?? checkout.checkoutOrder?.totalRawPrice ?? checkout.totalPrice ?? fallbackSubtotal
+  const feeShip = checkout.totalShippingFee ?? checkout.checkoutOrder?.feeShip ?? checkout.feeShip ?? 0
+  const totalShopDiscount = checkout.totalShopDiscount ?? checkout.checkoutOrder?.totalShopDiscount ?? 0
+  const amoutGlobalDiscountProduct = checkout.totalPlatformDiscount ?? checkout.amoutGlobalDiscountProduct ?? 0
+  const amoutGlobalDiscountShipping = checkout.totalShippingDiscount ?? checkout.amoutGlobalDiscountShipping ?? 0
+  const finalCheckout = checkout.grandTotal ?? checkout.checkoutOrder?.finalCheckout ?? Math.max(0, totalRawPrice + feeShip - totalShopDiscount - amoutGlobalDiscountProduct - amoutGlobalDiscountShipping)
 
   const totalFeeShip = Math.max(0, feeShip - amoutGlobalDiscountShipping)
-  const totalDiscount = amoutGlobalDiscountProduct + amoutGlobalDiscountShipping + totalShopDiscount
+  const totalDiscount = totalShopDiscount + amoutGlobalDiscountProduct + amoutGlobalDiscountShipping
+  const hasFreeShip = amoutGlobalDiscountShipping > 0
+  const hasServerTotal = checkout.grandTotal != null || checkout.checkoutOrder?.finalCheckout != null
+  const isPreviewReady = enabled && !isFetching && !isError && hasServerTotal
 
-  const hasFreeShip = feeShip !== totalFeeShip
   return {
     ...checkout,
     totalRawPrice,
     totalShopDiscount,
+    amoutGlobalDiscountProduct,
+    amoutGlobalDiscountShipping,
     finalCheckout,
     totalFeeShip,
     totalDiscount,
-    hasFreeShip
+    feeShip,
+    hasFreeShip,
+    isFetching,
+    isError,
+    error,
+    isPreviewReady
   }
 }

@@ -23,13 +23,17 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate()
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
-  const stock = stockConfig[getStockStatus(product.spu_quantity)] || stockConfig['in']
+  const [failedImage, setFailedImage] = useState(null)
+  const imageFailed = failedImage === product.spu_thumb
+  const stock = product.spu_quantity == null ? null : stockConfig[getStockStatus(product.spu_quantity)]
   const queryClient = useQueryClient()
 
   const handleDelete = async () => {
     await toast.promise(deleteProductAPI(selectedId), { pending: 'Deleting...' })
     setOpenDialog(false)
     setSelectedId(null)
+    await queryClient.invalidateQueries({ queryKey: ['seller_product_cards'] })
+    await queryClient.invalidateQueries({ queryKey: ['products_stats'] })
     await queryClient.refetchQueries({
       queryKey: ['products'],
       type: 'active'
@@ -60,17 +64,36 @@ const ProductCard = ({ product }) => {
             overflow: 'hidden'
           }}
         >
-          <Box
-            component="img"
-            src={product.spu_thumb}
-            alt={product.spu_name}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              borderRadius: { xs: '8px', sm: '10px' }
-            }}
-          />
+          {product.spu_thumb && !imageFailed
+            ? <Box
+                component="img"
+                src={product.spu_thumb}
+                alt={product.spu_name}
+                onError={() => setFailedImage(product.spu_thumb)}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: { xs: '8px', sm: '10px' }
+                }}
+              />
+            : <Box
+                role="img"
+                aria-label={`Chưa có ảnh cho ${product.spu_name}`}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'text.secondary',
+                  bgcolor: 'rgba(120, 144, 156, 0.12)',
+                  fontSize: { xs: '2.5rem', sm: '3.5rem' },
+                  fontWeight: 700,
+                  borderRadius: { xs: '8px', sm: '10px' }
+                }}
+              >
+                {product.spu_name?.trim()?.[0]?.toUpperCase() || '?'}
+              </Box>}
 
           {/* Edit */}
           <Box
@@ -109,7 +132,7 @@ const ProductCard = ({ product }) => {
               <IconButton
                 size='small'
                 onClick={() => {
-                  return navigate(`/products/form/${product.spu_code}`)
+                  return navigate(`/seller/products/${product.id || product._id || product.spu_code}/edit`)
                 }}
                 sx={{
                   width: { xs: 28, sm: 32 },
@@ -126,7 +149,7 @@ const ProductCard = ({ product }) => {
               <IconButton
                 size='small'
                 onClick={() => {
-                  setSelectedId(product.mongo_id)
+                  setSelectedId(product.id || product._id || product.mongo_id)
                   setOpenDialog(true)
                 }}
                 sx={{
@@ -162,7 +185,7 @@ const ProductCard = ({ product }) => {
             {formatVND(product.spu_price)}
           </Typography>
 
-          <Box
+          {stock && <Box
             sx={{
               bgcolor: '#f4f4f4',
               borderRadius: { xs: '8px', sm: '10px' },
@@ -187,7 +210,7 @@ const ProductCard = ({ product }) => {
             <Typography sx={{ fontSize: { xs: '0.55rem', sm: '0.6rem' }, fontWeight: 700, color: '#333', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {stock.label}
             </Typography>
-          </Box>
+          </Box>}
         </Box>
 
       </Box>

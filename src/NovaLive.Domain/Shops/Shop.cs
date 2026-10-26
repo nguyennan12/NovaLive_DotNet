@@ -69,13 +69,28 @@ public sealed class Shop : AuditableEntity, ISoftDeletable
         return Result.Success();
     }
 
-    public void Approve()
+    public Result Approve()
     {
+        if (Status != ShopStatus.Pending)
+        {
+            return Error.Conflict("Shops.NotPending", "Chỉ có thể phê duyệt gian hàng đang ở trạng thái chờ duyệt.");
+        }
         Status = ShopStatus.Active;
+        return Result.Success();
     }
 
     public void Suspend()
     {
         Status = ShopStatus.Suspended;
+    }
+
+    public Result Ban()
+    {
+        if (Status == ShopStatus.Banned)
+        {
+            return Error.Conflict("Shops.AlreadyBanned", "Gian hàng đã bị cấm trước đó.");
+        }
+        Status = ShopStatus.Banned;
+        return Result.Success();
     }
 }

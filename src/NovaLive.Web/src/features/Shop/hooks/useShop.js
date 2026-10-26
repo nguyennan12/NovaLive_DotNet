@@ -26,7 +26,7 @@ export const useShopMutation = () => {
   const registerMutation = useMutation({
     mutationFn: registerShopAPI,
     onSuccess: (data) => {
-      if (data?.id) dispatch(setCurrentUser({ ...currentUser, user_shop: data.id }))
+      if (data?.id) dispatch(setCurrentUser({ ...currentUser, shopId: data.id, user_shop: data.id }))
       queryClient.invalidateQueries({ queryKey: ['my_profile', currentUser?._id] })
       queryClient.invalidateQueries({ queryKey: ['my_shop', currentUser?._id] })
       toast.success('Đăng ký cửa hàng thành công!')

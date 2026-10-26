@@ -1,7 +1,5 @@
 import AllInclusiveRoundedIcon from '@mui/icons-material/AllInclusiveRounded'
 import AttachMoneyRoundedIcon from '@mui/icons-material/AttachMoneyRounded'
-import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
-import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
 import PercentRoundedIcon from '@mui/icons-material/PercentRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import { Box, Divider, FormControl, InputLabel, MenuItem, Paper, Select, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
@@ -11,7 +9,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { useSelector } from 'react-redux'
 import { useInfiniteScroll } from '~/common/hooks/useScroll'
 import { selectCurrentUser } from '~/store/user/userSlice'
-import { toApiPayloadDiscount, toDefaultValuesDiscount } from '~/common/utils/converter'
+import { toApiPayloadDiscount, toApiPayloadDiscountUpdate, toDefaultValuesDiscount } from '~/common/utils/converter'
 import { useHomeProducts } from '~/features/Home/hooks/useHomeProducts'
 import { SelectProductForForm } from '../shared/SelectProductForForm'
 
@@ -43,6 +41,7 @@ const DEFAULT_VALUES = {
   discount_start_date: '',
   discount_end_date: '',
   discount_is_active: true,
+  discount_is_public: true,
   discount_target: 'product',
   discount_type: 'percentage',
   discount_applies_to: 'all',
@@ -86,7 +85,7 @@ export const DiscountForm = ({ onSubmit, editData }) => {
       discount_shopId: user.user_shop,
       discount_product_ids: data.discount_applies_to === 'all' ? [] : data.discount_product_ids
     }
-    onSubmit(toApiPayloadDiscount(payload))
+    onSubmit(editData ? toApiPayloadDiscountUpdate(payload) : toApiPayloadDiscount(payload))
     reset(DEFAULT_VALUES)
   }
 
@@ -123,12 +122,13 @@ export const DiscountForm = ({ onSubmit, editData }) => {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
               <Controller
                 name="discount_code" control={control}
+                rules={{ required: 'Required' }}
                 render={({ field }) => (
                   <TextField {...field} label="Discount code" size="small" fullWidth
                     placeholder="SUMMER24"
                     onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     slotProps={{ style: { fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.08em' } }}
-                    helperText="Optional" sx={inputSx} />
+                    sx={inputSx} />
                 )}
               />
               <Controller
@@ -225,15 +225,9 @@ export const DiscountForm = ({ onSubmit, editData }) => {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
               <Box>
                 <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: 700, mb: 0.5 }}>Category</Typography>
-                <Controller name="discount_target" control={control}
-                  render={({ field }) => (
-                    <ToggleButtonGroup exclusive size="small" value={field.value}
-                      onChange={(_, v) => v && field.onChange(v)} sx={toggleSx('#7c3aed', '#f5f3ff')}>
-                      <ToggleButton value="product"><LocalOfferRoundedIcon sx={{ fontSize: 13 }} /> Product</ToggleButton>
-                      <ToggleButton value="shipping"><LocalShippingRoundedIcon sx={{ fontSize: 13 }} /> Free ship</ToggleButton>
-                    </ToggleButtonGroup>
-                  )}
-                />
+                <Typography sx={{ py: 1, fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary' }}>
+                  Product discount
+                </Typography>
               </Box>
               <Box>
                 <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: 700, mb: 0.5 }}>Discount type</Typography>

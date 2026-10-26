@@ -1,5 +1,7 @@
 using NovaLive.Domain.Common;
+
 namespace NovaLive.Application.UseCases.Orders;
+
 public static class OrderErrors
 {
     public static readonly Error EmptyCart = Error.Validation("Orders.EmptyCart", "Chọn sản phẩm không rỗng, không trùng.");

@@ -70,13 +70,22 @@ services:
     container_name: novalive_api_dev
     ports:
       - "5001:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "--max-time", "5", "http://127.0.0.1:8080/health" ]
+      interval: 5s
+      timeout: 6s
+      start_period: 120s
+      retries: 12
     env_file:
       - ../../.env
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      DemoData__Enabled: "${DEMODATA_ENABLED:-true}"
+      DemoData__SellerEmail: "${DEMODATA_SELLER_EMAIL:-seller@novalive.vn}"
+      DemoData__SellerPassword: "${DEMODATA_SELLER_PASSWORD:-${POSTGRES_PASSWORD}}"
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-      Redis__ConnectionString: "redis:6379"
+      Redis__ConnectionString: "redis:6379,abortConnect=false"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Username: "${RABBITMQ_DEFAULT_USER}"
       RabbitMQ__Password: "${RABBITMQ_DEFAULT_PASS}"

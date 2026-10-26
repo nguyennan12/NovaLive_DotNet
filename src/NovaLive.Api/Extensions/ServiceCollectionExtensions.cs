@@ -5,6 +5,7 @@ using NovaLive.Api.Auth;
 using NovaLive.Api.Middleware;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Domain.Common;
+using NovaLive.Infrastructure.Services;
 
 namespace NovaLive.Api.Extensions;
 
@@ -88,13 +89,25 @@ public static class ServiceCollectionExtensions
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
-            signalRBuilder.AddStackExchangeRedis(redisConnectionString, redisOptions =>
+            var signalRRedisOptions = RedisConnectionStringParser.Parse(redisConnectionString);
+            signalRRedisOptions.AbortOnConnectFail = false;
+            signalRRedisOptions.ConnectRetry = 5;
+            signalRRedisOptions.ConnectTimeout = 5000;
+            signalRRedisOptions.SyncTimeout = 5000;
+
+            signalRBuilder.AddStackExchangeRedis(options =>
             {
-                redisOptions.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NovaLive_SignalR");
+                options.Configuration = signalRRedisOptions;
+                options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NovaLive_SignalR");
             });
         }
 
         services.AddScoped<NovaLive.Application.Abstractions.Services.ILivestreamNotificationService, NovaLive.Api.Services.LivestreamNotificationService>();
+        services.AddScoped<NovaLive.Application.Abstractions.Services.IOrderNotificationService, NovaLive.Api.Services.OrderNotificationService>();
+        services.AddScoped<NovaLive.Application.Abstractions.Services.IPaymentNotificationService, NovaLive.Api.Services.PaymentNotificationService>();
+        services.AddSingleton<NovaLive.Api.Services.LivestreamReactionBatcher>();
+        services.AddSingleton<NovaLive.Api.Services.ILivestreamReactionBatcher>(sp => sp.GetRequiredService<NovaLive.Api.Services.LivestreamReactionBatcher>());
+        services.AddHostedService(sp => sp.GetRequiredService<NovaLive.Api.Services.LivestreamReactionBatcher>());
 
         // 6. Controllers & JSON Options
         services.AddControllers()

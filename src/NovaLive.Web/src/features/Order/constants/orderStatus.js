@@ -78,21 +78,29 @@ export const STATUS_TIMELINE_STEPS = [
   { status: 'delivered', label: 'Giao hàng thành công' }
 ]
 
-// Số ngày cho phép trả hàng sau khi đã giao
-export const RETURN_WINDOW_DAYS = 10
+// Số ngày cho phép trả hàng sau khi đã giao (SRS FR-RETURN-001: Trong vòng 7 ngày)
+export const RETURN_WINDOW_DAYS = 7
 
-export const canCancelOrder = (status) => status === ORDER_STATUS.PENDING
+export const canCancelOrder = (status) => (status || '').toLowerCase() === ORDER_STATUS.PENDING
 
 export const isDeliveredWithinReturnWindow = (status, deliveredAt) => {
-  if (status !== ORDER_STATUS.DELIVERED) return false
-  if (!deliveredAt) return false
+  const normalized = (status || '').toLowerCase()
+  if (normalized !== ORDER_STATUS.DELIVERED) return false
+  if (!deliveredAt) return true
   const daysDiff = (Date.now() - new Date(deliveredAt).getTime()) / (1000 * 60 * 60 * 24)
   return daysDiff <= RETURN_WINDOW_DAYS
 }
 
+export const getRemainingReturnDays = (deliveredAt) => {
+  if (!deliveredAt) return RETURN_WINDOW_DAYS
+  const daysPassed = (Date.now() - new Date(deliveredAt).getTime()) / (1000 * 60 * 60 * 24)
+  return Math.max(0, Math.ceil(RETURN_WINDOW_DAYS - daysPassed))
+}
+
 export const getPaymentMethodLabel = (method) => {
-  const map = { cod: 'COD (Tiền mặt)', vnpay: 'VNPay', momo: 'MoMo', stripe: 'Stripe' }
-  return map[method] || method
+  const normalized = (method || '').toLowerCase()
+  const map = { cod: 'Thanh toán khi nhận hàng (COD)', vietqr: 'Chuyển khoản VietQR', momo: 'Ví điện tử MoMo' }
+  return map[normalized] || method
 }
 
 export const getPaymentStatusLabel = (status) => {

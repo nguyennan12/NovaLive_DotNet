@@ -1,53 +1,55 @@
 import { Box, Button, TextField } from '@mui/material'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 import SectionCard from '~/features/Inventory/components/shared/SectionCard'
-import { useCreateSession, useUpdateSession } from '../../hooks/useLiveSessions'
+import { useCreateSession, useScheduleSession } from '../../hooks/useLiveSessions'
 
-const DEFAULT_VALUES = { title: '', scheduledAt: '', description: '' }
+const DEFAULT_VALUES = { title: '', scheduledAt: '' }
 
-const CreateLiveForm = ({ editData, onCancelEdit }) => {
-  const isEditing = !!editData
+const toLocalDateTime = (date) => {
+  const offset = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm({
-    values: isEditing
-      ? {
-        title: editData.live_title,
-        scheduledAt: editData.live_scheduled_at ? editData.live_scheduled_at.slice(0, 16) : '',
-        description: editData.live_description || ''
-      }
-      : DEFAULT_VALUES
-  })
+const CreateLiveForm = () => {
+  const { control, handleSubmit, reset, formState: { errors } } = useForm({ defaultValues: DEFAULT_VALUES })
 
   const createSession = useCreateSession()
-  const updateSession = useUpdateSession()
+  const scheduleSession = useScheduleSession()
+  const navigate = useNavigate()
 
   const onSubmit = async (data) => {
-    const payload = { ...data, scheduledAt: new Date(data.scheduledAt).toISOString() }
-    if (isEditing) {
+    if (data.scheduledAt) {
+      const scheduledAt = new Date(data.scheduledAt)
+      if (Number.isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+        toast.error('Thời gian lên lịch phải ở tương lai.')
+        return
+      }
       await toast.promise(
-        updateSession.mutateAsync({ sessionId: editData._id, data: payload }),
-        { pending: 'Updating...', success: 'Live session updated successfully!', error: 'Update failed' }
+        scheduleSession.mutateAsync({ title: data.title, scheduledAt: scheduledAt.toISOString() }),
+        { pending: 'Đang lên lịch live...', success: 'Đã lên lịch phiên live.', error: 'Không thể lên lịch phiên live.' }
       )
-      onCancelEdit?.()
-    } else {
-      await toast.promise(
-        createSession.mutateAsync(payload),
-        { pending: 'Scheduling...', success: 'Live session scheduled successfully!', error: 'Scheduling failed' }
-      )
+      reset(DEFAULT_VALUES)
+      return
+    }
+
+    const session = await toast.promise(
+      createSession.mutateAsync({ title: data.title }),
+      { pending: 'Đang tạo phòng live...', success: 'Đã tạo phòng live.', error: 'Không thể tạo phòng live.' }
+    )
+    if (!session?.id) {
+      toast.error('API tạo live không trả về mã phiên.')
+      return
     }
     reset(DEFAULT_VALUES)
-  }
-
-  const handleCancel = () => {
-    onCancelEdit?.()
-    reset(DEFAULT_VALUES)
+    navigate(`/shop/live/${session.id}`)
   }
 
   return (
     <SectionCard
-      title={isEditing ? 'Edit Live Session' : 'Schedule New Live'}
-      subtitle='Fill in the details for your livestream'
+      title='Tạo phiên livestream'
+      subtitle='Bắt đầu ngay hoặc chọn thời gian để lên lịch phiên live.'
     >
       <Box
         component='form'
@@ -61,7 +63,7 @@ const CreateLiveForm = ({ editData, onCancelEdit }) => {
           render={({ field }) => (
             <TextField
               {...field}
-              label='Live session title *'
+              label='Tên phiên live *'
               fullWidth
               size='small'
               error={!!errors.title}
@@ -73,47 +75,26 @@ const CreateLiveForm = ({ editData, onCancelEdit }) => {
         <Controller
           name='scheduledAt'
           control={control}
-          rules={{ required: 'Start time is required' }}
           render={({ field }) => (
             <TextField
               {...field}
-              label='Start time *'
               type='datetime-local'
+              label='Lên lịch (để trống để bắt đầu ngay)'
               fullWidth
               size='small'
-              slotProps={{ inputLabel: { shrink: true } }}
-              error={!!errors.scheduledAt}
-              helperText={errors.scheduledAt?.message}
-            />
-          )}
-        />
-
-        <Controller
-          name='description'
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label='Description (optional)'
-              fullWidth
-              size='small'
-              multiline
-              rows={3}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: toLocalDateTime(new Date()) }}
+              helperText='Thời gian được tính theo múi giờ thiết bị.'
             />
           )}
         />
 
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', mt: 0.5 }}>
-          {isEditing && (
-            <Button variant='outlined' color='inherit' onClick={handleCancel} sx={{ borderRadius: '8px' }}>
-              Cancel
-            </Button>
-          )}
           <Button
             type='submit'
             variant='contained'
             disableElevation
-            disabled={createSession.isPending || updateSession.isPending}
+            disabled={createSession.isPending || scheduleSession.isPending}
             sx={{
               background: 'linear-gradient(90deg, #74a2ffff, #69aedc, #8acdde)',
               borderRadius: '8px',
@@ -122,7 +103,7 @@ const CreateLiveForm = ({ editData, onCancelEdit }) => {
               color: '#fff'
             }}
           >
-            {isEditing ? 'Save Changes' : 'Schedule Live'}
+            {scheduleSession.isPending ? 'Đang lên lịch…' : 'Tạo phiên live'}
           </Button>
         </Box>
       </Box>

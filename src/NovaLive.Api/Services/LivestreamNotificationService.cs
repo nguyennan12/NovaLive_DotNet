@@ -21,4 +21,19 @@ public sealed class LivestreamNotificationService(IHubContext<LivestreamHub> hub
     {
         await hubContext.Clients.Group($"live_{sessionId:N}").SendAsync("LiveEnded", new { sessionId, endedAt = DateTimeOffset.UtcNow }, ct);
     }
+
+    public async Task BroadcastViewerCountUpdatedAsync(Guid sessionId, int viewerCount, CancellationToken ct = default)
+    {
+        await hubContext.Clients.Group($"live_{sessionId:N}").SendAsync("ViewerCountUpdated", new ViewerCountUpdatedResponse(sessionId, viewerCount), ct);
+    }
+
+    public async Task BroadcastReceiveMessageAsync(Guid sessionId, LivestreamCommentResponse comment, CancellationToken ct = default)
+    {
+        await hubContext.Clients.Group($"live_{sessionId:N}").SendAsync("ReceiveMessage", comment, ct);
+    }
+
+    public async Task BroadcastReceiveReactionAsync(Guid sessionId, LivestreamReactionBatchResponse reactionBatch, CancellationToken ct = default)
+    {
+        await hubContext.Clients.Group($"live_{sessionId:N}").SendAsync("ReceiveReaction", reactionBatch, ct);
+    }
 }

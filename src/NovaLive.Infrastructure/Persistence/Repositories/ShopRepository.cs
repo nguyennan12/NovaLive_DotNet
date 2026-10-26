@@ -23,6 +23,28 @@ public sealed class ShopRepository(AppDbContext db) : IShopRepository
         db.Shops.AsNoTracking().SingleOrDefaultAsync(s => s.Id == shopId
             && s.Status == ShopStatus.Active && s.DeletedAt == null, ct);
 
+    public Task<Shop?> GetTrackedByIdAsync(Guid shopId, CancellationToken ct = default) =>
+        db.Shops.SingleOrDefaultAsync(s => s.Id == shopId && s.DeletedAt == null, ct);
+
+    public async Task<(List<Shop> Items, long TotalCount)> GetPagedAsync(ShopStatus? status, int page, int size, CancellationToken ct = default)
+    {
+        var query = db.Shops.AsNoTracking().Where(s => s.DeletedAt == null);
+        if (status.HasValue)
+        {
+            query = query.Where(s => s.Status == status.Value);
+        }
+
+        var total = await query.LongCountAsync(ct);
+        var items = await query
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenByDescending(s => s.Id)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
     public Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
         db.Shops.IgnoreQueryFilters().AnyAsync(s => s.OwnerId == ownerId, ct);
 
@@ -37,6 +59,10 @@ public sealed class ShopRepository(AppDbContext db) : IShopRepository
 
     public Task<ShopVerification?> GetLatestVerificationAsync(Guid shopId, CancellationToken ct = default) =>
         db.ShopVerifications.AsNoTracking().Where(v => v.ShopId == shopId)
+            .OrderByDescending(v => v.SubmittedAt).ThenByDescending(v => v.Id).FirstOrDefaultAsync(ct);
+
+    public Task<ShopVerification?> GetLatestTrackedVerificationAsync(Guid shopId, CancellationToken ct = default) =>
+        db.ShopVerifications.Where(v => v.ShopId == shopId)
             .OrderByDescending(v => v.SubmittedAt).ThenByDescending(v => v.Id).FirstOrDefaultAsync(ct);
 
     public Task<List<ShopAddress>> GetAddressesAsync(Guid shopId, CancellationToken ct = default) =>

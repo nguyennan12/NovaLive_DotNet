@@ -38,7 +38,8 @@ public sealed class EmailSenderTests
             body.RootElement.GetProperty("from").GetString().Should().Be("NovaLive Test <sender@example.com>");
             body.RootElement.GetProperty("to")[0].GetString().Should().Be("buyer@example.com");
             body.RootElement.GetProperty("subject").GetString().Should().Contain(description);
-            body.RootElement.GetProperty("html").GetString().Should().Contain(description).And.Contain(Code).And.Contain("5 phút");
+            WebUtility.HtmlDecode(body.RootElement.GetProperty("html").GetString())
+                .Should().Contain(description).And.Contain(Code).And.Contain("5 phút");
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"id\":\"test-message-id\"}") };
         });
         using var host = BuildHost("Production", "Resend", Key, "sender@example.com", logs, handler);

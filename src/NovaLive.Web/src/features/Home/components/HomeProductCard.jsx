@@ -9,10 +9,16 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
   const navigate = useNavigate()
   // Only apply flash sale pricing/badge when explicitly in flash sale context
   const isFlashSale = showFlashBadge && product.is_flash_sale
+  const thumb = product.spu_thumb || product.thumbnailUrl || ''
+  const name = product.spu_name || product.name || ''
+  const code = product.spu_code || product.id || product.slug || ''
+  const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
+  const sold = product.total_sold ?? product.soldCount ?? 0
+
   return (
     <Box
       ref={ref}
-      onClick={() => navigate(`/product/${product.spu_code}`)}
+      onClick={() => navigate(`/product/${code}`)}
       sx={{
         bgcolor: 'primary.main',
         borderRadius: '16px',
@@ -26,8 +32,8 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
       <Box sx={{ position: 'relative', height: { xs: 155, sm: 195, md: 215 }, overflow: 'hidden' }}>
         <Box
           component="img"
-          src={product.spu_thumb}
-          alt={product.spu_name}
+          src={thumb}
+          alt={name}
           sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
         {isFlashSale && (
@@ -50,7 +56,7 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
 
       <Box sx={{ p: { xs: 1.25, sm: 1.5 } }}>
         <Typography noWrap sx={{ fontSize: { xs: '0.82rem', sm: '0.9rem' }, fontWeight: 700, color: 'primary.contrastText', mb: 0.85 }}>
-          {product.spu_name}
+          {name}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
           <Typography sx={{
@@ -58,18 +64,18 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
             color: isFlashSale ? '#e8472a' : 'secondary.main',
             letterSpacing: '-0.02em', lineHeight: 1
           }}>
-            {formatVND(isFlashSale ? product.flash_price : product.spu_price)}
+            {formatVND(isFlashSale ? product.flash_price : price)}
           </Typography>
           {isFlashSale && (
             <Typography sx={{ fontSize: '0.7rem', color: '#aaa', textDecoration: 'line-through', lineHeight: 1 }}>
-              {formatVND(product.spu_price)}
+              {formatVND(price)}
             </Typography>
           )}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
           <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
           <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
-            {formatSold(product.total_sold)} lượt mua
+            {formatSold(sold)} lượt mua
           </Typography>
         </Box>
       </Box>
@@ -79,9 +85,15 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
 
 const LandscapeCard = ({ product }) => {
   const navigate = useNavigate()
+  const thumb = product.spu_thumb || product.thumbnailUrl || ''
+  const name = product.spu_name || product.name || ''
+  const code = product.spu_code || product.id || product.slug || ''
+  const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
+  const sold = product.total_sold ?? product.soldCount ?? 0
+
   return (
     <Box
-      onClick={() => navigate(`/product/${product.spu_code}`)}
+      onClick={() => navigate(`/product/${code}`)}
       sx={{
         bgcolor: 'primary.main',
         borderRadius: '14px',
@@ -96,8 +108,8 @@ const LandscapeCard = ({ product }) => {
       <Box sx={{ width: { xs: 90, sm: 120, md: 135 }, flexShrink: 0, overflow: 'hidden', minHeight: { xs: 90, sm: 115 } }}>
         <Box
           component="img"
-          src={product.spu_thumb}
-          alt={product.spu_name}
+          src={thumb}
+          alt={name}
           sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </Box>
@@ -106,16 +118,16 @@ const LandscapeCard = ({ product }) => {
           fontSize: { xs: '0.85rem', sm: '0.92rem' }, fontWeight: 700, color: 'primary.contrastText',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4
         }}>
-          {product.spu_name}
+          {name}
         </Typography>
         <Box sx={{ mt: 0.75 }}>
           <Typography sx={{ fontSize: { xs: '1rem', sm: '1.1rem' }, fontWeight: 800, color: 'secondary.main', letterSpacing: '-0.02em', lineHeight: 1 }}>
-            {formatVND(product.spu_price)}
+            {formatVND(price)}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.35 }}>
             <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
             <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
-              {formatSold(product.total_sold)} lượt mua
+              {formatSold(sold)} lượt mua
             </Typography>
           </Box>
         </Box>

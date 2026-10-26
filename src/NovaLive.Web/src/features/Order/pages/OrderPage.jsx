@@ -1,5 +1,5 @@
 import ShoppingCartCheckoutRoundedIcon from '@mui/icons-material/ShoppingCartCheckoutRounded'
-import { Box, Button, Container, Grid, Typography } from '@mui/material'
+import { Alert, Box, Button, Container, Grid, Typography } from '@mui/material'
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
@@ -12,7 +12,7 @@ import { formatVND } from '~/common/utils/formatters'
 import { useAddress } from '~/features/Address/hooks/useAddresss'
 import { useCart } from '~/features/Cart/hooks/useCart'
 import { useApplyDiscounts } from '~/features/Discount/hook/useApplyDiscounts'
-import CodOtpDialog from '../components/shared/CodOtpDialog'
+import PaymentQrModal from '../components/shared/PaymentQrModal'
 import OrderAddressSection from '../components/OrderPage/OrderAddressSection'
 import OrderPaymentMethod from '../components/OrderPage/OrderPaymentMethod'
 import OrderProductList from '../components/OrderPage/OrderProductList'
@@ -22,55 +22,99 @@ import OrderVoucherSection from '../components/OrderPage/OrderVoucherSection'
 import { useCheckout } from '../hooks/useCheckout'
 import { useOrderMutation } from '../hooks/useOrderMutation'
 
-
 function OrderPage() {
   const navigate = useNavigate()
   const user = useSelector(selectCurrentUser)
 
-  //state item và checkout
+  // State giỏ hàng & sản phẩm được chọn
   const { selectedItems, cartId } = useCart()
   const canCheckout = selectedItems.length > 0
+  const localSubtotal = useMemo(() => selectedItems.reduce(
+    (sum, item) => sum + (item.isFlashSale ? item.flashSalePrice : item.price) * item.quantity,
+    0
+  ), [selectedItems])
   const { appliedshopDiscounts, appliedProductVoucher, appliedFreeshipVoucher } = useApplyDiscounts()
-  const { control, handleSubmit } = useForm({ mode: 'onChange', defaultValues: { paymentMethod: 'cod' } })
+  const { control, handleSubmit } = useForm({
+    mode: 'onChange',
+    defaultValues: { paymentMethod: 'vietqr' }
+  })
 
-  //state địa chỉ của user
+  // State địa chỉ người nhận
   const { addressUser, allAddressUser } = useAddress(user)
   const [selectedAddressOverride, setSelectedAddressOverride] = useState(null)
   const selectedAddress = selectedAddressOverride ?? addressUser
+  const addressId = selectedAddress?.id || selectedAddress?._id || user?.default_address_id
 
-  // State cho COD OTP dialog
-  const [createdOrder, setCreatedOrder] = useState(null)
-  const [showCodOtp, setShowCodOtp] = useState(false)
+  // State cho Modal Thanh toán VietQR / MoMo Realtime
+  const [paymentQrData, setPaymentQrData] = useState(null)
+  const [showPaymentQr, setShowPaymentQr] = useState(false)
 
-  // Build payload cho useCheckout
-  const checkoutPayload = useMemo(() => {
-    if (!canCheckout || !cartId) return undefined
-    return {
-      cartId,
-      shopOrderIds: buildShopOrderIds(selectedItems, appliedshopDiscounts),
-      userAddressId: selectedAddress?._id,
-      productDiscountCode: appliedProductVoucher?.code ?? '',
-      shippingDiscountCode: appliedFreeshipVoucher?.code ?? ''
-    }
-  }, [cartId, selectedItems, appliedshopDiscounts, appliedProductVoucher, appliedFreeshipVoucher, canCheckout, selectedAddress?._id])
-  const checkoutData = useCheckout(checkoutPayload)
-
-  // Group selected items theo shop để hiển thị trong OrderProductList
+  // Group selected items theo shop
   const shopGroups = useMemo(() => {
     const map = {}
-    selectedItems.forEach(item => {
-      const key = String(item.shopId)
-      if (!map[key]) map[key] = { shopId: item.shopId, shopName: item.shopName, items: [] }
+    selectedItems.forEach((item) => {
+      const key = String(item.shopId || item.shop_id || 'default')
+      if (!map[key]) {
+        map[key] = {
+          shopId: item.shopId || item.shop_id,
+          shopName: item.shopName || item.shop_name || 'Shop',
+          items: []
+        }
+      }
       map[key].items.push(item)
     })
     return Object.values(map)
   }, [selectedItems])
 
-  // Mutation đặt hàng
-  const { orderMutation } = useOrderMutation({ setCreatedOrder, setShowCodOtp })
+  const cartItemIds = useMemo(() => {
+    return selectedItems.map((item) => item.cartItemId || item.id || item._id).filter(Boolean)
+  }, [selectedItems])
 
-  const hasAddress = !!(selectedAddress || user?.default_address_id)
-  const canSubmit = canCheckout && hasAddress && !orderMutation.isPending
+  // Build payload cho useCheckout preview
+  const checkoutPayload = useMemo(() => {
+    if (!canCheckout) return undefined
+    return {
+      cartItemIds,
+      shippingAddressId: addressId,
+      shopVouchers: (Array.isArray(appliedshopDiscounts) ? appliedshopDiscounts : Object.values(appliedshopDiscounts || {})).filter(Boolean).map((v) => ({ shopId: v.shopId, code: v.code })),
+      platformProductVoucherCode: appliedProductVoucher?.code || null,
+      platformFreeshipVoucherCode: appliedFreeshipVoucher?.code || null,
+      // Legacy compatibility
+      cartId,
+      shopOrderIds: buildShopOrderIds(selectedItems, appliedshopDiscounts),
+      userAddressId: addressId
+    }
+  }, [canCheckout, cartItemIds, addressId, appliedshopDiscounts, appliedProductVoucher, appliedFreeshipVoucher, cartId, selectedItems])
+
+  const checkoutData = useCheckout(checkoutPayload, localSubtotal)
+
+  // Mutation đặt hàng chính
+  const { orderMutation } = useOrderMutation({
+    onPaymentRequired: (data) => {
+      setPaymentQrData(data)
+      setShowPaymentQr(true)
+    },
+    onOrderSuccess: () => {
+      navigate('/orders')
+    }
+  })
+
+  const hasAddress = !!addressId
+  const canSubmit = canCheckout && hasAddress && checkoutData.isPreviewReady && !orderMutation.isPending
+  const shippingQuoteLabel = !hasAddress
+    ? 'Chọn địa chỉ để tính phí'
+    : checkoutData.isFetching
+      ? 'Đang tính phí...'
+      : checkoutData.isError
+        ? 'Không tính được phí'
+        : null
+  const totalLabel = !hasAddress
+    ? 'Chọn địa chỉ'
+    : checkoutData.isFetching
+      ? 'Đang tính...'
+      : checkoutData.isError
+        ? 'Không khả dụng'
+        : null
 
   const onSubmit = (formData) => {
     if (!hasAddress) {
@@ -82,26 +126,36 @@ function OrderPage() {
       return
     }
 
+    const rawMethod = (formData.paymentMethod || 'vietqr').toLowerCase()
+    const methodMapping = {
+      vietqr: 'VietQR',
+      momo: 'MoMo',
+      cod: 'COD'
+    }
+    const backendPaymentMethod = methodMapping[rawMethod] || 'COD'
+
+    const shippingProviders = shopGroups.map((g) => ({
+      shopId: g.shopId,
+      provider: 'GHN',
+      serviceCode: '2'
+    }))
+
     orderMutation.mutate({
+      cartItemIds,
+      shippingAddressId: addressId,
+      shippingProviders,
+      shopVouchers: (Array.isArray(appliedshopDiscounts) ? appliedshopDiscounts : Object.values(appliedshopDiscounts || {})).filter(Boolean).map((v) => ({ shopId: v.shopId, code: v.code })),
+      platformProductVoucherCode: appliedProductVoucher?.code || null,
+      platformFreeshipVoucherCode: appliedFreeshipVoucher?.code || null,
+      paymentMethod: backendPaymentMethod,
+      note: formData.note || '',
+      // Backward compatibility fields
       cartId,
       client_totalCheckout: checkoutData.finalCheckout,
       shopOrderIds: buildShopOrderIds(selectedItems, appliedshopDiscounts),
-      userAddressId: selectedAddress?._id || user?.default_address_id,
-      productDiscountCode: appliedProductVoucher?.code ?? '',
-      shippingDiscountCode: appliedFreeshipVoucher?.code ?? '',
-      userPayment: formData.paymentMethod
+      userAddressId: addressId,
+      userPayment: rawMethod
     })
-  }
-
-  const handleCodOtpClose = () => {
-    setShowCodOtp(false)
-    toast.info('Đơn hàng đã tạo. Kiểm tra email để xác nhận OTP hoàn tất.')
-    navigate('/')
-  }
-
-  const handleCodOtpSuccess = () => {
-    setShowCodOtp(false)
-    navigate('/')
   }
 
   return (
@@ -109,7 +163,7 @@ function OrderPage() {
       <Container maxWidth="lg" sx={{ pt: { xs: 2.5, md: 4 }, pb: { xs: '100px', md: '80px' } }}>
         <Grid container columns={10} spacing={{ xs: 2, md: 3 }}>
 
-          {/*  Left column: Sản phẩm, Địa chỉ, Vận chuyển, Voucher */}
+          {/* Left column: Sản phẩm, Địa chỉ, Vận chuyển, Voucher */}
           <Grid size={{ xs: 10, md: 7 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
@@ -128,14 +182,15 @@ function OrderPage() {
                 amountFreeShip={checkoutData?.amoutGlobalDiscountShipping}
                 feeShip={checkoutData.totalFeeShip}
                 hasFreeShip={checkoutData.hasFreeShip}
+                quoteLabel={shippingQuoteLabel}
               />
 
-              {/* Voucher toàn sàn (reuse GlobalDiscountSection) */}
+              {/* Voucher toàn sàn */}
               <OrderVoucherSection subtotal={checkoutData.totalRawPrice} />
             </Box>
           </Grid>
 
-          {/* Right column: Summary + Thanh toán (sticky)  */}
+          {/* Right column: Summary + Thanh toán (sticky) */}
           <Grid size={{ xs: 10, md: 3 }}>
             <Box sx={{
               display: 'flex', flexDirection: 'column', gap: 2,
@@ -153,11 +208,18 @@ function OrderPage() {
                 totalFeeShip={checkoutData.totalFeeShip}
                 totalDiscount={checkoutData.totalDiscount}
                 finalCheckout={checkoutData.finalCheckout}
+                totalLabel={totalLabel}
                 hasFreeShip={checkoutData.hasFreeShip}
                 itemCount={selectedItems.length}
               />
 
-              {/* Nút đặt hàng — chỉ hiện trên desktop; mobile dùng sticky bottom */}
+              {checkoutData.isError && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                  {checkoutData.error?.response?.data?.message || 'Không thể tính tổng đơn hàng. Vui lòng thử lại.'}
+                </Alert>
+              )}
+
+              {/* Nút đặt hàng trên desktop */}
               <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                 <Button
                   variant="contained"
@@ -183,9 +245,9 @@ function OrderPage() {
             </Box>
           </Grid>
         </Grid>
-
       </Container>
 
+      {/* Mobile Sticky Bottom Bar */}
       {createPortal(
         <Box sx={{
           display: { xs: 'flex', md: 'none' },
@@ -202,7 +264,7 @@ function OrderPage() {
               Tổng thanh toán
             </Typography>
             <Typography sx={{ fontSize: '1.12rem', fontWeight: 800, color: 'secondary.main', lineHeight: 1.2 }}>
-              {formatVND(checkoutData.totalPrice)}
+              {totalLabel || formatVND(checkoutData.finalCheckout || checkoutData.totalPrice || 0)}
             </Typography>
           </Box>
 
@@ -227,13 +289,17 @@ function OrderPage() {
         document.body
       )}
 
-      {/* Dialog xác nhận OTP cho COD */}
-      <CodOtpDialog
-        open={showCodOtp}
-        onClose={handleCodOtpClose}
-        orderId={createdOrder?._id}
-        email={user?.user_email}
-        onSuccess={handleCodOtpSuccess}
+      {/* Modal Quét mã VietQR / MoMo Realtime SignalR */}
+      <PaymentQrModal
+        open={showPaymentQr}
+        onClose={() => {
+          setShowPaymentQr(false)
+          navigate('/orders')
+        }}
+        paymentData={paymentQrData}
+        onPaymentSuccess={() => {
+          setShowPaymentQr(false)
+        }}
       />
     </>
   )

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { getCartAPI } from '~/common/apis/services/cartService'
 import { deselectAll, toggleSelect } from '~/store/cart/cartSlice'
+import { selectCurrentUser } from '~/store/user/userSlice'
 import { useCartCalc } from './useCartCalc'
 import { useCartMutations } from './useCartMutations'
 
@@ -9,10 +10,12 @@ export const CART_QUERY_KEY = ['cart']
 
 export const useCart = () => {
   const dispatch = useDispatch()
+  const currentUser = useSelector(selectCurrentUser)
 
   const { data, isLoading } = useQuery({
     queryKey: CART_QUERY_KEY,
     queryFn: getCartAPI,
+    enabled: !!currentUser,
     staleTime: 1000 * 30
   })
 
@@ -32,7 +35,7 @@ export const useCart = () => {
     cartId,
     cartCount,
     // cart selection
-    toggleSelect: (skuId) => dispatch(toggleSelect(skuId)),
+    toggleSelect: (cartItemId) => dispatch(toggleSelect(cartItemId)),
     deselectAll: () => dispatch(deselectAll())
   }
 }

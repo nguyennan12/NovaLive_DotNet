@@ -2,6 +2,8 @@ namespace NovaLive.Application.Abstractions.Services;
 
 public interface IIdempotencyService
 {
+    Task<bool> TryAcquireAsync(string key, TimeSpan ttl, CancellationToken cancellationToken = default);
+    Task RemoveAsync(string key, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
     Task CreateAsync(string key, string requestName, TimeSpan? ttl = null, CancellationToken cancellationToken = default);

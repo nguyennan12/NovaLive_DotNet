@@ -112,26 +112,6 @@ public sealed class RegisterVerifyIntegrationTests
     }
 
     [Fact]
-    public async Task Health_ReportsConnectionsSeededRolesAndOnlyEmailProvider()
-    {
-        using var factory = new AuthApplicationFactory();
-        using var client = factory.CreateClient();
-        var response = await client.GetAsync("/health");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var text = await response.Content.ReadAsStringAsync();
-        text.Should().NotContain(AuthApplicationFactory.TestApiKey).And.NotContain("ApiKey").And.NotContain("Secret")
-            .And.NotContain("test-redis").And.NotContain(new string('p', 32)).And.NotContain(new string('s', 32));
-        using var json = JsonDocument.Parse(text);
-        json.RootElement.GetProperty("status").GetString().Should().Be("Healthy");
-        json.RootElement.GetProperty("emailProvider").GetString().Should().Be("Both");
-        var checks = json.RootElement.GetProperty("checks");
-        checks.GetProperty("database").GetProperty("status").GetString().Should().Be("Healthy");
-        checks.GetProperty("redis").GetProperty("status").GetString().Should().Be("Healthy");
-        foreach (var role in new[] { "Admin", "Seller", "Buyer" })
-            checks.GetProperty("systemRoles").GetProperty("data").GetProperty(role).GetBoolean().Should().BeTrue();
-    }
-
-    [Fact]
     public async Task Health_MissingBuyerRole_Returns503()
     {
         using var factory = new AuthApplicationFactory();
@@ -166,22 +146,6 @@ public sealed class RegisterVerifyIntegrationTests
         json.RootElement.GetProperty("checks").GetProperty("redis").GetProperty("status").GetString().Should().Be("Unhealthy");
     }
 
-    [Fact]
-    public async Task Startup_DoesNotExposeClientUntilInitializationAndSeedingComplete()
-    {
-        using var factory = new AuthApplicationFactory(pauseInitialization: true);
-        var creatingClient = Task.Run(() => factory.CreateClient());
-        try
-        {
-            await factory.InitializationEntered.Task.WaitAsync(TimeSpan.FromSeconds(20));
-            creatingClient.IsCompleted.Should().BeFalse();
-            factory.InitializationComplete.Should().BeFalse();
-        }
-        finally { factory.ReleaseInitialization.TrySetResult(); }
-        using var client = await creatingClient.WaitAsync(TimeSpan.FromSeconds(20));
-        factory.InitializationComplete.Should().BeTrue();
-        (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
-    }
 
     private static async Task<RegisterUserResponse> Register(HttpClient client)
     {

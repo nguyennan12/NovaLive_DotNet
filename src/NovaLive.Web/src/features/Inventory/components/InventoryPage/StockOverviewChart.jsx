@@ -1,8 +1,7 @@
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
-import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, Tooltip as RTooltip, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { getChartArtInventoryAPI } from '~/common/apis/services/inventoryService'
+import { useStockOverviewChart } from '../../hooks/useInventory'
 import SectionCard from '../shared/SectionCard'
 
 const PERIODS = ['today', 'week', 'month']
@@ -49,11 +48,7 @@ const StatPill = ({ label, value, color }) => (
 
 const StockOverviewChart = () => {
   const [period, setPeriod] = useState('today')
-
-  const { data = [] } = useQuery({
-    queryKey: ['chart_inventory', period],
-    queryFn: () => getChartArtInventoryAPI(period)
-  })
+  const { data = [] } = useStockOverviewChart(period)
   const totals = useMemo(() => {
     const totalIn = data.reduce((s, d) => s + d.in, 0)
     const totalOut = data.reduce((s, d) => s + d.out, 0)

@@ -81,7 +81,7 @@ public sealed class PaymentsController(
 
         if (string.IsNullOrWhiteSpace(signature))
         {
-            signature = request?.Signature;
+            signature = request.Signature;
         }
 
         string rawBody = string.Empty;
@@ -93,14 +93,14 @@ public sealed class PaymentsController(
             Request.Body.Position = 0;
         }
 
-        if (string.IsNullOrWhiteSpace(rawBody) && request is not null)
+        if (string.IsNullOrWhiteSpace(rawBody))
         {
             rawBody = JsonSerializer.Serialize(request, JsonOptions);
         }
 
         logger.LogInformation(
             "Tiếp nhận VietQR Webhook: TransId={TransId}, Amount={Amount}, Content={Content}",
-            request?.TransactionId, request?.Amount, request?.Content);
+            request.TransactionId, request.Amount, request.Content);
 
         var result = await Sender.Send(new HandleVietQrWebhookCommand(request, rawBody, signature), ct);
 

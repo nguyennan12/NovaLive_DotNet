@@ -1,13 +1,15 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using NovaLive.Application.Abstractions.Services;
 using StackExchange.Redis;
 
 namespace NovaLive.Infrastructure.Services;
 
-public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheService
+public sealed class RedisCacheService(IConnectionMultiplexer redis, ILogger<RedisCacheService>? logger = null) : ICacheService
 {
     private readonly IDatabase _database = redis.GetDatabase();
     private readonly IConnectionMultiplexer _redis = redis;
+    private readonly ILogger<RedisCacheService>? _logger = logger;
 
     public async Task<long> IncrementAsync(string key, TimeSpan ttl, CancellationToken cancellationToken = default)
     {
@@ -15,22 +17,79 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheServ
         return (long)await _database.ScriptEvaluateAsync(script, [key], [(long)ttl.TotalMilliseconds]).WaitAsync(cancellationToken);
     }
 
-    public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
-        _database.KeyExistsAsync(key).WaitAsync(cancellationToken);
+    public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!_redis.IsConnected) return false;
+            return await _database.KeyExistsAsync(key).WaitAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis ExistsAsync failed for key {Key}.", key);
+            return false;
+        }
+    }
 
-    public Task<TimeSpan?> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default) =>
-        _database.KeyTimeToLiveAsync(key).WaitAsync(cancellationToken);
+    public async Task<TimeSpan?> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!_redis.IsConnected) return null;
+            return await _database.KeyTimeToLiveAsync(key).WaitAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis GetTimeToLiveAsync failed for key {Key}.", key);
+            return null;
+        }
+    }
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var value = await _database.StringGetAsync(key);
-        return value.HasValue ? JsonSerializer.Deserialize<T>((string)value!) : default;
+        try
+        {
+            if (!_redis.IsConnected)
+            {
+                _logger?.LogWarning("Redis is not connected. Skipping cache lookup for key {Key}.", key);
+                return default;
+            }
+            var value = await _database.StringGetAsync(key);
+            return value.HasValue ? JsonSerializer.Deserialize<T>((string)value!) : default;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis GET failed for key {Key}. Falling back to default.", key);
+            return default;
+        }
     }
 
-    public Task SetAsync<T>(string key, T value, TimeSpan? ttl = null, CancellationToken cancellationToken = default)
+    public async Task SetAsync<T>(string key, T value, TimeSpan? ttl = null, CancellationToken cancellationToken = default)
     {
+        try
+        {
+            if (!_redis.IsConnected)
+            {
+                _logger?.LogWarning("Redis is not connected. Skipping cache write for key {Key}.", key);
+                return;
+            }
+            var payload = JsonSerializer.Serialize(value);
+            await _database.StringSetAsync(key, payload, expiry: ttl.HasValue ? (Expiration)ttl.Value : default);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis SET failed for key {Key}.", key);
+        }
+    }
+
+    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!_redis.IsConnected)
+            throw new InvalidOperationException("Redis is unavailable for an idempotency claim.");
+
         var payload = JsonSerializer.Serialize(value);
-        return _database.StringSetAsync(key, payload, expiry: ttl.HasValue ? (Expiration)ttl.Value : default);
+        return await _database.StringSetAsync(key, payload, ttl, When.NotExists).WaitAsync(cancellationToken);
     }
 
     public async Task<T> GetOrSetAsync<T>(
@@ -54,24 +113,42 @@ public sealed class RedisCacheService(IConnectionMultiplexer redis) : ICacheServ
         return value;
     }
 
-    public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        return _database.KeyDeleteAsync(key);
+        try
+        {
+            if (_redis.IsConnected)
+            {
+                await _database.KeyDeleteAsync(key);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis DELETE failed for key {Key}.", key);
+        }
     }
 
     public async Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
     {
-        var endpoints = _redis.GetEndPoints();
-        foreach (var endpoint in endpoints)
+        try
         {
-            var server = _redis.GetServer(endpoint);
-            if (server.IsReplica) continue;
-            cancellationToken.ThrowIfCancellationRequested();
-            var keys = server.Keys(database: _database.Database, pattern: $"{prefixKey}*").ToArray();
-            if (keys.Length > 0)
+            if (!_redis.IsConnected) return;
+            var endpoints = _redis.GetEndPoints();
+            foreach (var endpoint in endpoints)
             {
-                await _database.KeyDeleteAsync(keys).WaitAsync(cancellationToken);
+                var server = _redis.GetServer(endpoint);
+                if (server.IsReplica) continue;
+                cancellationToken.ThrowIfCancellationRequested();
+                var keys = server.Keys(database: _database.Database, pattern: $"{prefixKey}*").ToArray();
+                if (keys.Length > 0)
+                {
+                    await _database.KeyDeleteAsync(keys).WaitAsync(cancellationToken);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Redis RemoveByPrefixAsync failed for pattern {Prefix}.", prefixKey);
         }
     }
 }

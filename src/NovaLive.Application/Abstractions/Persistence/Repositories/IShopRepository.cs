@@ -10,6 +10,8 @@ public interface IShopRepository
     Task<List<Shop>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Shop?> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default);
     Task<Shop?> GetActiveByIdAsync(Guid shopId, CancellationToken ct = default);
+    Task<Shop?> GetTrackedByIdAsync(Guid shopId, CancellationToken ct = default);
+    Task<(List<Shop> Items, long TotalCount)> GetPagedAsync(ShopStatus? status, int page, int size, CancellationToken ct = default);
     // Uniqueness checks include soft-deleted shops, matching the database indexes.
     Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default);
     Task<bool> ExistsBySlugAsync(string slug, CancellationToken ct = default);
@@ -17,6 +19,7 @@ public interface IShopRepository
     Task AddVerificationAsync(ShopVerification verification, CancellationToken ct = default);
     Task AddRegistrationOutboxAsync(OutboxMessage message, CancellationToken ct = default);
     Task<ShopVerification?> GetLatestVerificationAsync(Guid shopId, CancellationToken ct = default);
+    Task<ShopVerification?> GetLatestTrackedVerificationAsync(Guid shopId, CancellationToken ct = default);
 
     // Mutation queries return tracked entities; display queries are read-only.
     Task<List<ShopAddress>> GetAddressesAsync(Guid shopId, CancellationToken ct = default);

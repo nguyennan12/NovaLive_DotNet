@@ -1,5 +1,6 @@
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
-import { Box, CircularProgress, Container, Tab, Tabs, Typography } from '@mui/material'
+import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRounded'
+import { Box, Button, CircularProgress, Container, Tab, Tabs, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInfiniteScroll } from '~/common/hooks/useScroll'
@@ -35,7 +36,7 @@ function OrderHistoryPage() {
 
   const { orders, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteOrders(status)
   const lastOrderRef = useInfiniteScroll({ isFetchingNextPage, fetchNextPage, hasNextPage })
-  const { cancelMutation, retryVNPayMutation, invalidateOrders } = useOrderMutation()
+  const { cancelMutation, invalidateOrders } = useOrderMutation()
 
   const handleTabChange = (_, newValue) => {
     setTabIdx(newValue)
@@ -46,6 +47,29 @@ function OrderHistoryPage() {
 
   return (
     <Container maxWidth="md" sx={{ pt: { xs: 2, sm: 3 }, pb: 6 }}>
+      {/* Header bar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.contrastText' }}>
+          Đơn Hàng Của Tôi
+        </Typography>
+        <Button
+          size="small"
+          startIcon={<AssignmentReturnRoundedIcon sx={{ fontSize: '16px !important' }} />}
+          onClick={() => navigate('/user/returns')}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            color: 'secondary.main',
+            border: '1px solid rgba(52,133,247,0.3)',
+            borderRadius: '8px',
+            bgcolor: 'rgba(52,133,247,0.04)',
+            '&:hover': { bgcolor: 'rgba(52,133,247,0.1)' }
+          }}
+        >
+          Đơn Trả Hàng / Khiếu Nại
+        </Button>
+      </Box>
 
       {/* Tabs */}
       <Box sx={{
@@ -102,7 +126,6 @@ function OrderHistoryPage() {
                 order={order}
                 onViewDetail={setDetailOrder}
                 cancelMutation={cancelMutation}
-                retryVNPayMutation={retryVNPayMutation}
                 onOrderUpdated={invalidateOrders}
                 ref={isLast ? lastOrderRef : null}
               />

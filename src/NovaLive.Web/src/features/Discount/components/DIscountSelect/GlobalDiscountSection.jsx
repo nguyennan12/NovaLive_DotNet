@@ -10,6 +10,7 @@ import { formatVND } from '~/common/utils/formatters'
 import { glassSx, gradientText } from '~/theme'
 import { useDiscounts } from '../../hook/useDiscounts'
 import { DiscountCardMini } from './DiscountCardMini'
+import { useCart } from '~/features/Cart/hooks/useCart'
 
 function AppliedBadge({ voucher, onClear, color = 'secondary.main', bgColor = 'rgba(52,133,247,0.06)', borderColor = 'rgba(52,133,247,0.18)' }) {
   return (
@@ -46,6 +47,8 @@ function GlobalDiscountSection({
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
   const [checkingId, setCheckingId] = useState(null)
+  const { selectedItems } = useCart()
+  const cartItemIds = selectedItems.map(item => item.cartItemId).filter(Boolean)
 
   const { productDiscounts, shippingDiscounts, isLoading } = useDiscounts({
     scope: 'global', status: 'active', search: code
@@ -68,7 +71,7 @@ function GlobalDiscountSection({
     setCheckingId(discount.id)
     try {
       await toast.promise(
-        checkAvailableAPI(discount.code, subtotal),
+        checkAvailableAPI({ code: discount.code, cartItemIds }),
         {
           pending: 'Đang kiểm tra voucher...',
           success: 'Áp dụng voucher thành công!',

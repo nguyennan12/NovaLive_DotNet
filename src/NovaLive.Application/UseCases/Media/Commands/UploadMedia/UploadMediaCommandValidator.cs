@@ -58,8 +58,19 @@ public class UploadMediaCommandValidator : AbstractValidator<UploadMediaCommand>
         When(x => !string.IsNullOrWhiteSpace(x.Bucket), () =>
         {
             RuleFor(x => x.Bucket!)
-                .Must(StorageBuckets.IsPublic)
-                .WithMessage($"Bucket không hợp lệ. Chỉ chấp nhận các bucket công khai: {string.Join(", ", StorageBuckets.Public)}.");
+                .Must((command, bucket) => StorageBuckets.IsPublic(bucket) ||
+                    (command.AllowPrivateKycBucket && string.Equals(bucket, StorageBuckets.KycDocs, StringComparison.OrdinalIgnoreCase)))
+                .WithMessage("Bucket không được phép cho request upload này.");
+        });
+
+        When(x => x.AllowPrivateKycBucket, () =>
+        {
+            RuleFor(x => x.Bucket)
+                .Equal(StorageBuckets.KycDocs)
+                .WithMessage("Tài liệu xác minh chỉ được tải lên bucket KYC.");
+            RuleFor(x => x.FileName)
+                .Must(fileName => !string.IsNullOrWhiteSpace(fileName) && ImageExtensions.Contains(Path.GetExtension(fileName)))
+                .WithMessage("Tài liệu xác minh chỉ chấp nhận file ảnh.");
         });
     }
 }

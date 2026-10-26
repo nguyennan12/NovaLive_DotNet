@@ -25,7 +25,7 @@ try
     // ---------- 3. Dependency Injection Modules ----------
     builder.Services.AddApiServices(builder.Configuration, builder.Environment);
     builder.Services.AddApplication();
-    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
     var app = builder.Build();
 
@@ -47,6 +47,7 @@ try
 catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "NovaLive.Api terminated unexpectedly during startup.");
+    throw;
 }
 finally
 {

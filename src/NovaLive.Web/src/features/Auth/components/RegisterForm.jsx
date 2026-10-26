@@ -9,7 +9,6 @@ import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -20,6 +19,8 @@ import { authCardSx, authInputSx, authButtonSx } from '../authStyles'
 import {
   EMAIL_RULE,
   EMAIL_RULE_MESSAGE,
+  PHONE_RULE,
+  PHONE_RULE_MESSAGE,
   FIELD_REQUIRED_MESSAGE,
   PASSWORD_RULE,
   PASSWORD_RULE_MESSAGE
@@ -27,34 +28,18 @@ import {
 
 function RegisterForm() {
   const { register, handleSubmit, getValues, formState: { errors } } = useForm()
-  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const navigate = useNavigate()
 
   const onSubmitRegister = (data) => {
-    let cleanPhone = (data.phone || '').trim().replace(/\s+/g, '')
-    if (cleanPhone.startsWith('+84')) {
-      // already has +84
-    } else if (cleanPhone.startsWith('0')) {
-      cleanPhone = '+84' + cleanPhone.slice(1)
-    } else {
-      cleanPhone = '+84' + cleanPhone
-    }
-
-    const payload = {
-      fullName: data.fullName.trim(),
-      phone: cleanPhone,
-      email: data.email.trim(),
-      password: data.password
-    }
-
-    toast.promise(registerUserAPI(payload),
+    const { fullName, phone, email, password } = data
+    toast.promise(registerUserAPI({ email, phone, fullName, password }),
       { pending: 'Registration is in progress...' }
     ).then((response) => {
-      const resData = response?.data || response?.metadata || response
-      const userId = resData?.userId || resData?.user?.id || resData?.user?._id
-      const userEmail = resData?.email || resData?.user?.email || data.email
-      navigate(`/verify?userId=${userId || ''}&registeredEmail=${encodeURIComponent(userEmail)}`)
+      const emailTarget = response?.email || response?.user?.user_email || email
+      const userId = response?.userId || response?.id || ''
+      navigate(`/verify?registeredEmail=${encodeURIComponent(emailTarget)}&userId=${encodeURIComponent(userId)}`)
     })
   }
 
@@ -65,10 +50,9 @@ function RegisterForm() {
           {/* Header */}
           <AuthHeader
             title="Create an Account"
-            subtitle="Enter your details to register"
+            subtitle="Sign up to start shopping & streaming on NovaLive"
           />
 
-          {/* Form Fields Stacked Vertically */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Full Name */}
             <Box>
@@ -77,71 +61,34 @@ function RegisterForm() {
                 fullWidth
                 size="small"
                 label="Full Name"
-                placeholder="Nguyễn Văn A"
+                placeholder="Nguyen Van A"
                 variant="outlined"
                 sx={authInputSx}
                 error={!!errors['fullName']}
                 {...register('fullName', {
-                  required: FIELD_REQUIRED_MESSAGE
+                  required: FIELD_REQUIRED_MESSAGE,
+                  minLength: { value: 2, message: 'Name must be at least 2 characters.' },
+                  maxLength: { value: 200, message: 'Name cannot exceed 200 characters.' }
                 })}
               />
               <FieldErrorAlert errors={errors} fieldName={'fullName'} />
             </Box>
 
-            {/* Phone Number with Country Code */}
+            {/* Phone Number */}
             <Box>
               <TextField
                 fullWidth
                 size="small"
                 label="Phone Number"
-                placeholder="912 345 678"
+                placeholder="0912345678"
                 variant="outlined"
                 sx={authInputSx}
                 error={!!errors['phone']}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Box sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.6,
-                          pr: 1,
-                          mr: 0.5,
-                          borderRight: '1px solid #cbd5e1',
-                          userSelect: 'none'
-                        }}>
-                          <Box component="span" sx={{ fontSize: '1.15rem', lineHeight: 1 }}>🇻🇳</Box>
-                          <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}>+84</Typography>
-                        </Box>
-                      </InputAdornment>
-                    )
-                  }
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.6,
-                        pr: 1,
-                        mr: 0.5,
-                        borderRight: '1px solid #cbd5e1',
-                        userSelect: 'none'
-                      }}>
-                        <Box component="span" sx={{ fontSize: '1.15rem', lineHeight: 1 }}>🇻🇳</Box>
-                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}>+84</Typography>
-                      </Box>
-                    </InputAdornment>
-                  )
-                }}
                 {...register('phone', {
                   required: FIELD_REQUIRED_MESSAGE,
-                  validate: (value) => {
-                    const clean = (value || '').trim().replace(/\s+/g, '')
-                    const isValid = /^(0|\+84)?[35789][0-9]{8}$/.test(clean)
-                    return isValid || 'Phone number must be valid (e.g. 0912345678 or 912345678)'
+                  pattern: {
+                    value: PHONE_RULE,
+                    message: PHONE_RULE_MESSAGE
                   }
                 })}
               />
@@ -155,7 +102,7 @@ function RegisterForm() {
                 size="small"
                 label="Email"
                 placeholder="example@gmail.com"
-                type="email"
+                type="text"
                 variant="outlined"
                 sx={authInputSx}
                 error={!!errors['email']}
@@ -198,21 +145,6 @@ function RegisterForm() {
                     )
                   }
                 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setShowPassword(prev => !prev)}
-                        edge="end"
-                        tabIndex={-1}
-                        sx={{ color: '#64748b' }}
-                      >
-                        {showPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
                 {...register('password', {
                   required: FIELD_REQUIRED_MESSAGE,
                   pattern: {
@@ -224,7 +156,7 @@ function RegisterForm() {
               <FieldErrorAlert errors={errors} fieldName={'password'} />
             </Box>
 
-            {/* Confirm Password */}
+            {/* Password Confirmation */}
             <Box>
               <TextField
                 fullWidth
@@ -252,22 +184,8 @@ function RegisterForm() {
                     )
                   }
                 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setShowConfirmPassword(prev => !prev)}
-                        edge="end"
-                        tabIndex={-1}
-                        sx={{ color: '#64748b' }}
-                      >
-                        {showConfirmPassword ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
                 {...register('password_confirmation', {
+                  required: FIELD_REQUIRED_MESSAGE,
                   validate: (value) => {
                     if (value === getValues('password')) return true
                     return 'Password Confirmation does not match!'
@@ -287,7 +205,7 @@ function RegisterForm() {
               fullWidth
               sx={authButtonSx}
             >
-              Register
+              Create Account
             </Button>
           </Box>
 

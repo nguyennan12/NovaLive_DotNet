@@ -2,6 +2,8 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using NovaLive.Api.Controllers.Shipping;
 using NovaLive.Application.UseCases.Shipping.Commands.Webhook;
@@ -11,6 +13,8 @@ using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Xunit;
+using System.Text;
+using System.Text.Json;
 
 namespace NovaLive.Api.Tests.Shipping;
 
@@ -18,11 +22,17 @@ public class ShippingControllerTests
 {
     private readonly Mock<ISender> _senderMock = new();
     private readonly Mock<IGhnChecksumValidator> _validatorMock = new();
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock = new();
     private readonly ShippingController _controller;
 
     public ShippingControllerTests()
     {
-        _controller = new ShippingController(_senderMock.Object, _validatorMock.Object)
+        _controller = new ShippingController(
+            _senderMock.Object,
+            _validatorMock.Object,
+            _httpClientFactoryMock.Object,
+            Options.Create(new GhnOptions()),
+            NullLogger<ShippingController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -36,12 +46,13 @@ public class ShippingControllerTests
     {
         // Arrange
         var request = new GhnWebhookRequest("GHN123", "delivering");
+        _controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request)));
         _validatorMock
             .Setup(v => v.ValidateWebhook(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns(false);
 
         // Act
-        var result = await _controller.GhnWebhook(request, CancellationToken.None);
+        var result = await _controller.GhnWebhook(CancellationToken.None);
 
         // Assert
         result.Should().BeOfType<UnauthorizedObjectResult>();
@@ -52,6 +63,7 @@ public class ShippingControllerTests
     {
         // Arrange
         var request = new GhnWebhookRequest("GHN123", "delivered");
+        _controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request)));
         _validatorMock
             .Setup(v => v.ValidateWebhook(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns(true);
@@ -61,12 +73,13 @@ public class ShippingControllerTests
             .ReturnsAsync(Result.Success());
 
         // Act
-        var result = await _controller.GhnWebhook(request, CancellationToken.None);
+        var result = await _controller.GhnWebhook(CancellationToken.None);
 
         // Assert
         var okResult = result.Should().BeOfType<ObjectResult>().Subject;
         okResult.StatusCode.Should().Be(200);
-        _senderMock.Verify(s => s.Send(It.Is<HandleShippingWebhookCommand>(c => c.Request.OrderCode == "GHN123"), It.IsAny<CancellationToken>()), Times.Once);
+        _senderMock.Verify(s => s.Send(It.Is<HandleShippingWebhookCommand>(c => c.TrackingCode == "GHN123"
+            && c.Provider == ShippingProvider.GHN && c.Status == ShippingStatus.Delivered), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

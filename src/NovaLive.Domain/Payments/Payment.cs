@@ -32,6 +32,10 @@ public sealed class Payment : AuditableEntity
 
     public DateTimeOffset? ExpiredAt { get; private set; }
 
+    public bool IsDueForExpiry(DateTimeOffset now, TimeSpan paymentTimeout) =>
+        Status == PaymentStatus.Pending && Method is PaymentMethod.MoMo or PaymentMethod.VietQR
+        && (ExpiredAt is { } expiry ? expiry <= now : CreatedAt <= now - paymentTimeout);
+
     public void ExpirePending(DateTimeOffset now)
     {
         if (Status != PaymentStatus.Pending) return;
@@ -56,6 +60,21 @@ public sealed class Payment : AuditableEntity
         {
             GatewayResponse = gatewayResponse;
         }
+        UpdatedAt = paidAt;
+        return Result.Success();
+    }
+
+    public Result MarkCodSuccess(DateTimeOffset paidAt)
+    {
+        if (Method != PaymentMethod.COD)
+            return Result.Failure(Error.Conflict("Payment.NotCod", "Chỉ thanh toán COD mới được đối soát qua vận chuyển."));
+        if (Status == PaymentStatus.Success) return Result.Success();
+        if (Status is PaymentStatus.Expired or PaymentStatus.Failed or PaymentStatus.Refunded)
+            return Result.Failure(Error.Conflict("Payment.TerminalState",
+                $"Không thể đối soát COD khi thanh toán đang ở trạng thái {Status}."));
+
+        Status = PaymentStatus.Success;
+        PaidAt = paidAt;
         UpdatedAt = paidAt;
         return Result.Success();
     }

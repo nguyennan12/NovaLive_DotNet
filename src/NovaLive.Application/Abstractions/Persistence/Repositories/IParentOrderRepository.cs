@@ -13,7 +13,7 @@ public interface IParentOrderRepository
     Task<ParentOrder?> GetByOrderCodeForUpdateAsync(string orderCode, CancellationToken ct);
 
     Task<(IReadOnlyList<ParentOrder> Items, long Total)> GetMinePagedAsync(Guid buyerId,
-        NovaLive.Domain.Common.ParentOrderPaymentStatus? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct);
+        string? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct);
 
     Task<bool> TryAddAsync(ParentOrder order, CancellationToken ct);
 }

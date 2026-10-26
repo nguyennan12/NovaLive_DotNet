@@ -68,13 +68,13 @@ const ProductDetailPage = () => {
       return
     }
     try {
-      await addToCartAsync({
+      const cartItem = await addToCartAsync({
         skuId: selectedSku._id,
         productId: selectedSku.sku_spuId,
         shopId: product.spu_shopId,
         quantity
       })
-      dispatch(setSelectedIds([String(selectedSku._id)]))
+      dispatch(setSelectedIds(cartItem?.cartItemId ? [String(cartItem.cartItemId)] : []))
       navigate('/order')
     } catch {
       // toast đã được xử lý trong addMutation

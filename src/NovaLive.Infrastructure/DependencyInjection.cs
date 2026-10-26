@@ -7,16 +7,20 @@ using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Application.Abstractions.Search;
 using NovaLive.Infrastructure.Auth;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Interceptors;
 using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Persistence.Seeding;
 using NovaLive.Infrastructure.Services;
+using NovaLive.Infrastructure.Search;
 using NovaLive.Infrastructure.System;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Infrastructure.Shipping.Ghn;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
+using System.Security.Authentication;
 using Minio;
 using NovaLive.Infrastructure.Storage;
 using NovaLive.Infrastructure.Livestreams.Agora;
@@ -24,17 +28,25 @@ using NovaLive.Infrastructure.Payments.Momo;
 using NovaLive.Infrastructure.Payments.VietQr;
 
 using StackExchange.Redis;
+using Npgsql;
 
 namespace NovaLive.Infrastructure;
 
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration) =>
+        AddInfrastructure(services, configuration, environment: null);
+
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment? environment)
     {
         services.AddAuthServices(configuration);
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+        connectionString = NormalizePostgresConnectionString(connectionString);
 
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<SoftDeleteInterceptor>();
@@ -61,8 +73,17 @@ public static class DependencyInjection
         services.AddScoped<IAfterCommitActions, AfterCommitActions>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IProductQueryService, PostgresProductQueryService>();
+        services.AddScoped<IProductSearchIndexer, PostgresProductSearchIndexer>();
 
         // Repositories
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IAdminDashboardReadRepository, AdminDashboardReadRepository>();
+        services.AddScoped<ISellerDashboardReadRepository, SellerDashboardReadRepository>();
+        services.AddScoped<IOrderReturnRepository, OrderReturnRepository>();
+        services.AddScoped<IShopWalletTransactionRepository, ShopWalletTransactionRepository>();
+        services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
+        services.AddScoped<IOrderReturnItemRepository, OrderReturnItemRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<IUserRepository, NovaLive.Infrastructure.Persistence.Repositories.UserRepository>();
         services.AddScoped<IPermissionRepository, NovaLive.Infrastructure.Persistence.Repositories.PermissionRepository>();
@@ -76,37 +97,72 @@ public static class DependencyInjection
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ICartRepository, NovaLive.Infrastructure.Persistence.Repositories.CartRepository>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IShopAddressRepository, ShopAddressRepository>();
+        services.AddScoped<IShippingOrderRepository, ShippingOrderRepository>();
+        services.AddScoped<IShippingProviderResolver, NovaLive.Infrastructure.Shipping.ShippingProviderResolver>();
         services.AddScoped<ICategoryRepository, NovaLive.Infrastructure.Persistence.Repositories.CategoryRepository>();
         services.AddScoped<IFlashSaleRepository, NovaLive.Infrastructure.Persistence.Repositories.FlashSaleRepository>();
         services.AddScoped<IShopWalletRepository, ShopWalletRepository>();
+        services.AddScoped<ISellerPayoutRepository, SellerPayoutRepository>();
         services.AddScoped<ILivestreamSessionRepository, LivestreamSessionRepository>();
         services.AddScoped<ILivestreamProductRepository, LivestreamProductRepository>();
+        services.AddScoped<ILivestreamCommentRepository, LivestreamCommentRepository>();
 
         // Migration & Seeding
         services.AddScoped<IDataSeeder, RbacDataSeeder>();
         services.AddScoped<IDataSeeder, CategoryDataSeeder>();
+        if (configuration.GetValue<bool>($"{DemoDataOptions.SectionName}:Enabled"))
+        {
+            services.AddOptions<DemoDataOptions>()
+                .Bind(configuration.GetSection(DemoDataOptions.SectionName))
+                .Validate(options => !string.IsNullOrWhiteSpace(options.SellerEmail),
+                    "DemoData:SellerEmail is required when demo data seeding is enabled.")
+                .ValidateOnStart();
+            services.AddScoped<IDataSeeder, DemoSellerShopDataSeeder>();
+            services.AddScoped<IDataSeeder, ProductDataSeeder>();
+        }
         services.AddScoped<IMigrationService, MigrationService>();
 
         // Caching & Idempotency
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (string.IsNullOrWhiteSpace(redisConnectionString))
             throw new InvalidOperationException("Redis:ConnectionString is required for authentication and revocation checks.");
-        if (!string.IsNullOrWhiteSpace(redisConnectionString))
-        {
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
-            services.AddSingleton<ICacheService, RedisCacheService>();
-            services.AddSingleton<IIdempotencyService, RedisIdempotencyService>();
-        }
+
+        var redisOptions = RedisConnectionStringParser.Parse(redisConnectionString);
+        redisOptions.AbortOnConnectFail = false;
+        redisOptions.ConnectRetry = 5;
+        redisOptions.ConnectTimeout = 5000;
+        redisOptions.SyncTimeout = 5000;
+        redisOptions.KeepAlive = 60;
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+        services.AddSingleton<ICacheService, RedisCacheService>();
+        services.AddSingleton<IIdempotencyService, RedisIdempotencyService>();
+        services.AddSingleton<ILivestreamCacheManager, LivestreamCacheManager>();
 
         // Outbox background worker
         services.AddHostedService<OutboxBackgroundWorker>();
+        services.AddOptions<NovaLive.Application.UseCases.Orders.OrderTimeoutOptions>()
+            .Bind(configuration.GetSection(NovaLive.Application.UseCases.Orders.OrderTimeoutOptions.SectionName))
+            .Validate(o => o.PollInterval > TimeSpan.Zero && o.PollInterval.TotalMilliseconds <= uint.MaxValue - 1,
+                "OrderTimeout:PollInterval must be a valid positive timer interval.")
+            .Validate(o => o.PaymentTimeout > TimeSpan.Zero, "OrderTimeout:PaymentTimeout must be positive.")
+            .Validate(o => o.BatchSize > 0, "OrderTimeout:BatchSize must be positive.")
+            .ValidateOnStart();
+        services.AddHostedService<TimeoutOrderRollbackWorker>();
+        services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging
         services.AddMassTransit(bus =>
         {
+            bus.AddConsumer<OrderPlacedConsumer>();
+            bus.AddConsumer<PaymentSuccessConsumer>();
+            bus.AddConsumer<InventorySyncConsumer, InventorySyncConsumerDefinition>();
+            bus.AddConsumer<ProductSearchVectorConsumer, ProductSearchVectorConsumerDefinition>();
+            bus.AddConsumer<CODReconciliationConsumer>();
             bus.UsingRabbitMq((context, cfg) =>
             {
                 var host = configuration.GetValue<string>("RabbitMQ:Host")
@@ -115,15 +171,39 @@ public static class DependencyInjection
                     ?? throw new InvalidOperationException("RabbitMQ:Username is required.");
                 var password = configuration.GetValue<string>("RabbitMQ:Password")
                     ?? throw new InvalidOperationException("RabbitMQ:Password is required.");
-                cfg.Host(host, "/", h =>
+                var port = configuration.GetValue<ushort?>("RabbitMQ:Port") ?? 5672;
+                var virtualHost = configuration.GetValue<string>("RabbitMQ:VirtualHost") ?? "/";
+                var useSsl = configuration.GetValue<bool>("RabbitMQ:UseSsl");
+                var virtualHostPath = virtualHost == "/"
+                    ? "/"
+                    : $"/{Uri.EscapeDataString(virtualHost.TrimStart('/'))}";
+                var brokerAddress = new UriBuilder("rabbitmq", host, port, virtualHostPath).Uri;
+
+                cfg.Host(brokerAddress, h =>
                 {
                     h.Username(username);
                     h.Password(password);
+                    if (useSsl)
+                    {
+                        h.UseSsl(ssl => ssl.Protocol = SslProtocols.Tls12);
+                    }
                 });
                 cfg.ConfigureEndpoints(context);
             });
         });
         services.AddScoped<IMessageBus, MassTransitMessageBus>();
+
+        services.AddHttpClient<ResendOrderConfirmationEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(10))
+            .RemoveAllLoggers()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddTransient<LoggingOrderConfirmationEmailSender>();
+        services.AddTransient<IOrderConfirmationEmailSender>(provider =>
+        {
+            var settings = provider.GetRequiredService<IOptions<EmailOptions>>().Value;
+            return settings.IsLogging
+                ? provider.GetRequiredService<LoggingOrderConfirmationEmailSender>()
+                : provider.GetRequiredService<ResendOrderConfirmationEmailSender>();
+        });
 
         // GHN Shipping Provider
         services.Configure<GhnOptions>(configuration.GetSection(GhnOptions.SectionName));
@@ -148,6 +228,15 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(MinioOptions.SectionName))
             .PostConfigure(options =>
             {
+                var publicUrl = configuration["MINIO_PUBLIC_URL"];
+                if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var publicUri)
+                    && publicUri.Scheme is "http" or "https")
+                {
+                    options.Endpoint = publicUri.Authority;
+                    options.UseSsl = publicUri.Scheme == Uri.UriSchemeHttps;
+                    options.CdnBaseUrl = publicUri.GetLeftPart(UriPartial.Authority);
+                }
+
                 var envEndpoint = configuration["MINIO_ENDPOINT"];
                 if (!string.IsNullOrWhiteSpace(envEndpoint))
                 {
@@ -187,6 +276,10 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<MinioFileStorageService>();
+        services.AddOptions<NovaLive.Application.UseCases.Reviews.ReviewMediaOptions>()
+            .Configure<IOptions<MinioOptions>>((options, minio) =>
+                options.BucketBaseUrl = string.IsNullOrWhiteSpace(minio.Value.CdnBaseUrl)
+                    ? null : minio.Value.CdnBaseUrl.TrimEnd('/') + "/" + StorageBuckets.Reviews + "/");
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<MinioFileStorageService>());
         services.AddHostedService<MinioBucketInitializer>();
 
@@ -273,6 +366,31 @@ public static class DependencyInjection
         services.AddSingleton<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
 
         return services;
+    }
+
+    private static string NormalizePostgresConnectionString(string connectionString)
+    {
+        if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri)
+            || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
+        {
+            return connectionString;
+        }
+
+        var credentials = Uri.UnescapeDataString(uri.UserInfo).Split(':', 2);
+        if (credentials.Length != 2)
+            throw new InvalidOperationException("The PostgreSQL URL must include a username and password.");
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.IsDefaultPort ? 5432 : uri.Port,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/')),
+            Username = credentials[0],
+            Password = credentials[1],
+            SslMode = SslMode.Require
+        };
+
+        return builder.ConnectionString;
     }
 }
 

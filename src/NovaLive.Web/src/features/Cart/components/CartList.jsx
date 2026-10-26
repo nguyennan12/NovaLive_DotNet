@@ -6,7 +6,7 @@ import CartShopGroup from './CartShopGroup'
 
 function CartList() {
   const {
-    allItems, selectedIds, shopGroups,
+    allItems = [], selectedIds, shopGroups,
     removeSelectedItems
   } = useCart()
 

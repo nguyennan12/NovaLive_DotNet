@@ -48,8 +48,9 @@ export const useLiveHost = ({ liveId, userId }) => {
 
     try {
       // Lấy Token từ Server
-      const { token } = await startLiveAPI(liveId)
-      const channelName = liveId.toString()
+      if (!AGORA_APP_ID) throw new Error('VITE_AGORA_APP_ID chưa được cấu hình trên frontend.')
+      const { token, channelName: issuedChannelName } = await startLiveAPI(liveId)
+      const channelName = issuedChannelName || liveId.toString()
 
       // Khởi tạo Agora Client
       const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' })

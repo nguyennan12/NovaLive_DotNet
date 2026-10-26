@@ -57,23 +57,41 @@ public sealed class SubOrder : AuditableEntity
 
     public DateTimeOffset? CancelledAt { get; private set; }
 
-    public void MarkAsShipping(DateTimeOffset? shippedAt = null)
+    public Result MarkAsShipping(DateTimeOffset? shippedAt = null)
     {
-        if (Status == SubOrderStatus.Confirmed || Status == SubOrderStatus.Processing)
-        {
-            Status = SubOrderStatus.Shipping;
-            ShippedAt = shippedAt ?? DateTimeOffset.UtcNow;
-        }
+        if (Status != SubOrderStatus.Confirmed)
+            return Result.Failure(OrderStateErrors.InvalidStatusTransition);
+
+        Status = SubOrderStatus.Shipping;
+        ShippedAt = shippedAt ?? DateTimeOffset.UtcNow;
+        UpdatedAt = ShippedAt.Value;
+        return Result.Success();
     }
 
-    public void MarkAsDelivered(DateTimeOffset? deliveredAt = null)
+    public bool MarkAsDelivered(DateTimeOffset deliveredAt)
     {
-        if (Status != SubOrderStatus.Delivered && Status != SubOrderStatus.Completed && Status != SubOrderStatus.Cancelled)
-        {
-            Status = SubOrderStatus.Delivered;
-            DeliveredAt = deliveredAt ?? DateTimeOffset.UtcNow;
-        }
+        if (Status != SubOrderStatus.Shipping) return false;
+        Status = SubOrderStatus.Delivered;
+        DeliveredAt = deliveredAt;
+        UpdatedAt = deliveredAt;
+        return true;
     }
+    public Result RequestReturn(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.Delivered || DeliveredAt is null) return ReturnStateErrors.NotDelivered;
+        if (now > DeliveredAt.Value.AddDays(7)) return ReturnStateErrors.Expired;
+        Status = SubOrderStatus.ReturnRequested;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
+    public Result MarkAsReturned(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.ReturnRequested) return ReturnStateErrors.InvalidStatus;
+        Status = SubOrderStatus.Returned; UpdatedAt = now;
+        return Result.Success();
+    }
+
     public Result Cancel(Guid actor, OrderRole role, string reason, DateTimeOffset now)
     {
         if (Status == SubOrderStatus.Cancelled) return Result.Failure(OrderStateErrors.AlreadyCancelled);
@@ -105,6 +123,17 @@ public sealed class SubOrder : AuditableEntity
             ConfirmedAt = now;
             UpdatedAt = now;
         }
+    }
+
+    public Result CancelForPaymentTimeout(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.PendingPayment) return OrderStateErrors.InvalidStatusTransition;
+        Status = SubOrderStatus.Cancelled;
+        CancelReason = "PaymentTimeout";
+        CancelledBy = null;
+        CancelledAt = now;
+        UpdatedAt = now;
+        return Result.Success();
     }
 }
 

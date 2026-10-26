@@ -7,7 +7,7 @@ import { CATEGORY_THEME, fmtValue, fmtValueSub } from '../../utils/normalizeDisc
 import { StatusBadge } from './StatusBadge'
 
 
-const usagePct = (used, limit) => Math.min(100, Math.round((used / limit) * 100))
+const usagePct = (used, limit) => Number(limit) > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0
 
 export const DiscountCard = ({ discount, onEdit, onDelete }) => {
   const { name, code, category = 'product', type, value, status, startDate, endDate, usageLimit, usedCount } = discount
@@ -143,7 +143,7 @@ export const DiscountCard = ({ discount, onEdit, onDelete }) => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.4 }}>
               <Typography sx={{ fontSize: '0.6rem', color: '#9ca3af' }}>Đã sử dụng</Typography>
               <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: '#4b5563' }}>
-                {usedCount}/{usageLimit}
+                {usageLimit ? `${usedCount}/${usageLimit}` : `${usedCount} lượt`}
               </Typography>
             </Box>
             <Box sx={{ height: 4, bgcolor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>

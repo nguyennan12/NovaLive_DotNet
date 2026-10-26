@@ -27,8 +27,8 @@ export const ProductLiveCard = ({ liveShop, product, onClick }) => {
         quantity: 1
       }
 
-      await addToCartAsync(payload)
-      dispatch(setSelectedIds([String(firstSku.skuId)]))
+      const cartItem = await addToCartAsync(payload)
+      dispatch(setSelectedIds(cartItem?.cartItemId ? [String(cartItem.cartItemId)] : []))
       navigate('/order')
     } catch {
       // toast đã được xử lý trong addMutation

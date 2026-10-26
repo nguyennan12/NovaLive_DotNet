@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { uploadAvatarAPI } from '~/common/apis/services/uploadService'
+import { updateMyProfileAPI } from '~/common/apis/services/userService'
 import { useUpload } from '~/common/hooks/useUpload'
 import { selectCurrentUser } from '~/store/user/userSlice'
 import { glassSx } from '~/theme'
@@ -41,7 +42,16 @@ const UserProfileHeader = ({ profile, isLoading }) => {
   const queryClient = useQueryClient()
 
   const uploadAvatar = useUpload({
-    api: uploadAvatarAPI,
+    api: async (file) => {
+      const uploaded = await uploadAvatarAPI(file)
+      await updateMyProfileAPI({
+        fullName: profile?.user_name || '',
+        phone: profile?.user_phone || null,
+        birthday: profile?.user_birthday || null,
+        gender: profile?.user_gender || null,
+        avatarUrl: uploaded?.url
+      })
+    },
     afterUpload: () => queryClient.refetchQueries({ queryKey: ['my_profile', profile?._id] }),
     pendingMsg: 'Đang tải lên ảnh đại diện...',
     successMsg: 'Uploaded avatar!',

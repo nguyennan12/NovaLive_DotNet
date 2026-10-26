@@ -105,6 +105,18 @@ public sealed class LivestreamSession : AuditableEntity
         return Result.Success();
     }
 
+    public Result CancelScheduled(DateTimeOffset now)
+    {
+        if (Status != LivestreamStatus.Scheduled)
+        {
+            return LivestreamDomainErrors.InvalidState;
+        }
+
+        Status = LivestreamStatus.Cancelled;
+        UpdatedAt = now;
+        return Result.Success();
+    }
+
     public void UpdateViewerStats(int currentViewers)
     {
         ViewerCount = Math.Max(0, currentViewers);
@@ -119,5 +131,19 @@ public sealed class LivestreamSession : AuditableEntity
     {
         PlaybackUrl = playbackUrl;
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public Result UpdateSchedule(string title, string? thumbnailUrl, DateTimeOffset scheduledAt, DateTimeOffset now)
+    {
+        if (Status != LivestreamStatus.Scheduled || scheduledAt <= now || string.IsNullOrWhiteSpace(title))
+        {
+            return LivestreamDomainErrors.InvalidState;
+        }
+
+        Title = title.Trim();
+        ThumbnailUrl = thumbnailUrl?.Trim();
+        ScheduledAt = scheduledAt;
+        UpdatedAt = now;
+        return Result.Success();
     }
 }

@@ -4,6 +4,24 @@ using NovaLive.Domain.Orders;
 namespace NovaLive.Infrastructure.Persistence.Repositories;
 public sealed class SubOrderRepository(AppDbContext db) : ISubOrderRepository
 {
+    public Task<List<Guid>> GetIdsByShopAsync(Guid shopId, CancellationToken ct) =>
+        db.SubOrders.AsNoTracking().Where(s => s.ShopId == shopId).Select(s => s.Id).ToListAsync(ct);
+    public Task<List<SubOrder>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)
+    {
+        var keys = ids.Distinct().ToArray();
+        return db.SubOrders.AsNoTracking().Where(s => keys.Contains(s.Id)).ToListAsync(ct);
+    }
+    public Task<SubOrder?> FindByIdAsync(Guid id, CancellationToken ct) =>
+        db.SubOrders.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id, ct);
+
+    public async Task<SubOrder?> GetForUpdateAsync(Guid id, CancellationToken ct)
+    {
+        if (db.Database.IsNpgsql())
+            return (await db.SubOrders.FromSqlInterpolated(
+                $"SELECT * FROM public.sub_orders WHERE id = {id} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
+        return await db.SubOrders.SingleOrDefaultAsync(s => s.Id == id, ct);
+    }
+
     public async Task AddAsync(SubOrder entity, CancellationToken ct) => await db.SubOrders.AddAsync(entity, ct);
     public Task<SubOrder?> FindForShopAsync(Guid id, Guid shopId, CancellationToken ct) =>
         db.SubOrders.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id && s.ShopId == shopId, ct);

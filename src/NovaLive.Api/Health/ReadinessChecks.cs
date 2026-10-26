@@ -18,8 +18,19 @@ public sealed class RedisHealthCheck(IConnectionMultiplexer redis) : IHealthChec
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        await redis.GetDatabase().PingAsync().WaitAsync(cancellationToken);
-        return HealthCheckResult.Healthy();
+        try
+        {
+            if (!redis.IsConnected)
+            {
+                return HealthCheckResult.Unhealthy("Redis is unavailable.");
+            }
+            await redis.GetDatabase().PingAsync().WaitAsync(cancellationToken);
+            return HealthCheckResult.Healthy();
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("Redis is unavailable: " + ex.Message);
+        }
     }
 }
 

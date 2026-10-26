@@ -3,8 +3,7 @@ import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
 import SectionCard from '../shared/SectionCard'
 import EmptyState from '../shared/EmptyState'
-import { getReservedStocAPI } from '~/common/apis/services/inventoryService'
-import { useQuery } from '@tanstack/react-query'
+import { useReservedStock } from '../../hooks/useInventory'
 
 const fmt = (iso) => {
   if (!iso) return ''
@@ -12,16 +11,11 @@ const fmt = (iso) => {
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-
 const getExpiresAt = (iso) => new Date(new Date(iso).getTime() + 15 * 60 * 1000)
 const isExpired = (expiresAt) => expiresAt < new Date()
 
 const ReservedStock = ({ loading = false }) => {
-  const { data: reserveds = [], isLoading } = useQuery({
-    queryKey: ['reserved_stock'],
-    queryFn: getReservedStocAPI,
-    staleTime: 30 * 1000
-  })
+  const { reserveds, isLoading } = useReservedStock()
 
   const isDataLoading = loading || isLoading
 

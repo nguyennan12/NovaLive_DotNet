@@ -1,3 +1,5 @@
+using NovaLive.Contracts.Common;
+
 namespace NovaLive.Contracts.V1.Shops;
 
 public record RegisterShopRequest(
@@ -44,3 +46,14 @@ public record RejectShopRequest(
 
 public record BanShopRequest(
     string Reason);
+
+public record GetAdminShopsRequest(
+    string? Status = null,
+    int Page = 1,
+    int Size = 20) : PagedRequest(Page, Size);
+
+public record GetAdminPayoutsRequest(
+    Guid? ShopId = null,
+    string? Status = null,
+    int Page = 1,
+    int Size = 20) : PagedRequest(Page, Size);

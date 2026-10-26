@@ -61,7 +61,8 @@ const SCROLL_AMOUNT = 460
 
 const ProductScrollSection = ({ products = [], isLoading, campaign, showFlashBadge = false }) => {
   const scrollRef = useRef(null)
-  const endTime = campaign?.end_time ? new Date(campaign.end_time) : null
+  const rawEndTime = campaign?.endAt || campaign?.endTime || campaign?.end_time
+  const endTime = rawEndTime ? new Date(rawEndTime) : null
 
   const scroll = (dir) => {
     scrollRef.current?.scrollBy({ left: dir * SCROLL_AMOUNT, behavior: 'smooth' })
@@ -112,9 +113,9 @@ const ProductScrollSection = ({ products = [], isLoading, campaign, showFlashBad
               '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 4 }
             }}
           >
-            {products.map((product) => (
+            {products.map((product, idx) => (
               <Box
-                key={product.spu_code || product.mongo_id || product._id}
+                key={product.id || product.spu_code || product._id || product.mongo_id || idx}
                 sx={{ flexShrink: 0, width: { xs: 150, sm: 185, md: 210 }, scrollSnapAlign: 'start' }}
               >
                 <HomeProductCard product={product} variant="portrait" showFlashBadge={showFlashBadge} />

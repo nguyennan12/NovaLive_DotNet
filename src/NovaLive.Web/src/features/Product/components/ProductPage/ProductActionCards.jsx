@@ -6,22 +6,22 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
 import { Box, Button, Grid, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 
-const cardData = [
+const getCardData = (stats = {}) => [
   {
     key: 'total',
     icon: InventoryRoundedIcon,
     iconBg: 'linear-gradient(135deg, #3465c8 0%, #4f83e3 100%)',
     iconColor: '#fff',
     label: 'Total Products',
-    value: '1,245',
-    sub: '+12 added this week',
+    value: stats.loading ? '—' : stats.totalProducts,
+    sub: stats.loading ? 'Loading store data' : 'Products in this shop',
     subColor: '#22c55e',
     subIcon: TrendingUpRoundedIcon,
     btnLabel: '+ Add Product',
     btnVariant: 'outlined',
     btnBorderColor: '#3465c8',
     btnColor: '#3465c8',
-    path: '/products/form'
+    path: '/seller/products/new'
   },
   {
     key: 'stock',
@@ -29,15 +29,15 @@ const cardData = [
     iconBg: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
     iconColor: '#fff',
     label: 'Stock Inventory',
-    value: '14 Items',
+    value: stats.loading ? '—' : `${stats.lowStockCount ?? 0} items`,
     valueSub: 'Low Stock',
-    sub: '3 out of stock',
+    sub: stats.loading ? 'Loading stock data' : `${stats.outOfStockCount ?? 0} out of stock`,
     subColor: '#ef4444',
     btnLabel: 'Manage Stock',
     btnVariant: 'outlined',
     btnBorderColor: '#8b5cf6',
     btnColor: '#8b5cf6',
-    path: '/manager/inventory'
+    path: '/seller/inventory'
   },
   {
     key: 'discount',
@@ -45,15 +45,15 @@ const cardData = [
     iconBg: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
     iconColor: '#fff',
     label: 'Active Discounts',
-    value: '3',
-    valueSub: 'Campaigns',
-    sub: '2 ending this week',
+    value: 'Manage',
+    valueSub: 'campaigns',
+    sub: 'Open discount management',
     subColor: '#f59e0b',
     btnLabel: '+ New Discount',
     btnVariant: 'outlined',
     btnBorderColor: '#f59e0b',
     btnColor: '#f59e0b',
-    path: '/manager/discount'
+    path: '/seller/discounts'
   },
   {
     key: 'schedule',
@@ -61,14 +61,15 @@ const cardData = [
     iconBg: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
     iconColor: '#fff',
     label: 'Upcoming Schedule',
-    value: 'Oct 25',
-    valueSub: 'Next Flash Sale',
-    sub: '5 days remaining',
+    value: 'View',
+    valueSub: 'Flash Sale',
+    sub: 'Open campaign registration',
     subColor: '#10b981',
-    btnLabel: 'View Calendar',
+    btnLabel: 'View campaigns',
     btnVariant: 'outlined',
     btnBorderColor: '#10b981',
-    btnColor: '#10b981'
+    btnColor: '#10b981',
+    path: '/seller/flash-sales'
   }
 ]
 
@@ -189,9 +190,9 @@ const ActionCard = ({ card }) => {
   )
 }
 
-const ProductActionCards = () => (
+const ProductActionCards = ({ stats }) => (
   <Grid container spacing={2} sx={{ mb: 3 }}>
-    {cardData.map((card) => (
+    {getCardData(stats).map((card) => (
       <Grid key={card.key} size={{ xs: 12, sm: 6, lg: 3 }}>
         <ActionCard card={card} />
       </Grid>

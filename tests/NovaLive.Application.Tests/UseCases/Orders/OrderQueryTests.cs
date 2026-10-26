@@ -13,9 +13,9 @@ public sealed class OrderQueryTests
     public async Task BuyerList_PassesIdentityFilterDatesAndPageToRepository()
     {
         var c = await OrderOperationsTestContext.Create(); var from = c.Parent.CreatedAt.AddDays(-1); var to = from.AddDays(2);
-        c.Checkout.Parents.Setup(p => p.GetMinePagedAsync(c.Parent.BuyerId, ParentOrderPaymentStatus.Pending, from, to, 2, 3, It.IsAny<CancellationToken>()))
+        c.Checkout.Parents.Setup(p => p.GetMinePagedAsync(c.Parent.BuyerId, "Pending", from, to, 2, 3, It.IsAny<CancellationToken>()))
             .ReturnsAsync(((IReadOnlyList<ParentOrder>)[c.Parent], 8L));
-        var result = await new GetMyOrdersQueryHandler(c.Checkout.Parents.Object, c.Checkout.Draft.User.Object)
+        var result = await new GetMyOrdersQueryHandler(c.Checkout.Parents.Object, c.Checkout.Subs.Object, c.Checkout.Draft.User.Object)
             .Handle(new("Pending", from, to, 2, 3), default);
         result.IsSuccess.Should().BeTrue(); result.Value!.Page.Should().Be(2); result.Value.Size.Should().Be(3);
         result.Value.Total.Should().Be(8); result.Value.Items.Should().ContainSingle(i => i.Id == c.Parent.Id);

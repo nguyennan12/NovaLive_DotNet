@@ -1,80 +1,54 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { OrderByUserAPI, cancelOrderAPI, confirmCodOTPAPI, createVNPayUrlAPI, resendCodOTPAPI } from '~/common/apis/services/orderService'
+import { checkoutAPI, cancelOrderAPI } from '~/common/apis/services/orderService'
 
-export const useOrderMutation = ({ setCreatedOrder, setShowCodOtp, onSuccessConfirm } = {}) => {
+export const useOrderMutation = ({
+  onPaymentRequired,
+  onOrderSuccess
+} = {}) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const invalidateOrders = () => queryClient.invalidateQueries({ queryKey: ['my_orders'] })
+  const invalidateOrders = () => {
+    queryClient.invalidateQueries({ queryKey: ['orders'] })
+    queryClient.invalidateQueries({ queryKey: ['my_orders'] })
+    queryClient.invalidateQueries({ queryKey: ['cart'] })
+  }
 
-  //  Mutation Đặt hàng chính
+  // Mutation Đặt hàng chính
   const orderMutation = useMutation({
-    mutationFn: OrderByUserAPI,
-    onSuccess: async (data, variables) => {
-      if (variables.userPayment === 'vnpay') {
-        try {
-          const result = await createVNPayUrlAPI({
-            orderId: data.order_trackingNumber,
-            amount: data.order_checkout?.finalCheckout
-          })
-          window.location.href = result.paymentUrl
-        } catch {
-          toast.error('Không thể tạo link thanh toán VNPay. Vui lòng liên hệ hỗ trợ.')
-          navigate('/')
-        }
-      } else if (variables.userPayment === 'cod') {
-        setCreatedOrder(data)
-        setShowCodOtp(true)
+    mutationFn: (payload) => checkoutAPI(payload),
+    onSuccess: (data, variables) => {
+      invalidateOrders()
+      const method = (variables.paymentMethod || '').toLowerCase()
+
+      if (method === 'vietqr' || method === 'momo') {
+        // Mở Modal thanh toán QR động kết nối SignalR
+        onPaymentRequired?.({
+          paymentId: data.paymentId,
+          parentOrderId: data.parentOrderId,
+          orderCode: data.orderCode,
+          amount: data.grandTotal,
+          paymentMethod: method,
+          expiredAt: data.expiredAt
+        })
       } else {
-        toast.success('Đặt hàng thành công!')
-        navigate('/')
+        // COD - Thành công trực tiếp
+        toast.success('🎉 Đặt hàng thành công! Cảm ơn bạn đã mua sắm.')
+        onOrderSuccess?.(data)
+        navigate('/orders')
       }
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message || 'Đặt hàng thất bại. Vui lòng thử lại.')
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Đặt hàng thất bại. Vui lòng kiểm tra lại.'
+      toast.error(msg)
     }
   })
 
-  //  Mutation Xác nhận OTP
-  const confirmMutation = useMutation({
-    mutationFn: confirmCodOTPAPI,
-    onSuccess: () => {
-      toast.success('Xác nhận thành công! Đơn hàng đang được xử lý.')
-      onSuccessConfirm?.()
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.message || 'Mã OTP không đúng. Vui lòng thử lại.')
-    }
-  })
-
-  // Mutation Gửi lại OTP
-  const resendMutation = useMutation({
-    mutationFn: resendCodOTPAPI,
-    onSuccess: () => {
-      toast.success('Đã gửi lại mã OTP tới email của bạn!')
-    },
-    onError: () => {
-      toast.error('Gửi lại mã thất bại. Vui lòng thử lại.')
-    }
-  })
-
-  //Mutation thanh toán lại vnpay
-  const retryVNPayMutation = useMutation({
-    mutationFn: ({ trackingNumber, amount }) =>
-      createVNPayUrlAPI({ orderId: trackingNumber, amount }),
-    onSuccess: (data) => {
-      if (data?.paymentUrl) window.location.href = data.paymentUrl
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.message || 'Không thể tạo link thanh toán. Vui lòng thử lại.')
-    }
-  })
-
-  //Mutation cancelOrder
+  // Mutation Hủy đơn hàng
   const cancelMutation = useMutation({
-    mutationFn: cancelOrderAPI,
+    mutationFn: ({ orderId, reason }) => cancelOrderAPI(orderId, reason),
     onSuccess: () => {
       invalidateOrders()
       toast.success('Đơn hàng đã được hủy thành công!')
@@ -84,5 +58,9 @@ export const useOrderMutation = ({ setCreatedOrder, setShowCodOtp, onSuccessConf
     }
   })
 
-  return { orderMutation, confirmMutation, resendMutation, cancelMutation, retryVNPayMutation, invalidateOrders }
+  return {
+    orderMutation,
+    cancelMutation,
+    invalidateOrders
+  }
 }

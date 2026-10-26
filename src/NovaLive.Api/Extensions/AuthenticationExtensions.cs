@@ -55,8 +55,15 @@ public static class AuthenticationExtensions
             {
                 OnMessageReceived = context =>
                 {
-                    // Any explicit Authorization header takes precedence; never fall back to cookies for an invalid header.
-                    if (context.Request.Headers.ContainsKey("Authorization")) return Task.CompletedTask;
+                    // Any explicit Authorization header with actual token takes precedence; empty Bearer falls back to cookie.
+                    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader) && !string.IsNullOrWhiteSpace(authHeader))
+                    {
+                        var authValue = authHeader.ToString().Trim();
+                        if (!string.Equals(authValue, "Bearer", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return Task.CompletedTask;
+                        }
+                    }
                     var cookies = context.HttpContext.RequestServices.GetRequiredService<IOptions<SessionCookieOptions>>().Value;
                     var cookie = context.Request.Cookies[cookies.AccessTokenName];
                     if (!string.IsNullOrEmpty(cookie))

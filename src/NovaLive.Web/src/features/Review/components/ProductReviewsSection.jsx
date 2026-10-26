@@ -34,12 +34,20 @@ const ProductReviewsSection = ({ productId, ratingAvg, ratingCount }) => {
 
       <Divider sx={{ borderColor: '#f0f0f0' }} />
 
-      {reviews.map((review, idx) => (
-        <Box key={review._id}>
-          <ReviewCard review={review} />
-          {idx < reviews.length - 1 && <Divider sx={{ borderColor: '#f5f5f5' }} />}
+      {reviews.length === 0 ? (
+        <Box sx={{ py: 3, textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '0.85rem', color: 'rgba(45,45,45,0.45)' }}>
+            Chưa có đánh giá nào cho sản phẩm này.
+          </Typography>
         </Box>
-      ))}
+      ) : (
+        reviews.map((review, idx) => (
+          <Box key={review._id || review.id || idx}>
+            <ReviewCard review={review} />
+            {idx < reviews.length - 1 && <Divider sx={{ borderColor: '#f5f5f5' }} />}
+          </Box>
+        ))
+      )}
     </Box>
   )
 }

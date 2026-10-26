@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "lint:seller": "eslint src/features/Seller --max-warnings=0",
+    "type-check": "tsc --noEmit",
+    "preview:seller": "node src/features/Seller/mocks/preview-server.mjs",
+    "test:seller": "node --test --test-concurrency=1 src/features/Seller/tests/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -14,7 +18,7 @@
     "@emotion/styled": "^11.14.1",
     "@microsoft/signalr": "^8.0.7",
     "@monaco-editor/react": "^4.7.0",
-    "@mui/icons-material": "^9.0.0",
+    "@mui/icons-material": "^9.5.0",
     "@mui/lab": "^9.0.0-beta.2",
     "@mui/material": "^9.0.0",
     "@reduxjs/toolkit": "^2.11.2",
@@ -37,7 +41,8 @@
     "redux-persist": "^6.0.0",
     "socket.io-client": "^4.8.3",
     "uuid": "^13.0.0",
-    "vite-plugin-svgr": "^5.2.0"
+    "vite-plugin-svgr": "^5.2.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -45,11 +50,14 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "jest": "^30.3.0",
     "supertest": "^7.2.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
     "vite": "^8.0.4"
   }
 }

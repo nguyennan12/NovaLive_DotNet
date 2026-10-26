@@ -117,6 +117,14 @@ public sealed class Inventory : Entity
         LastUpdated = DateTimeOffset.UtcNow;
     }
 
+    public Result ReceiveReturn(int qty, DateTimeOffset now)
+    {
+        if (qty <= 0 || (long)QtyOnHand + qty > int.MaxValue || Version == int.MaxValue)
+            return InventoryReservationErrors.InvalidReturn;
+        QtyOnHand += qty; Version++; LastUpdated = now;
+        return Result.Success();
+    }
+
     public void Return(int qty)
     {
         if (qty <= 0)
@@ -169,6 +177,22 @@ public sealed class Inventory : Entity
         if (quantity <= 0 || ReservedQty < quantity)
             return Result.Failure(InventoryReservationErrors.InvalidRelease(SkuId));
         ReleaseReservation(quantity);
+        return Result.Success();
+    }
+
+    public Result TryRelease(int quantity, DateTimeOffset now) => ChangeReservation(quantity, false, now);
+
+    public Result TryConfirmSale(int quantity, DateTimeOffset now) => ChangeReservation(quantity, true, now);
+
+    private Result ChangeReservation(int quantity, bool confirmSale, DateTimeOffset now)
+    {
+        if (quantity <= 0 || ReservedQty < quantity || QtyOnHand < quantity || Version == int.MaxValue)
+            return InventoryReservationErrors.ReservationMismatch;
+
+        ReservedQty -= quantity;
+        if (confirmSale) QtyOnHand -= quantity;
+        Version++;
+        LastUpdated = now;
         return Result.Success();
     }
 }

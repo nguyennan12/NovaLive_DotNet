@@ -2,7 +2,10 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using NovaLive.Infrastructure.Auth;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Domain.Common;
 using NovaLive.Domain.Rbac;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Seeding;
@@ -31,6 +34,27 @@ public sealed class SystemDataSeederTests
         (await context.Roles.Select(role => role.Id).Distinct().CountAsync()).Should().Be(3);
         (await context.Resources.Select(resource => resource.Code).Distinct().CountAsync()).Should().Be(19);
         (await context.Permissions.Select(permission => permission.Code).Distinct().CountAsync()).Should().Be(58);
+        (await context.Users.CountAsync()).Should().Be(1);
+        (await context.Shops.CountAsync()).Should().Be(1);
+        (await context.ShopAddresses.CountAsync()).Should().Be(1);
+        (await context.Spus.CountAsync()).Should().Be(7);
+        (await context.Skus.CountAsync()).Should().Be(10);
+        (await context.Inventories.CountAsync()).Should().Be(10);
+
+        var demoSeller = await context.Users.SingleAsync();
+        demoSeller.Email.Should().Be("seller@novalive.local");
+        demoSeller.IsSeller.Should().BeTrue();
+        (await context.UserRoles.CountAsync(role =>
+            role.UserId == demoSeller.Id && role.RoleId == SystemRoleIds.Seller)).Should().Be(1);
+
+        var demoShop = await context.Shops.SingleAsync();
+        demoShop.OwnerId.Should().Be(demoSeller.Id);
+        demoShop.Status.Should().Be(ShopStatus.Active);
+
+        var demoWarehouse = await context.ShopAddresses.SingleAsync();
+        demoWarehouse.ShopId.Should().Be(demoShop.Id);
+        demoWarehouse.IsPrimary.Should().BeTrue();
+        demoWarehouse.IsReturn.Should().BeTrue();
 
         var roles = await context.Roles.ToDictionaryAsync(role => role.Name);
         roles.Keys.Should().BeEquivalentTo("Admin", "Seller", "Buyer");
@@ -144,9 +168,24 @@ public sealed class SystemDataSeederTests
             var categorySeeder = new CategoryDataSeeder(
                 context,
                 NullLogger<CategoryDataSeeder>.Instance);
+            var demoSellerShopSeeder = new DemoSellerShopDataSeeder(
+                context,
+                new PasswordHasher(),
+                new FixedDateTimeProvider(SeedTime),
+                Options.Create(new DemoDataOptions
+                {
+                    SellerEmail = "seller@novalive.local",
+                    SellerPassword = "Test-only-password-123!"
+                }),
+                NullLogger<DemoSellerShopDataSeeder>.Instance);
+            var productSeeder = new ProductDataSeeder(
+                context,
+                NullLogger<ProductDataSeeder>.Instance);
 
             await rbacSeeder.SeedAsync();
             await categorySeeder.SeedAsync();
+            await demoSellerShopSeeder.SeedAsync();
+            await productSeeder.SeedAsync();
         }
 
         public async ValueTask DisposeAsync()

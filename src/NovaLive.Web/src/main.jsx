@@ -14,6 +14,9 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import ScrollToTop from './common/hooks/useScroll'
 
 
+import { SignalRProvider } from './common/contexts/SignalRContext'
+import ErrorBoundary from './common/components/ErrorBoundary'
+
 const persitor = persistStore(store)
 const queryClient = new QueryClient()
 
@@ -27,7 +30,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ConfirmProvider>
               <CssBaseline />
               <ScrollToTop />
-              <App />
+              <ErrorBoundary>
+                <SignalRProvider excludedOrderPaths={['/seller', '/dashboard/shop', '/manager/inventory', '/manager/discount', '/products/form']}>
+                  <App />
+                </SignalRProvider>
+              </ErrorBoundary>
               <ToastContainer autoClose={2000} theme="colored" />
             </ConfirmProvider>
           </ThemeProvider >

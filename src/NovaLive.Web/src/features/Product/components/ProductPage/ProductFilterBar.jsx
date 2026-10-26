@@ -79,7 +79,7 @@ const ProductFilterBar = () => {
           <Select {...field} sx={selectSx}>
             <MenuItem value='all' sx={menuItemSx}>All Categories</MenuItem>
             {categories?.map((cate) => (
-              <MenuItem key={cate.id || cate._id} value={cate.cat_slug} sx={menuItemSx}>
+              <MenuItem key={cate.id || cate._id} value={cate.id || cate._id} sx={menuItemSx}>
                 {cate.cat_name}
               </MenuItem>
             ))}

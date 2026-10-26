@@ -11,7 +11,6 @@ export const useShopDiscount = (shopId, enabled = true) => {
     select: (raw) => {
       const list = Array.isArray(raw) ? raw : raw?.items ?? []
       return list
-        .filter(d => d.discount_scope === 'shop' && d.discount_is_active)
         .map(normalizeDiscount)
         .filter(d => d.status === 'active')
     }

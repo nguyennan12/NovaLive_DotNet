@@ -37,15 +37,15 @@ const ShopActivityStatsCard = () => {
       <SectionTitle title="Thống kê cửa hàng" icon={BarChartIcon} accentColor="#f59e0b" />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-around', mb: 2 }}>
-        <Grid xs={4}>
-          <StatBox icon={LocalMallIcon} label="Đã bán" value={metrics.total_sold ?? 0} color="#14c3eb" isLoading={isLoading} />
-        </Grid>
-        <Grid xs={4}>
-          <StatBox icon={InventoryIcon} label="Sản phẩm" value={metrics.total_products ?? 0} color="#8b5cf6" isLoading={isLoading} />
-        </Grid>
-        <Grid xs={4}>
-          <StatBox icon={GroupIcon} label="Theo dõi" value={metrics.follower_count ?? 0} color="#10b981" isLoading={isLoading} />
-        </Grid>
+        {metrics.total_sold != null && <Grid xs={4}>
+          <StatBox icon={LocalMallIcon} label="Đã bán" value={metrics.total_sold} color="#14c3eb" isLoading={isLoading} />
+        </Grid>}
+        {metrics.total_products != null && <Grid xs={4}>
+          <StatBox icon={InventoryIcon} label="Sản phẩm" value={metrics.total_products} color="#8b5cf6" isLoading={isLoading} />
+        </Grid>}
+        {metrics.follower_count != null && <Grid xs={4}>
+          <StatBox icon={GroupIcon} label="Theo dõi" value={metrics.follower_count} color="#10b981" isLoading={isLoading} />
+        </Grid>}
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 2 }}>

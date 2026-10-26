@@ -18,7 +18,7 @@ import { STATUS_CONFIG, canCancelOrder, getPaymentMethodLabel, getPaymentStatusC
 import { useOrderDetail } from '../../hooks/useOrderDetail'
 import { useOrderMutation } from '../../hooks/useOrderMutation'
 import CancelOrderDialog from '../shared/CancelOrderDialog'
-import CodOtpDialog from '../shared/CodOtpDialog'
+import PaymentQrModal from '../shared/PaymentQrModal'
 import OrderStatusTimeline from './OrderStatusTimeline'
 import { SectionBox } from '../shared/SectionOrder'
 import { SectionTitle } from '../shared/SectionOrder'
@@ -87,10 +87,10 @@ function PriceLine({ label, value, highlight = false, discount = false }) {
 function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
   const { data: order, isLoading } = useOrderDetail(orderId)
   const user = useSelector(selectCurrentUser)
-  const { cancelMutation, retryVNPayMutation } = useOrderMutation()
+  const { cancelMutation } = useOrderMutation()
   const [copied, setCopied] = useState(false)
   const [showCancel, setShowCancel] = useState(false)
-  const [showCodRetry, setShowCodRetry] = useState(false)
+  const [showPaymentQr, setShowPaymentQr] = useState(false)
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -137,24 +137,17 @@ function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
   const StatusIcon = cfg.Icon
 
   // Payment retry logic
-  const isPendingPayment = order_status === 'pending' && order_payment.paymentStatus === 'pending'
-  const canRetryVNPay = isPendingPayment && order_payment.method === 'vnpay'
-  const canRetryCOD = isPendingPayment && order_payment.method === 'cod'
+  const isPendingPayment = (order_status === 'pending' || order_status === 'Pending') &&
+    (order_payment.paymentStatus === 'pending' || order_payment.paymentStatus === 'Pending' || !order_payment.paymentStatus)
+  const canPayOnline = isPendingPayment && (order_payment.method || '').toLowerCase() !== 'cod'
 
   const handleCancel = () => {
-    cancelMutation.mutate(order._id, {
+    cancelMutation.mutate({ orderId: order._id, reason: 'Người mua hủy đơn' }, {
       onSuccess: () => {
         setShowCancel(false)
         onOrderUpdated?.()
         onRequestClose?.()
       }
-    })
-  }
-
-  const handleRetryVNPay = () => {
-    retryVNPayMutation.mutate({
-      trackingNumber: order_trackingNumber,
-      amount: order_checkout.finalCheckout
     })
   }
 
@@ -200,7 +193,7 @@ function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
       </Box>
 
       {/* Action buttons — chỉ hiện khi đơn còn pending */}
-      {(canCancelOrder(order_status) || canRetryVNPay || canRetryCOD) && (
+      {(canCancelOrder(order_status) || canPayOnline) && (
         <SectionBox sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {canCancelOrder(order_status) && (
@@ -217,38 +210,19 @@ function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
               </Button>
             )}
 
-            {canRetryVNPay && (
+            {canPayOnline && (
               <Button
                 size="small"
-                disabled={retryVNPayMutation.isPending}
-                startIcon={retryVNPayMutation.isPending
-                  ? <CircularProgress size={13} sx={{ color: '#fff' }} />
-                  : <PaymentRoundedIcon sx={{ fontSize: '15px !important' }} />}
-                onClick={handleRetryVNPay}
+                startIcon={<PaymentRoundedIcon sx={{ fontSize: '15px !important' }} />}
+                onClick={() => setShowPaymentQr(true)}
                 sx={{
                   fontSize: '0.8rem', fontWeight: 700, py: 0.75, px: 2, borderRadius: 2,
-                  background: 'linear-gradient(90deg,#f59e0b,#ef8e00)',
-                  color: '#fff',
-                  '&:hover': { boxShadow: '0 3px 12px rgba(245,158,11,0.4)' },
-                  '&:disabled': { opacity: 0.6, color: '#fff' }
-                }}
-              >
-                Thanh toán VNPay
-              </Button>
-            )}
-
-            {canRetryCOD && (
-              <Button
-                size="small"
-                onClick={() => setShowCodRetry(true)}
-                sx={{
-                  fontSize: '0.8rem', fontWeight: 600, py: 0.75, px: 2, borderRadius: 2,
-                  background: 'linear-gradient(90deg,#568dfb,#69aedc)',
+                  background: 'linear-gradient(90deg, #568dfb, #69aedc)',
                   color: '#fff',
                   '&:hover': { boxShadow: '0 3px 12px rgba(52,133,247,0.35)' }
                 }}
               >
-                Xác nhận OTP COD
+                Thanh toán ngay
               </Button>
             )}
           </Box>
@@ -367,13 +341,18 @@ function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
         trackingNumber={order_trackingNumber}
       />
 
-      <CodOtpDialog
-        open={showCodRetry}
-        onClose={() => setShowCodRetry(false)}
-        orderId={order._id}
-        email={user?.user_email}
-        onSuccess={() => {
-          setShowCodRetry(false)
+      <PaymentQrModal
+        open={showPaymentQr}
+        onClose={() => setShowPaymentQr(false)}
+        paymentData={{
+          paymentId: order.paymentId || order.payment_id,
+          parentOrderId: order._id || order.id,
+          orderCode: order_trackingNumber || order.orderCode || order._id,
+          amount: order_checkout.finalCheckout || order.grandTotal || 0,
+          paymentMethod: (order_payment.method || 'vietqr').toLowerCase()
+        }}
+        onPaymentSuccess={() => {
+          setShowPaymentQr(false)
           onOrderUpdated?.()
           onRequestClose?.()
         }}

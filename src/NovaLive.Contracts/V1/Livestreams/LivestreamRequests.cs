@@ -5,6 +5,16 @@ public record StartLivestreamRequest(
     string? ThumbnailUrl,
     Guid? WarehouseAddressId);
 
+public sealed record ScheduleLivestreamRequest(
+    string Title,
+    string? ThumbnailUrl,
+    DateTimeOffset ScheduledAt);
+
+public sealed record UpdateScheduledLivestreamRequest(
+    string Title,
+    string? ThumbnailUrl,
+    DateTimeOffset ScheduledAt);
+
 public record PinProductRequest(
     Guid SkuId,
     decimal? FlashPrice,
@@ -20,3 +30,11 @@ public record QuickBuyCheckoutRequest(
     int Quantity,
     Guid ShippingAddressId,
     string PaymentMethod);
+
+public record SendLivestreamCommentRequest(
+    string Content,
+    bool IsQuestion = false);
+
+public record SendLivestreamReactionRequest(
+    string Type);
+

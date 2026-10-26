@@ -33,7 +33,13 @@ export const useDiscounts = (filters) => {
       queryFn: () => queryDiscountAPI(listQueryParams),
       placeholderData: (previousData) => previousData,
       staleTime: 20 * 1000,
-      select: (raw) => safeArray(raw?.items).map(normalizeDiscount)
+      select: (raw) => safeArray(Array.isArray(raw) ? raw : raw?.items)
+        .map(normalizeDiscount)
+        .filter(discount => !filters.shopId || String(discount.shopId) === String(filters.shopId))
+        .filter(discount => !search || `${discount.name} ${discount.code}`.toLowerCase().includes(search.toLowerCase()))
+        .filter(discount => !filters.status || filters.status === 'all' || discount.status === filters.status)
+        .filter(discount => !filters.type || filters.type === 'all' || discount.type === filters.type)
+        .filter(discount => !filters.category || filters.category === 'all' || discount.category === filters.category)
     })
 
   const stats = useMemo(() => ({

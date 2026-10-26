@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Button, Skeleton, Typography, Divider } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Skeleton, TextField, Typography, Divider } from '@mui/material'
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded'
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import EditRoundedIcon from '@mui/icons-material/EditRounded'
@@ -9,19 +9,58 @@ import { toast } from 'react-toastify'
 import ConfirmDialog from '~/common/components/common/form/ConfirmDialog'
 import SectionCard from '~/features/Inventory/components/shared/SectionCard'
 import LiveStatusBadge from '../shared/LiveStatusBadge'
-import { useCancelSession, useUpcomingSession } from '../../hooks/useLiveSessions'
+import { useCancelSession, useStartScheduledSession, useUpcomingSession, useUpdateSession } from '../../hooks/useLiveSessions'
 import { formatDate } from '~/common/utils/formatters'
 
-const UpcomingLiveCard = ({ onEdit }) => {
+const toLocalDateTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+const UpcomingLiveCard = () => {
   const navigate = useNavigate()
   const [sessionToCancel, setSessionToCancel] = useState(null)
+  const [sessionToEdit, setSessionToEdit] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editScheduledAt, setEditScheduledAt] = useState('')
 
   const { data: sessions = [], isLoading } = useUpcomingSession()
   const cancelSession = useCancelSession()
+  const updateSession = useUpdateSession()
+  const startSession = useStartScheduledSession()
 
-  const handleStart = (session) => {
+  const handleStart = async (session) => {
     if (!session) return
-    navigate(`/shop/live/${session._id}`)
+    const started = await toast.promise(
+      startSession.mutateAsync(session._id),
+      { pending: 'Đang bắt đầu phiên live...', success: 'Phiên live đã bắt đầu.', error: 'Không thể bắt đầu phiên live.' }
+    )
+    if (started?.id || started?._id) navigate(`/shop/live/${started.id || started._id}`)
+  }
+
+  const openEdit = (session) => {
+    setSessionToEdit(session)
+    setEditTitle(session.live_title || '')
+    setEditScheduledAt(toLocalDateTime(session.live_schedule_at))
+  }
+
+  const handleSaveEdit = async () => {
+    if (!sessionToEdit) return
+    const scheduledAt = new Date(editScheduledAt)
+    if (editTitle.trim().length < 3 || Number.isNaN(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+      toast.error('Nhập tiêu đề và thời gian hợp lệ trong tương lai.')
+      return
+    }
+    await toast.promise(
+      updateSession.mutateAsync({
+        sessionId: sessionToEdit._id,
+        data: { title: editTitle.trim(), scheduledAt: scheduledAt.toISOString() }
+      }),
+      { pending: 'Đang cập nhật...', success: 'Đã cập nhật lịch live.', error: 'Cập nhật thất bại.' }
+    )
+    setSessionToEdit(null)
   }
 
   const handleConfirmCancel = async () => {
@@ -121,7 +160,7 @@ const UpcomingLiveCard = ({ onEdit }) => {
               </Button>
               <Button
                 variant="outlined" size="small" startIcon={<EditRoundedIcon />}
-                onClick={() => onEdit?.(session)}
+                onClick={() => openEdit(session)}
                 sx={{ borderColor: 'divider', color: 'text.secondary', fontWeight: 500, borderRadius: '8px', fontSize: '0.81rem' }}
               >
                 Sửa
@@ -149,6 +188,32 @@ const UpcomingLiveCard = ({ onEdit }) => {
         onConfirm={handleConfirmCancel}
         onClose={() => setSessionToCancel(null)}
       />
+
+      <Dialog open={Boolean(sessionToEdit)} onClose={() => setSessionToEdit(null)} fullWidth maxWidth='sm'>
+        <DialogTitle>Sửa lịch livestream</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '12px !important' }}>
+          <TextField
+            label='Tên phiên live'
+            value={editTitle}
+            onChange={(event) => setEditTitle(event.target.value)}
+            inputProps={{ maxLength: 150 }}
+            fullWidth
+          />
+          <TextField
+            label='Thời gian bắt đầu'
+            type='datetime-local'
+            value={editScheduledAt}
+            onChange={(event) => setEditScheduledAt(event.target.value)}
+            inputProps={{ min: toLocalDateTime(new Date()) }}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSessionToEdit(null)}>Đóng</Button>
+          <Button variant='contained' onClick={handleSaveEdit} disabled={updateSession.isPending}>Lưu thay đổi</Button>
+        </DialogActions>
+      </Dialog>
     </SectionCard>
   )
 }

@@ -22,7 +22,7 @@ export const DiscountPage = () => {
   const [status, setStatus] = useState('all')
   const [type, setType] = useState('all')
   const [category, setCategory] = useState('all')
-  const filters = { search, status, type, category, shopId: user.user_shop }
+  const filters = { search, status, type, category, shopId: user.shopId || user.user_shop, scope: 'seller' }
 
   const { filtered, stats, addDiscount, updateDiscount, deleteDiscount, isLoading, isFetching, isMutating } =
     useDiscounts(filters)
@@ -97,7 +97,7 @@ export const DiscountPage = () => {
         <Breadcrumbs sx={{ mb: 1 }}>
           <Link
             component={RouterLink}
-            to="/dashboard/shop/products"
+            to="/seller/products"
             underline="hover"
             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.8rem', color: 'primary.contrastText' }}
           >
