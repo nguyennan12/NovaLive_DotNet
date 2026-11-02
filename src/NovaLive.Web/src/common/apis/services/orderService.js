@@ -163,19 +163,13 @@ export const createMomoPaymentAPI = async ({ orderId, orderInfo = 'Thanh toan do
   })
 }
 
-export const getPaymentStatusAPI = async (orderId) => {
-  try {
-    const res = await authorizedAxiosInstance.get(`orders/${orderId}`)
-    const order = res?.data !== undefined ? res.data : res
-    const isPaid = String(order?.paymentStatus || '').toLowerCase() === 'paid'
-    return {
-      status: order?.paymentStatus || (isPaid ? 'Paid' : 'Pending'),
-      isPaid,
-      order
-    }
-  } catch (_e) {
-    return { status: 'Pending', isPaid: false }
-  }
+export const initiatePaymentAPI = async ({ parentOrderId, paymentMethod }, signal) => {
+  return await authorizedAxiosInstance.post('payments/initiate', { parentOrderId, paymentMethod }, { signal })
+}
+
+export const getPaymentStatusAPI = async (paymentId, signal) => {
+  const payment = await authorizedAxiosInstance.get(`payments/${paymentId}/status`, { signal })
+  return { ...payment, isPaid: payment?.status === 'Success' }
 }
 
 // ─── Backward compatibility aliases ──────────────────────────────────────────

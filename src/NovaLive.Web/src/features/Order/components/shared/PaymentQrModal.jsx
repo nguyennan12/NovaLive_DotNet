@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,6 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
-  Divider,
   Alert
 } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -21,13 +20,15 @@ import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { formatVND } from '~/common/utils/formatters'
-import { generateVietQrAPI, createMomoPaymentAPI, getPaymentStatusAPI } from '~/common/apis/services/orderService'
+import { initiatePaymentAPI, getPaymentStatusAPI } from '~/common/apis/services/orderService'
 import { usePaymentHub } from '~/common/hooks/useSignalR'
 import { gradientText } from '~/theme'
 
-const QR_COUNTDOWN_SECONDS = 15 * 60 // 15 mins
+export default function PaymentQrModal(props) {
+  return props.open ? <OpenPaymentQrModal key={props.paymentData?.parentOrderId} {...props} /> : null
+}
 
-export default function PaymentQrModal({
+function OpenPaymentQrModal({
   open,
   onClose,
   paymentData, // { paymentId, parentOrderId, orderCode, amount, paymentMethod }
@@ -36,28 +37,23 @@ export default function PaymentQrModal({
   const navigate = useNavigate()
   const { paymentId, parentOrderId, orderCode, amount = 0, paymentMethod = 'vietqr' } = paymentData || {}
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [vietQrData, setVietQrData] = useState(null)
   const [momoData, setMomoData] = useState(null)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(QR_COUNTDOWN_SECONDS)
+  const [clockNow, setClockNow] = useState(Date.now)
+  const [expiredAt, setExpiredAt] = useState(null)
+  const [initiatedPaymentId, setInitiatedPaymentId] = useState(null)
+  const [paymentError, setPaymentError] = useState(null)
+  const successHandledRef = useRef(false)
+  const activePaymentId = initiatedPaymentId || paymentId
+  const timeLeft = expiredAt ? Math.max(0, Math.ceil((Date.parse(expiredAt) - clockNow) / 1000)) : 0
   const [copiedField, setCopiedField] = useState(null)
 
-  // Countdown timer
+  // Always use the persisted deadline; reopening the modal never renews a payment.
   useEffect(() => {
     if (!open || isSuccess) return
-    setTimeLeft(QR_COUNTDOWN_SECONDS)
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
+    const timer = setInterval(() => setClockNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [open, isSuccess])
 
@@ -69,6 +65,8 @@ export default function PaymentQrModal({
 
   // Handle successful payment event
   const handleSuccess = useCallback((eventPayload) => {
+    if (successHandledRef.current) return
+    successHandledRef.current = true
     setIsSuccess(true)
     toast.success('🎉 Thanh toán thành công! Đơn hàng đã được xác nhận.')
     onPaymentSuccess?.(eventPayload)
@@ -81,41 +79,60 @@ export default function PaymentQrModal({
 
   // SignalR Payment Hub connection
   usePaymentHub({
-    paymentId,
+    paymentId: activePaymentId,
     onPaymentSuccess: handleSuccess,
-    enabled: open && !!paymentId && !isSuccess
+    enabled: open && !!activePaymentId && !isSuccess
   })
 
-  // Fetch QR info when modal opens
-  const fetchPaymentDetails = useCallback(async () => {
-    if (!open || !orderCode) return
-    setLoading(true)
-
-    try {
-      if (paymentMethod === 'vietqr') {
-        const data = await generateVietQrAPI(orderCode)
-        setVietQrData(data)
-      } else if (paymentMethod === 'momo') {
-        const data = await createMomoPaymentAPI({
-          orderId: parentOrderId || orderCode,
-          orderInfo: `Thanh toan don hang ${orderCode}`
-        })
-        setMomoData(data)
-      }
-    } catch (err) {
-      console.error('Failed to load payment QR:', err)
-      toast.error('Không thể tạo mã QR thanh toán. Bạn có thể kiểm tra lại trong lịch sử đơn.')
-    } finally {
-      setLoading(false)
-    }
-  }, [open, orderCode, parentOrderId, paymentMethod])
-
+  // Initiate the payment using the server's amount, method and original expiry.
   useEffect(() => {
-    if (open) {
-      setIsSuccess(false)
-      fetchPaymentDetails()
+    if (!open || !parentOrderId) return
+    const controller = new AbortController()
+    const initiate = async () => {
+      try {
+        const data = await initiatePaymentAPI({ parentOrderId, paymentMethod }, controller.signal)
+        if (controller.signal.aborted) return
+        setInitiatedPaymentId(data.paymentId)
+        setExpiredAt(data.expiredAt)
+        if (data.vietQr) {
+          setVietQrData({ ...data.vietQr, qrDataUrl: `data:image/png;base64,${data.qrImageBase64}` })
+        }
+        setMomoData({ payUrl: data.paymentUrl })
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setPaymentError(err.response?.data?.error?.message || 'Không thể khởi tạo thanh toán. Vui lòng kiểm tra lại đơn hàng.')
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
     }
-  }, [open, fetchPaymentDetails])
+    initiate()
+    return () => controller.abort()
+  }, [open, parentOrderId, paymentMethod])
+
+  // Polling also covers notifications missed during a disconnect or before the hub connects.
+  useEffect(() => {
+    if (!open || !activePaymentId || isSuccess) return
+    const controller = new AbortController()
+    let timer
+    const poll = async () => {
+      try {
+        const status = await getPaymentStatusAPI(activePaymentId, controller.signal)
+        if (controller.signal.aborted) return
+        if (status.isPaid) { handleSuccess(status); return }
+        if (status.expiredAt) setExpiredAt(status.expiredAt)
+        if (['Failed', 'Expired', 'Refunded'].includes(status.status)) {
+          setPaymentError('Giao dịch đã kết thúc hoặc hết hạn. Vui lòng kiểm tra lại đơn hàng.')
+          return
+        }
+      } catch {
+        // Retry transient polling failures; the manual action still reports its own errors.
+      }
+      if (!controller.signal.aborted) timer = setTimeout(poll, 5000)
+    }
+    poll()
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [open, activePaymentId, isSuccess, handleSuccess])
 
   // Copy to clipboard helper
   const handleCopy = (text, fieldName) => {
@@ -128,9 +145,9 @@ export default function PaymentQrModal({
 
   // Manual status check fallback
   const handleCheckManual = async () => {
-    if (!parentOrderId) return
+    if (!activePaymentId) return
     try {
-      const res = await getPaymentStatusAPI(parentOrderId)
+      const res = await getPaymentStatusAPI(activePaymentId)
       if (res?.isPaid) {
         handleSuccess(res)
       } else {
@@ -204,6 +221,8 @@ export default function PaymentQrModal({
             </Typography>
             <CircularProgress size={24} sx={{ mt: 3, color: '#16a34a' }} />
           </Box>
+        ) : paymentError || (expiredAt && timeLeft === 0) ? (
+          <Alert severity="warning">{paymentError || 'Giao dịch đã hết hạn. Vui lòng kiểm tra lại đơn hàng.'}</Alert>
         ) : loading ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6, gap: 2 }}>
             <CircularProgress size={40} sx={{ color: paymentMethod === 'vietqr' ? '#0284c7' : '#ae2d68' }} />

@@ -33,6 +33,8 @@ public class VietQrPaymentAdapterTests
         // Assert
         result.Should().NotBeNull();
         result.Amount.Should().Be(150000);
+        Convert.FromBase64String(result.QrImageBase64!).Take(8).Should()
+            .Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
         result.Description.Should().Be("NOVA ORD-20261015-001");
         result.QrCode.Should().StartWith("000201010212"); // EMVCo format
         result.QrCode.Should().Contain("970422"); // MBBank BIN
