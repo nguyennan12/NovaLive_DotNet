@@ -4,8 +4,13 @@ import { formatVND } from '~/common/utils/formatters'
 
 const LiveProductItem = ({ product, onRemove }) => {
   const firstSku = product.skus?.[0]
-
-  const hasDiscount = firstSku?.original_price && firstSku.original_price !== firstSku.live_price
+  const name = product.spuName || product.name || 'Sản phẩm'
+  const thumb = product.thumbnailUrl || product.thumb || ''
+  const livePrice = product.effectivePrice ?? product.flashPrice ?? firstSku?.live_price ?? product.sellPrice ?? 0
+  const originalPrice = product.originalPrice ?? firstSku?.original_price ?? livePrice
+  const hasDiscount = originalPrice > livePrice
+  const code = product.skuCode || product.code || firstSku?.sku_name || ''
+  const targetId = product.skuId || firstSku?.sku_id || product.productId || product.id
 
   return (
     <Box sx={{
@@ -30,8 +35,8 @@ const LiveProductItem = ({ product, onRemove }) => {
       }}>
         <Box
           component="img"
-          src={product.thumb}
-          alt={product.name}
+          src={thumb}
+          alt={name}
           sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => { e.target.style.display = 'none' }}
         />
@@ -43,37 +48,32 @@ const LiveProductItem = ({ product, onRemove }) => {
           fontSize: '0.82rem', fontWeight: 600, color: '#f0f0f0',
           lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
         }}>
-          {product.name}
+          {name}
         </Typography>
 
-        {firstSku?.sku_name && (
+        {code && (
           <Typography sx={{ fontSize: '0.68rem', color: '#aaa', mt: 0.2 }} noWrap>
-            {firstSku.sku_name}
+            {code}
           </Typography>
         )}
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.4 }}>
           <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#3485f7', lineHeight: 1 }}>
-            {formatVND(firstSku?.live_price ?? 0)}
+            {formatVND(livePrice)}
           </Typography>
           {hasDiscount && (
             <Typography sx={{ fontSize: '0.65rem', color: '#666', textDecoration: 'line-through' }}>
-              {formatVND(firstSku.original_price)}
+              {formatVND(originalPrice)}
             </Typography>
           )}
         </Box>
-
-        {/* spuCode hiển thị nhỏ */}
-        <Typography sx={{ fontSize: '0.6rem', color: '#555', mt: 0.25, fontFamily: 'monospace' }}>
-          #{product.code?.toString()}
-        </Typography>
       </Box>
 
       {/* Remove */}
       <Tooltip title="Xoá khỏi live" placement="left">
         <IconButton
           size="small"
-          onClick={() => onRemove(product.productId)}
+          onClick={() => onRemove(targetId)}
           sx={{
             color: '#ff5f5f',
             flexShrink: 0,

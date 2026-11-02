@@ -31,6 +31,7 @@ export default function SellerPortal() {
     <Route index element={<DashboardPage />} />
     <Route path='analytics' element={<DashboardPage />} />
     <Route path='profile' element={<ProfilePage />} />
+    <Route path='messages' element={<NotificationsPage />} />
     <Route path='notifications' element={<NotificationsPage />} />
     <Route path='products' element={<ProductsPage />} />
     <Route path='products/new' element={<ProductFormPage />} />

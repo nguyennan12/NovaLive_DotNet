@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Auth from '~/features/Auth/pages/Auth'
 import LiveFeedPage from '~/features/LiveSession/pages/LiveFeedPage'
 import ShopLive from '~/features/Shop/pages/ShopLive'
@@ -9,13 +9,18 @@ import ProductsListPage from '~/features/Product/pages/ProductsListPage'
 import CartPage from '~/features/Cart/pages/CartPage'
 import OrderPage from '~/features/Order/pages/OrderPage'
 import OrderHistoryPage from '~/features/Order/pages/OrderHistoryPage'
-import BuyerReturnsPage from '~/features/Order/pages/BuyerReturnsPage'
 import ConsumerLayout from '~/common/components/layout/ConsumerLayout/ConsumerLayout'
 import ProfilePage from '~/features/Profile/pages/ProfilePage'
 import AdminLayout from '~/features/Admin/components/AdminLayout'
-import AdminDashboardPage from '~/features/Admin/pages/AdminDashboardPage'
+import AdminOverviewPage from '~/features/Admin/pages/AdminOverviewPage'
+import AdminShopsPage from '~/features/Admin/pages/AdminShopsPage'
+import AdminPayoutsPage from '~/features/Admin/pages/AdminPayoutsPage'
+import AdminCategoriesPage from '~/features/Admin/pages/AdminCategoriesPage'
+import AdminFlashSalesPage from '~/features/Admin/pages/AdminFlashSalesPage'
+import AdminDiscountsPage from '~/features/Admin/pages/AdminDiscountsPage'
+import AdminLivePage from '~/features/Admin/pages/AdminLivePage'
+import AdminReviewsPage from '~/features/Admin/pages/AdminReviewsPage'
 import PrivateRoute from './PrivateRoute'
-import { Navigate } from 'react-router-dom'
 
 const AppRoutes = () => {
   return (
@@ -32,7 +37,7 @@ const AppRoutes = () => {
           <Route path="/order" element={<OrderPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/user/returns" element={<BuyerReturnsPage />} />
+          <Route path="/user/returns" element={<Navigate to="/orders?tab=returns" replace />} />
           <Route path="/returns" element={<Navigate to="/user/returns" replace />} />
         </Route>
       </Route>
@@ -55,23 +60,24 @@ const AppRoutes = () => {
       <Route path="/dashboard/shop/*" element={<LegacySellerRedirect />} />
       <Route path="/products/form" element={<LegacySellerRedirect target="product-form" />} />
       <Route path="/products/form/:id" element={<LegacySellerRedirect target="product-form" />} />
-      <Route path="/manager/inventory" element={<LegacySellerRedirect target="inventory" />} />
-      <Route path="/manager/discount" element={<LegacySellerRedirect target="discounts" />} />
 
-      {/* PLATFORM ADMIN DASHBOARD */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboardPage />} />
-        <Route path="livestreams" element={<AdminDashboardPage />} />
-        <Route path="disputes" element={<AdminDashboardPage />} />
-        <Route path="shops" element={<AdminDashboardPage />} />
-        <Route path="reports" element={<AdminDashboardPage />} />
-        <Route path="categories" element={<AdminDashboardPage />} />
-        <Route path="flash-sales" element={<AdminDashboardPage />} />
-        <Route path="payouts" element={<AdminDashboardPage />} />
-        <Route path="reviews" element={<AdminDashboardPage />} />
-        <Route path="users" element={<AdminDashboardPage />} />
+      {/* ADMIN PLATFORM PROTECTED ROUTES */}
+      <Route element={<PrivateRoute allowedRoles={['Admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<Navigate to="/admin/overview" replace />} />
+          <Route path="/admin/overview" element={<AdminOverviewPage />} />
+          <Route path="/admin/shops" element={<AdminShopsPage />} />
+          <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
+          <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+          <Route path="/admin/flash-sales" element={<AdminFlashSalesPage />} />
+          <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
+          <Route path="/admin/live" element={<AdminLivePage />} />
+          <Route path="/admin/reviews" element={<AdminReviewsPage />} />
+        </Route>
       </Route>
+
+      {/* 404 fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

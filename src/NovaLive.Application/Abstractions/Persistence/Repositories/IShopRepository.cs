@@ -33,6 +33,8 @@ public interface IShopRepository
     Task<bool> IsFollowingAsync(Guid shopId, Guid? userId, CancellationToken ct = default);
     Task AddFollowerAsync(ShopFollower follower, CancellationToken ct = default);
     Task RemoveFollowerAsync(Guid shopId, Guid userId, CancellationToken ct = default);
+    Task<List<Shop>> GetFollowedShopsAsync(Guid userId, CancellationToken ct = default);
+    Task<List<Shop>> GetSuggestedShopsAsync(int limit = 10, CancellationToken ct = default);
 
     // Transaction-scoped lock; acquire before loading mutable shop/address state.
     Task LockOwnerAsync(Guid ownerId, CancellationToken ct = default);

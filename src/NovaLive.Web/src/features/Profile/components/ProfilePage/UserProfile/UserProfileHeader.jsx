@@ -7,9 +7,11 @@ import { useNavigate } from 'react-router-dom'
 import { uploadAvatarAPI } from '~/common/apis/services/uploadService'
 import { updateMyProfileAPI } from '~/common/apis/services/userService'
 import { useUpload } from '~/common/hooks/useUpload'
+import { useShop } from '~/features/Shop/hooks/useShop'
 import { selectCurrentUser } from '~/store/user/userSlice'
 import { glassSx } from '~/theme'
 import ProfileActionButton from '../../shared/renderActionButton'
+
 const Banner = styled(Box)({
   height: 160,
   background: 'linear-gradient(135deg, #0095ff 0%, #14c3eb 40%, #8b5cf6 100%)',
@@ -39,7 +41,17 @@ function UserHeaderSkeleton() {
 const UserProfileHeader = ({ profile, isLoading }) => {
   const navigate = useNavigate()
   const currentUser = useSelector(selectCurrentUser)
+  const { shop } = useShop()
   const queryClient = useQueryClient()
+
+  const shopStatus = shop?.shop_status?.toLowerCase()
+  const isShop = Boolean(
+    currentUser?.shopId ||
+    currentUser?.user_shop ||
+    currentUser?.roles?.includes('Seller') ||
+    shopStatus === 'active'
+  )
+  const isPendingApproval = shopStatus === 'pending'
 
   const uploadAvatar = useUpload({
     api: async (file) => {
@@ -105,7 +117,12 @@ const UserProfileHeader = ({ profile, isLoading }) => {
             </Typography>
           </Box>
           <Stack sx={{ gap: 1, flexDirection: 'row', alignItems: 'flex-start', pt: { xs: 0, sm: 0.5 } }}>
-            <ProfileActionButton currentUser={currentUser} isShop={false} navigate={navigate} />
+            <ProfileActionButton
+              currentUser={currentUser}
+              isShop={isShop}
+              isPendingApproval={isPendingApproval}
+              navigate={navigate}
+            />
           </Stack>
         </Stack>
       </Box>

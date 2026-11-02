@@ -17,6 +17,11 @@ public interface ILivestreamSessionRepository
         int size,
         CancellationToken ct = default);
 
+    Task<(List<LivestreamSession> Items, long TotalCount)> GetUpcomingSessionsPagedAsync(
+        int page,
+        int size,
+        CancellationToken ct = default);
+
     Task AddAsync(LivestreamSession session, CancellationToken ct = default);
 
     void Update(LivestreamSession session);

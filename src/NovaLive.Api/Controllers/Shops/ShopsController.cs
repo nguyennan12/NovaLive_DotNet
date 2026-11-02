@@ -11,6 +11,7 @@ using NovaLive.Application.UseCases.Shops.Commands.FollowShop;
 using NovaLive.Application.UseCases.Shops.Commands.UnfollowShop;
 using NovaLive.Application.UseCases.Shops.Queries.GetMyShop;
 using NovaLive.Application.UseCases.Shops.Queries.GetShopPublic;
+using NovaLive.Application.UseCases.Shops.Queries.GetFollowedShops;
 
 namespace NovaLive.Api.Controllers.Shops;
 
@@ -32,6 +33,12 @@ public sealed class ShopsController(ISender sender) : ApiControllerBase(sender)
     [ProducesResponseType(typeof(ApiResponse<ShopResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMine(CancellationToken ct) =>
         Respond(await Sender.Send(new GetMyShopQuery(), ct));
+
+    [AllowAnonymous]
+    [HttpGet("followed")]
+    [ProducesResponseType(typeof(ApiResponse<List<FollowedShopResponse>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetFollowed(CancellationToken ct) =>
+        Respond(await Sender.Send(new GetFollowedShopsQuery(), ct));
 
     [AllowAnonymous]
     [HttpGet("{shopId:guid}")]

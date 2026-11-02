@@ -1,5 +1,6 @@
 import Logout from '@mui/icons-material/Logout'
 import PersonIcon from '@mui/icons-material/Person'
+import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded'
 import Settings from '@mui/icons-material/Settings'
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
@@ -12,11 +13,30 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
 import Chip from '@mui/material/Chip'
+import Typography from '@mui/material/Typography'
 import { useConfirm } from 'material-ui-confirm'
 import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { logoutUserAPI, selectCurrentUser } from '~/store/user/userSlice'
+
+export const iconBoxSx = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 36,
+  height: 36,
+  minWidth: 36,
+  bgcolor: 'rgba(83,155,255,0.10)',
+  border: '1px solid rgba(83,155,255,0.25)',
+  borderRadius: '50%',
+  color: 'secondary.main',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    bgcolor: 'rgba(83,155,255,0.18)',
+    borderColor: 'rgba(83,155,255,0.45)'
+  }
+}
 
 function Profiles() {
   const [anchorEl, setAnchorEl] = React.useState(null)
@@ -29,7 +49,10 @@ function Profiles() {
 
   const handleLogout = async () => {
     const { confirmed } = await confirmLogout({
-      title: 'Log out of your account?',
+      title: 'Đăng xuất khỏi tài khoản?',
+      description: 'Bạn có chắc chắn muốn đăng xuất không?',
+      confirmationText: 'Đăng xuất',
+      cancellationText: 'Hủy',
       allowClose: false
     })
     if (confirmed) {
@@ -43,18 +66,37 @@ function Profiles() {
   const handleClose = () => {
     setAnchorEl(null)
   }
+
+  const displayName = currentUser?.user_name || currentUser?.fullName || 'Hồ sơ của tôi'
+  const displayEmail = currentUser?.email || ''
+
   return (
     <Box>
-      <Tooltip title="Account settings">
+      <Tooltip title={displayName}>
         <IconButton
           onClick={handleClick}
           size="small"
-          sx={{ padding: 0 }}
+          sx={{ p: 0.25 }}
           aria-controls={open ? 'basic-menu-profiles' : undefined}
           aria-haspopup="true"
           aria-expanded={open ? 'true' : undefined}
         >
-          <Avatar sx={{ width: 30, height: 30 }} src={currentUser?.user_avatar} alt="avatar user" />
+          {currentUser?.user_avatar ? (
+            <Avatar
+              sx={{
+                width: 36,
+                height: 36,
+                border: '1.5px solid rgba(83,155,255,0.3)',
+                boxShadow: '0 2px 6px rgba(52,133,247,0.15)'
+              }}
+              src={currentUser.user_avatar}
+              alt={displayName}
+            />
+          ) : (
+            <Box sx={iconBoxSx}>
+              <PersonOutlineRoundedIcon sx={{ fontSize: '1.25rem' }} />
+            </Box>
+          )}
         </IconButton>
       </Tooltip>
 
@@ -64,18 +106,46 @@ function Profiles() {
         open={open}
         onClose={handleClose}
         onClick={handleClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            borderRadius: '16px',
+            border: '1px solid rgba(52,133,247,0.15)',
+            boxShadow: '0 10px 30px rgba(52,133,247,0.12)',
+            minWidth: 220
+          }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         MenuListProps={{
           'aria-labelledby': 'basic-button-recent'
         }}
       >
-        <MenuItem onClick={() => { handleClose(); navigate('/profile') }}>
-          <Avatar sx={{ width: '28px', height: '28px', mr: 2 }} src={currentUser?.user_avatar} />
-          {currentUser?.user_name || 'Hồ sơ của tôi'}
+        <MenuItem onClick={() => { handleClose(); navigate('/profile') }} sx={{ py: 1.25 }}>
+          {currentUser?.user_avatar ? (
+            <Avatar sx={{ width: 32, height: 32, mr: 1.5 }} src={currentUser.user_avatar} />
+          ) : (
+            <Box sx={{ ...iconBoxSx, width: 32, height: 32, minWidth: 32, mr: 1.5 }}>
+              <PersonOutlineRoundedIcon sx={{ fontSize: '1.1rem' }} />
+            </Box>
+          )}
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'primary.contrastText', lineHeight: 1.2 }}>
+              {displayName}
+            </Typography>
+            {displayEmail && (
+              <Typography variant="caption" sx={{ color: 'rgba(45,45,45,0.5)', display: 'block' }}>
+                {displayEmail}
+              </Typography>
+            )}
+          </Box>
         </MenuItem>
+
         <Divider />
+
         <MenuItem onClick={() => { handleClose(); navigate('/profile') }}>
           <ListItemIcon>
-            <PersonIcon fontSize="small" />
+            <PersonIcon fontSize="small" sx={{ color: 'secondary.main' }} />
           </ListItemIcon>
           Hồ sơ cá nhân
         </MenuItem>
@@ -101,27 +171,27 @@ function Profiles() {
 
         <Divider />
 
-        <MenuItem>
+        <MenuItem onClick={() => { handleClose(); navigate('/profile') }}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>
           Cài đặt
         </MenuItem>
-        <MenuItem onClick={handleLogout} sx={{
-          '&:hover': {
-            color: '#d91515',
-            '& .logout-icon': {
-              color: '#d91515'
+
+        <MenuItem
+          onClick={handleLogout}
+          sx={{
+            color: '#dc2626',
+            '&:hover': {
+              bgcolor: 'rgba(220,38,38,0.06)'
             }
-          }
-        }}>
+          }}
+        >
           <ListItemIcon>
-            <Logout className='logout-icon' fontSize="small" />
+            <Logout fontSize="small" sx={{ color: '#dc2626' }} />
           </ListItemIcon>
-          Logout
+          Đăng xuất
         </MenuItem>
-
-
       </Menu>
     </Box>
   )

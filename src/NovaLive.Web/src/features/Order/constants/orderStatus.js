@@ -30,11 +30,11 @@ export const STATUS_CONFIG = {
     Icon: AutorenewRoundedIcon
   },
   confirmed: {
-    label: 'Đã xác nhận',
-    color: '#3485f7',
-    bgColor: 'rgba(52,133,247,0.1)',
-    borderColor: 'rgba(52,133,247,0.25)',
-    Icon: CheckCircleOutlineRoundedIcon
+    label: 'Chờ xác nhận',
+    color: '#f59e0b',
+    bgColor: 'rgba(245,158,11,0.1)',
+    borderColor: 'rgba(245,158,11,0.25)',
+    Icon: HourglassEmptyRoundedIcon
   },
   shipped: {
     label: 'Đang giao',
@@ -66,7 +66,8 @@ export const ORDER_TABS = [
   { label: 'Đang giao', status: 'shipped' },
   { label: 'Đã giao', status: 'delivered' },
   { label: 'Đã hủy', status: 'cancelled' },
-  { label: 'Tất cả', statuses: 'all' }
+  { label: 'Trả hàng / Hoàn tiền', status: 'returns' },
+  { label: 'Tất cả', status: 'all' }
 ]
 
 // Timeline các bước theo thứ tự logic của đơn hàng

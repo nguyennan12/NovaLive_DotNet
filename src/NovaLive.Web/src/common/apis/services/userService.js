@@ -18,9 +18,7 @@ export const registerUserAPI = async (data) => {
     password: data.password,
     fullName: data.fullName.trim()
   }
-  const response = await authorizedAxiosInstance.post('auth/register', payload)
-  toast.success('Đăng ký tài khoản thành công! Vui lòng kiểm tra mã OTP để kích hoạt.', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/register', payload)
 }
 
 export const verifyOtpAPI = async (data) => {
@@ -28,18 +26,14 @@ export const verifyOtpAPI = async (data) => {
     userId: data.userId,
     otpCode: data.otpCode || data.otpToken || data.otp
   }
-  const response = await authorizedAxiosInstance.post('auth/verify-otp', payload)
-  toast.success('Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay.', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/verify-otp', payload)
 }
 
 export const resendOtpAPI = async (data) => {
   const payload = {
     emailOrPhone: typeof data === 'string' ? data : (data.emailOrPhone || data.email)
   }
-  const response = await authorizedAxiosInstance.post('auth/resend-otp', payload)
-  toast.success('Mã OTP mới đã được gửi!', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/resend-otp', payload)
 }
 
 export const refreshTokenAPI = async (refreshToken) => {

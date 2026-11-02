@@ -53,6 +53,25 @@ public sealed class LivestreamSessionRepository(IAppDbContext dbContext) : ILive
         return (items, total);
     }
 
+    public async Task<(List<LivestreamSession> Items, long TotalCount)> GetUpcomingSessionsPagedAsync(
+        int page,
+        int size,
+        CancellationToken ct = default)
+    {
+        var query = dbContext.LivestreamSessions
+            .AsNoTracking()
+            .Where(s => s.Status == LivestreamStatus.Scheduled)
+            .OrderBy(s => s.ScheduledAt);
+
+        var total = await query.LongCountAsync(ct);
+        var items = await query
+            .Skip((page - 1) * size)
+            .Take(size)
+            .ToListAsync(ct);
+
+        return (items, total);
+    }
+
     public async Task AddAsync(LivestreamSession session, CancellationToken ct = default)
     {
         await dbContext.LivestreamSessions.AddAsync(session, ct);

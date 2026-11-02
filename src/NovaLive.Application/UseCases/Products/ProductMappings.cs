@@ -115,11 +115,18 @@ public static class ProductMappings
         this Spu spu,
         string shopName,
         string categoryName,
-        IEnumerable<Sku>? skus = null)
+        IEnumerable<Sku>? skus = null,
+        IReadOnlyDictionary<Guid, InventoryEntity>? invMap = null)
     {
         var skuList = (skus ?? []).ToList();
         var minPrice = skuList.Count > 0 ? skuList.Min(s => s.SellPrice) : 0m;
         var maxPrice = skuList.Count > 0 ? skuList.Max(s => s.SellPrice) : 0m;
+        var skuResponses = skuList.Select(s =>
+        {
+            InventoryEntity? inv = null;
+            invMap?.TryGetValue(s.Id, out inv);
+            return s.ToResponse(inv, null);
+        }).ToList();
 
         return new SpuResponse(
             Id: spu.Id,
@@ -137,6 +144,7 @@ public static class ProductMappings
             Rating: 5.0,
             SoldCount: 0,
             Status: spu.Status.ToString(),
-            CreatedAt: spu.CreatedAt.UtcDateTime);
+            CreatedAt: spu.CreatedAt.UtcDateTime,
+            Skus: skuResponses);
     }
 }

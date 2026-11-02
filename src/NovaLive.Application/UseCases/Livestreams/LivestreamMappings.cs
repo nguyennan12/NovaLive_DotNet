@@ -21,7 +21,8 @@ public static class LivestreamMappings
             session.ViewerCount,
             session.PeakViewerCount,
             session.StartedAt,
-            session.EndedAt);
+            session.EndedAt,
+            session.ScheduledAt);
     }
 
     public static LivestreamStartResponse ToStartResponse(
@@ -106,4 +107,3 @@ public static class LivestreamMappings
             comment.CreatedAt);
     }
 }
-

@@ -12,6 +12,7 @@ namespace NovaLive.Application.UseCases.Products.Queries.GetSellerProducts;
 public sealed class GetSellerProductsQueryHandler(
     ISpuRepository spuRepository,
     ISkuRepository skuRepository,
+    IInventoryRepository inventoryRepository,
     ICategoryRepository categoryRepository,
     IAppDbContext dbContext,
     ICurrentUser currentUser)
@@ -40,6 +41,10 @@ public sealed class GetSellerProductsQueryHandler(
         var categoryMap = allCategories.ToDictionary(c => c.Id, c => c.Name);
 
         var skuMap = await skuRepository.GetBySpuIdsAsync(spuIds, ct);
+        var allSkuIds = skuMap.Values.SelectMany(x => x).Select(s => s.Id).ToList();
+        var invMap = allSkuIds.Count > 0
+            ? await inventoryRepository.GetBySkuIdsAsync(allSkuIds, ct)
+            : new Dictionary<Guid, Domain.Inventory.Inventory>();
 
         var shop = await dbContext.Shops
             .AsNoTracking()
@@ -51,7 +56,7 @@ public sealed class GetSellerProductsQueryHandler(
         {
             skuMap.TryGetValue(spu.Id, out var spuSkus);
             var categoryName = categoryMap.TryGetValue(spu.CategoryId, out var cName) ? cName : "Danh mục";
-            return spu.ToSummaryResponse(shopName, categoryName, spuSkus ?? []);
+            return spu.ToSummaryResponse(shopName, categoryName, spuSkus ?? [], invMap);
         }).ToList();
 
         return PagedResult<SpuResponse>.Create(items, req.NormalizedPage, req.NormalizedSize, total);

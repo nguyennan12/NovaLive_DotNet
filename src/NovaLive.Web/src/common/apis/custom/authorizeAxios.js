@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearCurrentUser } from '~/store/user/userSlice'
+import { setCurrentUser, clearCurrentUser } from '~/store/user/userSlice'
 import { store } from '~/store/store'
 
 const authorizedAxiosInstance = axios.create({
@@ -35,45 +35,69 @@ authorizedAxiosInstance.interceptors.response.use(
     const originalRequest = error.config
     const url = originalRequest?.url || ''
     const isAuthRoute = url.includes('auth/login') || url.includes('auth/refresh') || url.includes('auth/register')
+    const currentUser = store.getState()?.user?.currentUser
 
-    // Handle 401 Unauthorized for expired tokens by attempting refresh once
-    if (error.response?.status === 401 && !isAuthRoute && !originalRequest?._retry) {
+    // Only attempt refresh if user was actually logged in and it's a 401 on a non-auth route
+    if (error.response?.status === 401 && !isAuthRoute && !originalRequest?._retry && currentUser) {
       originalRequest._retry = true
       if (!refreshTokenPromise) {
         refreshTokenPromise = import('~/common/apis/services/userService')
-          .then(({ refreshTokenAPI }) => refreshTokenAPI())
+          .then(({ refreshTokenAPI }) => refreshTokenAPI(currentUser?.refreshToken))
           .then((res) => {
             const raw = res?.data !== undefined ? res.data : res
             const current = store.getState()?.user?.currentUser
             const token = raw?.accessToken || raw?.tokens?.accessToken
+            const refreshToken = raw?.refreshToken || raw?.tokens?.refreshToken
             if (current && (token || raw?.user)) {
-              // Cookie sessions intentionally return no token in JSON. Drop a
-              // legacy Bearer token so it cannot override the renewed cookie.
               const next = { ...current, ...raw?.user }
               if (token) next.accessToken = token
-              else delete next.accessToken
-              store.dispatch({ type: 'user/setCurrentUser', payload: next })
+              if (refreshToken) next.refreshToken = refreshToken
+              store.dispatch(setCurrentUser(next))
             }
             return res
           })
           .catch((_error) => {
             store.dispatch(clearCurrentUser())
-            window.location.href = '/login'
+            // Only redirect to login if currently on a protected route!
+            const pathname = window.location.pathname || '/'
+            const isPublicRoute =
+              pathname === '/' ||
+              pathname === '/login' ||
+              pathname === '/register' ||
+              pathname === '/verify' ||
+              pathname === '/live' ||
+              pathname === '/products' ||
+              pathname.startsWith('/product/')
+            if (!isPublicRoute) {
+              window.location.href = `/login?redirect=${encodeURIComponent(pathname)}`
+            }
             return Promise.reject(_error)
           })
           .finally(() => {
             refreshTokenPromise = null
           })
       }
-      return refreshTokenPromise.then(() => {
-        // The failed request still holds the old header even after Redux updates.
-        delete originalRequest.headers.Authorization
+      return refreshTokenPromise.then((res) => {
+        const raw = res?.data !== undefined ? res.data : res
+        const refreshedToken = raw?.accessToken || raw?.tokens?.accessToken || store.getState()?.user?.currentUser?.accessToken
+        if (refreshedToken) {
+          if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
+            originalRequest.headers.set('Authorization', `Bearer ${refreshedToken}`)
+          } else if (originalRequest.headers) {
+            originalRequest.headers['Authorization'] = `Bearer ${refreshedToken}`
+          }
+        } else if (originalRequest.headers) {
+          delete originalRequest.headers.Authorization
+          delete originalRequest.headers['Authorization']
+        }
         return authorizedAxiosInstance(originalRequest)
       })
     }
 
     if (error.response?.status === 401 && (isAuthRoute || originalRequest?._retry)) {
-      store.dispatch(clearCurrentUser())
+      if (currentUser) {
+        store.dispatch(clearCurrentUser())
+      }
     }
 
     return Promise.reject(error)

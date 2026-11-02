@@ -45,9 +45,9 @@ export const normalizeOrder = (o) => {
     ? null
     : subStatuses.every((value) => value === 'cancelled')
       ? 'cancelled'
-      : subStatuses.includes('pendingpayment')
+      : subStatuses.some((value) => ['pendingpayment', 'confirmed', 'pending'].includes(value))
         ? 'pending'
-        : subStatuses.some((value) => ['confirmed', 'processing'].includes(value))
+        : subStatuses.includes('processing')
           ? 'processing'
           : subStatuses.includes('shipping')
             ? 'shipped'
@@ -117,7 +117,7 @@ export const getMyOrdersAPI = async (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.status && filters.status !== 'all') params.append('status', filters.status)
   if (filters.page) params.append('page', filters.page)
-  if (filters.size || filters.limit) params.append('size', filters.size || filters.limit)
+  if (filters.size || filters.limit) params.append('size', Math.min(Number(filters.size || filters.limit), 100))
   if (filters.from) params.append('from', filters.from)
   if (filters.to) params.append('to', filters.to)
 

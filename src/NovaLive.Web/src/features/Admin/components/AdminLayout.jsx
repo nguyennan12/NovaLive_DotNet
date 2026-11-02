@@ -1,40 +1,55 @@
 import { useState } from 'react'
 import {
-  Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
   Avatar,
-  Badge,
+  Box,
+  Breadcrumbs,
+  Chip,
+  Divider,
+  Drawer,
+  IconButton,
+  ListItemIcon,
   Menu,
   MenuItem,
-  ListItemIcon,
-  Divider,
-  Chip,
-  useTheme,
-  useMediaQuery
+  Stack,
+  Typography,
+  useMediaQuery,
+  Link as MuiLink
 } from '@mui/material'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import MenuIcon from '@mui/icons-material/Menu'
-import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded'
+import MenuRounded from '@mui/icons-material/MenuRounded'
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded'
-import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded'
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
-import AdminSidebar from './AdminSidebar'
-import ErrorBoundary from '~/common/components/ErrorBoundary'
+import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded'
+import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
+import CircleIcon from '@mui/icons-material/Circle'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAPI, selectCurrentUser } from '~/store/user/userSlice'
+import AdminSidebar from './AdminSidebar'
+
+const ROUTE_LABELS = {
+  '/admin': 'Tổng quan sàn',
+  '/admin/dashboard': 'Tổng quan sàn',
+  '/admin/shops': 'Phê duyệt & Quản trị Shop',
+  '/admin/payouts': 'Duyệt giải ngân ví (Payout)',
+  '/admin/livestreams': 'Giám sát Livestream Realtime',
+  '/admin/categories': 'Quản lý Cây danh mục',
+  '/admin/flash-sales': 'Chiến dịch Flash Sale sàn',
+  '/admin/discounts': 'Mã giảm giá toàn sàn',
+  '/admin/reviews': 'Kiểm duyệt đánh giá sản phẩm',
+  '/admin/users': 'Người dùng & Phân quyền'
+}
 
 export const AdminLayout = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const [collapsed, setCollapsed] = useState(isMobile)
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [anchorEl, setAnchorEl] = useState(null)
+  const mobile = useMediaQuery('(max-width:899px)')
+
   const currentUser = useSelector(selectCurrentUser)
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
+
+  const currentLabel = ROUTE_LABELS[location.pathname] || 'Quản trị'
 
   const handleOpenMenu = (event) => setAnchorEl(event.currentTarget)
   const handleCloseMenu = () => setAnchorEl(null)
@@ -45,180 +60,170 @@ export const AdminLayout = () => {
     navigate('/login')
   }
 
-  const getPageTitle = () => {
-    const path = location.pathname
-    if (path.includes('livestreams')) return 'Giám sát Livestream Realtime'
-    if (path.includes('disputes')) return 'Trọng tài & Phân xử Tranh chấp (Dispute Arbitration)'
-    if (path.includes('shops')) return 'Phê duyệt & Quản trị Shop (KYC)'
-    if (path.includes('reports')) return 'Xử lý Khiếu nại & Tố cáo'
-    if (path.includes('categories')) return 'Quản lý Cây danh mục'
-    if (path.includes('flash-sales')) return 'Chiến dịch Flash Sale toàn sàn'
-    if (path.includes('payouts')) return 'Đối soát & Duyệt lệnh rút tiền (Payouts)'
-    if (path.includes('users')) return 'Quản trị Người dùng & Phân quyền (RBAC)'
-    if (path.includes('reviews')) return 'Kiểm duyệt đánh giá sản phẩm'
-    return 'Trung tâm Điều hành Nền tảng (Platform Overview)'
-  }
+  const isSeller = Boolean(currentUser?.shopId || currentUser?.user_shop || currentUser?.roles?.includes('Seller'))
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: '#f8fafc' }}>
-      {/* Sidebar */}
-      <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+    <Box
+      sx={{
+        background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #f5f8ff 100%)',
+        minHeight: '100dvh',
+        display: 'flex'
+      }}
+    >
+      {/* Desktop Sticky Sidebar */}
+      {!mobile && (
+        <Box sx={{ position: 'sticky', top: 0, height: '100dvh', p: 2, flexShrink: 0 }}>
+          <AdminSidebar
+            collapsed={collapsed}
+            onCollapse={() => setCollapsed(!collapsed)}
+          />
+        </Box>
+      )}
+
+      {/* Mobile Drawer Sidebar */}
+      <Drawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        slotProps={{ paper: { sx: { bgcolor: '#ffffff', p: 1 } } }}
+      >
+        <AdminSidebar
+          collapsed={false}
+          onCollapse={() => setMobileOpen(false)}
+          onNavigate={() => setMobileOpen(false)}
+        />
+      </Drawer>
 
       {/* Main Content Area */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-        {/* Top Navbar */}
-        <AppBar
-          position="static"
-          elevation={0}
-          sx={{
-            bgcolor: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
-            color: '#0f172a',
-            px: { xs: 1.5, sm: 3 },
-            py: 0.5
-          }}
-        >
-          <Toolbar disableGutters sx={{ minHeight: 64, justifyContent: 'space-between' }}>
-            {/* Left: Mobile Toggle & Page Title */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              {isMobile && (
-                <IconButton
-                  edge="start"
-                  onClick={() => setCollapsed(!collapsed)}
-                  sx={{ color: '#64748b' }}
-                >
-                  <MenuIcon />
-                </IconButton>
-              )}
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', sm: '1.2rem' }, color: '#0f172a' }}>
-                  {getPageTitle()}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b', display: { xs: 'none', sm: 'block' } }}>
-                  NovaLive Operations & Management System
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Right: Platform Status, Notifications & Profile */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-              {/* Platform Health Status Indicator */}
-              <Chip
-                icon={<FiberManualRecordIcon sx={{ fontSize: '10px !important', color: '#16a34a', animation: 'pulse 2s infinite' }} />}
-                label="Hệ thống: Bình thường"
-                size="small"
-                sx={{
-                  bgcolor: 'rgba(22, 163, 74, 0.08)',
-                  color: '#15803d',
-                  fontWeight: 600,
-                  fontSize: '0.75rem',
-                  display: { xs: 'none', md: 'inline-flex' },
-                  border: '1px solid rgba(22, 163, 74, 0.2)'
-                }}
-              />
-
-              {/* Notification Bell */}
-              <IconButton
-                sx={{
-                  color: '#64748b',
-                  bgcolor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  '&:hover': { bgcolor: '#f1f5f9' }
-                }}
-              >
-                <Badge badgeContent={5} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
-                  <NotificationsNoneRoundedIcon fontSize="small" />
-                </Badge>
-              </IconButton>
-
-              {/* User Avatar & Menu */}
-              <Box
-                onClick={handleOpenMenu}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.2,
-                  cursor: 'pointer',
-                  p: 0.5,
-                  borderRadius: '10px',
-                  '&:hover': { bgcolor: '#f1f5f9' }
-                }}
-              >
-                <Avatar
-                  src={currentUser?.user_avatar || currentUser?.avatarUrl}
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    bgcolor: '#3465c8',
-                    fontSize: '0.9rem',
-                    fontWeight: 700
-                  }}
-                >
-                  {(currentUser?.user_name || currentUser?.fullName || 'Admin')[0].toUpperCase()}
-                </Avatar>
-                <Box sx={{ display: { xs: 'none', lg: 'block' }, textAlign: 'left' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                    {currentUser?.user_name || currentUser?.fullName || 'Super Admin'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.7rem' }}>
-                    Platform Administrator
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Profile Dropdown Menu */}
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleCloseMenu}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                PaperProps={{
-                  sx: {
-                    mt: 1.5,
-                    minWidth: 200,
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                    border: '1px solid #e2e8f0'
-                  }
-                }}
-              >
-                <Box sx={{ px: 2, py: 1.5 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                    {currentUser?.user_name || currentUser?.fullName || 'Super Admin'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748b' }}>
-                    {currentUser?.user_email || currentUser?.email || 'admin@novalive.online'}
-                  </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={() => { handleCloseMenu(); navigate('/profile') }}>
-                  <ListItemIcon><AccountCircleRoundedIcon fontSize="small" /></ListItemIcon>
-                  Hồ sơ cá nhân
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={handleLogout} sx={{ color: '#dc2626' }}>
-                  <ListItemIcon sx={{ color: '#dc2626' }}><LogoutRoundedIcon fontSize="small" /></ListItemIcon>
-                  Đăng xuất
-                </MenuItem>
-              </Menu>
-            </Box>
-          </Toolbar>
-        </AppBar>
-
-        {/* Scrollable Page Outlet */}
+      <Box sx={{ flex: 1, minWidth: 0, p: { xs: 1.5, sm: 3 } }}>
+        {/* Top Header */}
         <Box
-          component="main"
+          component="header"
           sx={{
-            flex: 1,
-            overflowY: 'auto',
-            p: { xs: 2, sm: 3 },
-            bgcolor: '#f8fafc'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 2,
+            mb: 3,
+            flexWrap: 'wrap'
           }}
         >
-          <ErrorBoundary>
-            <Outlet />
-          </ErrorBoundary>
+          {/* Left: Mobile Toggle & Page Title & Breadcrumbs */}
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            {mobile && (
+              <IconButton aria-label="Mở menu quản trị" onClick={() => setMobileOpen(true)}>
+                <MenuRounded />
+              </IconButton>
+            )}
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', color: '#0f172a' }}>
+                {currentLabel}
+              </Typography>
+              <Breadcrumbs aria-label="Đường dẫn trang" sx={{ fontSize: '0.78rem' }}>
+                <MuiLink component={Link} to="/admin/dashboard" color="inherit" underline="hover">
+                  Quản trị sàn
+                </MuiLink>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                  {currentLabel}
+                </Typography>
+              </Breadcrumbs>
+            </Box>
+          </Stack>
+
+          {/* Right: Status Pill & Profile */}
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Chip
+              icon={<CircleIcon sx={{ fontSize: '8px !important', color: '#10b981 !important' }} />}
+              label="Hệ thống: Trực tuyến"
+              size="small"
+              sx={{
+                bgcolor: '#ecfdf5',
+                color: '#047857',
+                border: '1px solid #d1fae5',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                height: 28,
+                display: { xs: 'none', sm: 'inline-flex' }
+              }}
+            />
+
+            <Box
+              onClick={handleOpenMenu}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                cursor: 'pointer',
+                p: 0.5,
+                pr: 1.5,
+                borderRadius: '24px',
+                bgcolor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                transition: 'all 0.15s ease',
+                '&:hover': { bgcolor: 'rgba(0, 149, 255, 0.04)', borderColor: '#cbd5e1' }
+              }}
+            >
+              <Avatar
+                src={currentUser?.user_avatar || ''}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  bgcolor: 'secondary.main',
+                  color: '#ffffff'
+                }}
+              >
+                {currentUser?.user_name?.[0]?.toUpperCase() || 'A'}
+              </Avatar>
+              <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                  {currentUser?.user_name || 'Admin'}
+                </Typography>
+                <Typography sx={{ fontSize: '0.68rem', color: '#64748b' }}>
+                  Quản trị viên
+                </Typography>
+              </Box>
+            </Box>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleCloseMenu}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 1,
+                    minWidth: 180,
+                    borderRadius: 2,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                  }
+                }
+              }}
+            >
+              <MenuItem onClick={() => { handleCloseMenu(); navigate('/profile') }}>
+                <ListItemIcon><PersonOutlineRoundedIcon fontSize="small" /></ListItemIcon>
+                Hồ sơ cá nhân
+              </MenuItem>
+              {isSeller && (
+                <MenuItem onClick={() => { handleCloseMenu(); navigate('/dashboard/shop') }}>
+                  <ListItemIcon><StorefrontRoundedIcon fontSize="small" /></ListItemIcon>
+                  Kênh Người Bán
+                </MenuItem>
+              )}
+              <Divider />
+              <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+                <ListItemIcon><LogoutRoundedIcon fontSize="small" color="error" /></ListItemIcon>
+                Đăng xuất
+              </MenuItem>
+            </Menu>
+          </Stack>
+        </Box>
+
+        {/* Content Outlet */}
+        <Box component="main" id="admin-main" sx={{ minWidth: 0 }}>
+          <Outlet />
         </Box>
       </Box>
     </Box>

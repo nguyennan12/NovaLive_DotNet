@@ -2,16 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { getShopByUserAPI, registerShopAPI, updateShopAPI } from '~/common/apis/services/shopService'
+import { getApiErrorMessage } from '~/common/utils/formatters'
 import { selectCurrentUser, setCurrentUser } from '~/store/user/userSlice'
 
 export const useShop = () => {
   const currentUser = useSelector(selectCurrentUser)
-  const shopId = currentUser?.user_shop
 
   const { data: shop, isLoading } = useQuery({
     queryKey: ['my_shop', currentUser?._id],
     queryFn: getShopByUserAPI,
-    enabled: !!shopId,
+    enabled: !!currentUser,
+    retry: false,
     staleTime: 1000 * 60
   })
 
@@ -32,7 +33,7 @@ export const useShopMutation = () => {
       toast.success('Đăng ký cửa hàng thành công!')
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.message || 'Đăng ký cửa hàng thất bại!')
+      toast.error(getApiErrorMessage(error, 'Đăng ký cửa hàng thất bại!'))
     }
   })
 
@@ -43,7 +44,7 @@ export const useShopMutation = () => {
       toast.success('Cập nhật cửa hàng thành công!')
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.message || 'Cập nhật thất bại!')
+      toast.error(getApiErrorMessage(error, 'Cập nhật thất bại!'))
     }
   })
 

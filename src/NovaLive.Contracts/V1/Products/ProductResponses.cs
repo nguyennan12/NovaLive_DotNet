@@ -16,7 +16,8 @@ public record SpuResponse(
     double Rating,
     int SoldCount,
     string Status,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    List<SkuResponse>? Skus = null);
 
 public record SpuDetailResponse(
     Guid Id,

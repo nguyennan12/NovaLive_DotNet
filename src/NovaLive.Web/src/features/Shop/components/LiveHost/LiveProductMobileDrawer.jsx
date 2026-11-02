@@ -106,7 +106,7 @@ const LiveProductMobileDrawer = ({
           ) : (
             liveProducts.map((product) => (
               <LiveProductItem
-                key={product.productId?.toString()}
+                key={(product.skuId || product.productId || product.id)?.toString()}
                 product={product}
                 onRemove={(id) => { onRemoveProduct(id) }}
               />

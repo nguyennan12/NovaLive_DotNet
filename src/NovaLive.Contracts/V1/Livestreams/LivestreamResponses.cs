@@ -12,7 +12,8 @@ public record LivestreamSessionResponse(
     int ViewerCount,
     int PeakViewerCount,
     DateTimeOffset? StartedAt,
-    DateTimeOffset? EndedAt);
+    DateTimeOffset? EndedAt,
+    DateTimeOffset? ScheduledAt = null);
 
 public record LivestreamStartResponse(
     Guid Id,
@@ -97,4 +98,3 @@ public record LivestreamReactionBatchResponse(
 public record ViewerCountUpdatedResponse(
     Guid SessionId,
     int ViewerCount);
-

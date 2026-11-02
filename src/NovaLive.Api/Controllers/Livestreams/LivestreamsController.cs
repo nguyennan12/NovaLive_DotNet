@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NovaLive.Api.Controllers.Common;
 using NovaLive.Application.UseCases.Livestreams.Commands.CreateViewerToken;
 using NovaLive.Application.UseCases.Livestreams.Queries.GetActiveLivestreams;
+using NovaLive.Application.UseCases.Livestreams.Queries.GetUpcomingLivestreams;
 using NovaLive.Application.UseCases.Livestreams.Queries.GetLivestreamById;
 using NovaLive.Application.UseCases.Livestreams.Queries.GetPinnedProduct;
 using NovaLive.Contracts.V1.Livestreams;
@@ -20,6 +21,13 @@ public sealed class LivestreamsController(ISender sender) : ApiControllerBase(se
         [FromQuery] int size = 20,
         CancellationToken ct = default) =>
         Respond(await Sender.Send(new GetActiveLivestreamsQuery(page, size), ct));
+
+    [HttpGet("upcoming")]
+    public async Task<IActionResult> GetUpcomingLivestreams(
+        [FromQuery] int page = 1,
+        [FromQuery] int size = 20,
+        CancellationToken ct = default) =>
+        Respond(await Sender.Send(new GetUpcomingLivestreamsQuery(page, size), ct));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetLivestreamById(

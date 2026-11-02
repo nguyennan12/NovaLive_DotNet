@@ -22,10 +22,13 @@ import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded'
 import SportsSoccerRoundedIcon from '@mui/icons-material/SportsSoccerRounded'
 import TvRoundedIcon from '@mui/icons-material/TvRounded'
 import WatchRoundedIcon from '@mui/icons-material/WatchRounded'
+import { useEffect } from 'react'
 import { Box, Typography } from '@mui/material'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { selectCategories } from '~/store/product/categorySlice'
+import { useQuery } from '@tanstack/react-query'
+import { getAllCategoryAPI } from '~/common/apis/services/categoryService'
+import { selectCategories, setCategories } from '~/store/product/categorySlice'
 
 const GRADIENTS = [
   'linear-gradient(135deg, #6DD5FA 0%, #E0F7FA 100%)',
@@ -51,15 +54,16 @@ const GRADIENTS = [
 ]
 
 const ICON_MAP = [
+  { keys: ['dong-ho', 'watch'], Icon: WatchRoundedIcon },
   { keys: ['dien-thoai', 'phone', 'mobile', 'smartphone'], Icon: SmartphoneRoundedIcon },
-  { keys: ['laptop', 'may-tinh', 'computer', 'pc', 'tablet'], Icon: ComputerRoundedIcon },
+  { keys: ['laptop', 'may-tinh-bang', 'may-tinh', 'computer', 'pc'], Icon: ComputerRoundedIcon },
   { keys: ['tai-nghe', 'audio', 'headset', 'headphone', 'am-thanh'], Icon: HeadsetRoundedIcon },
   { keys: ['camera', 'anh', 'photo'], Icon: PhotoCameraRoundedIcon },
   { keys: ['tv', 'tivi', 'man-hinh'], Icon: TvRoundedIcon },
-  { keys: ['thoi-trang', 'quan-ao', 'ao', 'quan', 'fashion', 'clothing'], Icon: CheckroomRoundedIcon },
+  { keys: ['quan-nam', 'quan-nu', 'quan', 'ao-nu', 'ao', 'thoi-trang-nu', 'thoi-trang', 'quan-ao', 'fashion', 'clothing'], Icon: CheckroomRoundedIcon },
   { keys: ['sach', 'book', 'van-phong-pham', 'stationery'], Icon: MenuBookRoundedIcon },
   { keys: ['game', 'gaming', 'esport'], Icon: SportsEsportsRoundedIcon },
-  { keys: ['my-pham', 'beauty', 'lam-dep', 'trang-diem', 'cosmetic'], Icon: FaceRetouchingNaturalRoundedIcon },
+  { keys: ['trang-diem', 'my-pham', 'beauty', 'lam-dep', 'cosmetic'], Icon: FaceRetouchingNaturalRoundedIcon },
   { keys: ['nha-cua', 'noi-that', 'home', 'furniture', 'gia-dung'], Icon: HomeRoundedIcon },
   { keys: ['o-to', 'xe', 'auto', 'car', 'motor', 'xe-may'], Icon: DirectionsCarRoundedIcon },
   { keys: ['the-thao', 'sport', 'fitness', 'gym', 'outdoor'], Icon: SportsSoccerRoundedIcon },
@@ -69,8 +73,7 @@ const ICON_MAP = [
   { keys: ['suc-khoe', 'health', 'thuoc', 'y-te', 'pharmacy'], Icon: LocalPharmacyRoundedIcon },
   { keys: ['cong-cu', 'tool', 'dung-cu', 'may-moc', 'dien'], Icon: BuildRoundedIcon },
   { keys: ['spa', 'cham-soc', 'duong-da', 'skincare'], Icon: SpaRoundedIcon },
-  { keys: ['tui-xach', 'bag', 'accessories', 'phu-kien', 'balo'], Icon: ShoppingBagRoundedIcon },
-  { keys: ['dong-ho', 'watch', 'jewelry', 'trang-suc', 'vong'], Icon: WatchRoundedIcon },
+  { keys: ['phu-kien', 'tui-xach', 'bag', 'accessories', 'balo'], Icon: ShoppingBagRoundedIcon },
   { keys: ['bep', 'kitchen', 'nau-an', 'noi'], Icon: KitchenRoundedIcon },
   { keys: ['sieu-thi', 'grocery', 'tap-hoa', 'hang-tieu-dung'], Icon: LocalGroceryStoreRoundedIcon },
   { keys: ['trang-suc', 'jewelry', 'vang', 'bac', 'kim-cuong'], Icon: DiamondRoundedIcon }
@@ -132,8 +135,32 @@ const CategoryCard = ({ category, gradient, onClick, Icon }) => {
 
 const CategorySection = () => {
   const navigate = useNavigate()
-  const categories = useSelector(selectCategories)
-  const popular = (categories || []).slice(0, 20)
+  const dispatch = useDispatch()
+  const reduxCategories = useSelector(selectCategories)
+
+  const { data: fetchedCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => getAllCategoryAPI(),
+    staleTime: 1000 * 60 * 10
+  })
+
+  useEffect(() => {
+    if (fetchedCategories && fetchedCategories.length > 0) {
+      dispatch(setCategories(fetchedCategories))
+    }
+  }, [fetchedCategories, dispatch])
+
+  const categories = (fetchedCategories && fetchedCategories.length > 0)
+    ? fetchedCategories
+    : (reduxCategories || [])
+
+  const sortedCategories = [...categories].sort((a, b) => {
+    const orderA = a.displayOrder ?? a.display_order ?? 999
+    const orderB = b.displayOrder ?? b.display_order ?? 999
+    return orderA - orderB
+  })
+
+  const popular = sortedCategories.slice(0, 20)
 
   if (!popular.length) return null
 

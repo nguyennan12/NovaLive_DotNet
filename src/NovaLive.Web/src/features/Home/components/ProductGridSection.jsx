@@ -3,7 +3,7 @@ import { HomeProductCard, HomeProductCardSkeleton } from './HomeProductCard'
 import { SectionHeader } from '~/features/Product/components/shared/SectionHeader'
 import { CircularProgress } from '@mui/material'
 
-const ProductGridSection = ({ products = [], isLoading, lastItemRef, isFetchingNextPage }) => {
+const ProductGridSection = ({ products = [], isLoading, lastItemRef, isFetchingNextPage, title }) => {
   return (
     <Box sx={{
       background: 'rgba(255, 255, 255, 0.1)',
@@ -14,7 +14,7 @@ const ProductGridSection = ({ products = [], isLoading, lastItemRef, isFetchingN
       p: 2,
       my: { xs: 3.5, md: 5 }
     }}>
-      <SectionHeader title={'Các sản phẩm khác'} />
+      <SectionHeader title={title || 'Các sản phẩm khác'} />
       {isLoading ? (
         <Box sx={{
           display: 'grid',
@@ -49,8 +49,8 @@ const ProductGridSection = ({ products = [], isLoading, lastItemRef, isFetchingN
           })}
           {products.length === 0 && (
             <Box sx={{ gridColumn: '1 / -1', py: 5, textAlign: 'center' }}>
-              <Typography sx={{ fontSize: '0.9rem', color: '#bbb' }}>
-                Không tìm thấy sản phẩm nào phù hợp
+              <Typography sx={{ fontSize: '0.9rem', color: '#64748b' }}>
+                Không tìm thấy sản phẩm nào trong danh mục này
               </Typography>
             </Box>
           )}

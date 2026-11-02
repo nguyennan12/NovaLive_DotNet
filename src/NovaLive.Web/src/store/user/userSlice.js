@@ -36,29 +36,44 @@ export const logoutUserAPI = createAsyncThunk(
   }
 )
 
+const normalizeUserData = (user, tokens = {}, payload = {}) => {
+  if (!user) return null
+  const shopId = user?.shopId || user?.user_shop || null
+  const roles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : ['Buyer'])
+  return {
+    ...user,
+    _id: user?.id || user?._id,
+    id: user?.id || user?._id,
+    shopId,
+    user_shop: shopId,
+    roles,
+    role: roles[0] || 'Buyer',
+    user_name: user?.fullName || user?.user_name,
+    user_email: user?.email || user?.user_email,
+    user_phone: user?.phone || user?.user_phone,
+    user_avatar: user?.avatarUrl || user?.user_avatar,
+    accessToken: tokens.accessToken || payload?.accessToken || user?.accessToken,
+    refreshToken: tokens.refreshToken || payload?.refreshToken || user?.refreshToken
+  }
+}
+
 export const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setCurrentUser: (state, action) => { state.currentUser = action.payload },
-    clearCurrentUser: (state) => { state.currentUser = null }
+    setCurrentUser: (state, action) => {
+      state.currentUser = action.payload ? normalizeUserData(action.payload) : null
+    },
+    clearCurrentUser: (state) => {
+      state.currentUser = null
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(loginUserAPI.fulfilled, (state, action) => {
       const payload = action.payload?.data || action.payload?.metadata || action.payload || {}
       const user = payload?.user || payload
       const tokens = payload?.tokens || {}
-      state.currentUser = {
-        ...user,
-        _id: user?.id || user?._id,
-        id: user?.id || user?._id,
-        user_shop: user?.shopId || user?.user_shop,
-        user_name: user?.fullName || user?.user_name,
-        user_email: user?.email || user?.user_email,
-        user_phone: user?.phone || user?.user_phone,
-        user_avatar: user?.avatarUrl || user?.user_avatar,
-        accessToken: tokens.accessToken || payload?.accessToken || user?.accessToken
-      }
+      state.currentUser = normalizeUserData(user, tokens, payload)
     })
     builder.addCase(logoutUserAPI.fulfilled, (state) => {
       state.currentUser = null

@@ -175,6 +175,12 @@ const ShopProfileHeader = () => {
   if (isLoading) return <ShopHeaderSkeleton />
 
   const metrics = shop?.shop_metrics || {}
+  const userRoles = Array.isArray(currentUser?.roles)
+    ? currentUser.roles
+    : currentUser?.role
+    ? [currentUser.role]
+    : []
+  const isAdmin = userRoles.some((r) => String(r).toLowerCase() === 'admin')
 
   return (
     <>
@@ -227,11 +233,11 @@ const ShopProfileHeader = () => {
               </Typography>
               <Chip
                 icon={<StorefrontIcon sx={{ fontSize: '14px !important', color: '#fff !important' }} />}
-                label={shop?.shop_status === 'active' ? 'Đang hoạt động' : (shop?.shop_status || 'Cửa hàng')}
+                label={shop?.shop_status?.toLowerCase() === 'active' ? 'Đang hoạt động' : (shop?.shop_status || 'Cửa hàng')}
                 size="small"
                 sx={{
                   mt: 0.75,
-                  background: shop?.shop_status === 'active'
+                  background: shop?.shop_status?.toLowerCase() === 'active'
                     ? 'linear-gradient(90deg,#10b981,#14c3eb)'
                     : 'linear-gradient(90deg,#0095ff,#14c3eb)',
                   color: '#fff', fontWeight: 600, fontSize: '0.72rem', height: 22
@@ -246,26 +252,28 @@ const ShopProfileHeader = () => {
             </Box>
 
             <Stack sx={{ gap: 1, flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', pt: { xs: 0, sm: 0.5 } }}>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AdminPanelSettingsRoundedIcon sx={{ fontSize: '15px !important' }} />}
-                onClick={() => navigate('/admin/dashboard')}
-                sx={{
-                  background: 'linear-gradient(90deg, #3465c8 0%, #1e40af 100%)',
-                  color: '#fff',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  py: 0.6,
-                  px: 1.5,
-                  borderRadius: '8px',
-                  textTransform: 'none',
-                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
-                  '&:hover': { background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)' }
-                }}
-              >
-                Quản trị sàn (Admin)
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AdminPanelSettingsRoundedIcon sx={{ fontSize: '15px !important' }} />}
+                  onClick={() => navigate('/admin/dashboard')}
+                  sx={{
+                    background: 'linear-gradient(90deg, #3465c8 0%, #1e40af 100%)',
+                    color: '#fff',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    py: 0.6,
+                    px: 1.5,
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
+                    '&:hover': { background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)' }
+                  }}
+                >
+                  Quản trị sàn (Admin)
+                </Button>
+              )}
 
               <Button
                 variant="outlined"

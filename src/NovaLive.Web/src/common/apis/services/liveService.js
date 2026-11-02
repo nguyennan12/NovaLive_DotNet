@@ -158,11 +158,30 @@ export const getPinnedProductAPI = async (liveId) => {
  * Seller pins a product / flash deal into the livestream
  */
 export const addProductToLiveSessionAPI = async (liveId, payload) => {
+  let skuId = null
+  let flashPrice = null
+  let quantityLimit = null
+  let durationSeconds = 120
+
+  if (Array.isArray(payload) && payload.length > 0) {
+    const item = payload[0]
+    skuId = item.skuId || item.skus?.[0]?.sku_id || item.skus?.[0]?.id || item.id || item.productId
+    flashPrice = item.flashPrice || item.skus?.[0]?.live_price || item.skus?.[0]?.sellPrice
+    quantityLimit = item.quantityLimit
+    durationSeconds = item.durationSeconds || 120
+  } else if (payload && typeof payload === 'object') {
+    const firstSku = payload.skus?.[0] || payload.sku_list?.[0]
+    skuId = payload.skuId || payload.sku_id || firstSku?.id || firstSku?._id || payload.id || payload.productId
+    flashPrice = payload.flashPrice || firstSku?.sellPrice || firstSku?.price || payload.price
+    quantityLimit = payload.quantityLimit
+    durationSeconds = payload.durationSeconds || 120
+  }
+
   const body = {
-    skuId: payload.skuId || payload.productId,
-    flashPrice: payload.flashPrice ? Number(payload.flashPrice) : null,
-    quantityLimit: payload.quantityLimit ? Number(payload.quantityLimit) : null,
-    durationSeconds: payload.durationSeconds ? Number(payload.durationSeconds) : 120
+    skuId,
+    flashPrice: flashPrice ? Number(flashPrice) : null,
+    quantityLimit: quantityLimit ? Number(quantityLimit) : null,
+    durationSeconds: durationSeconds ? Number(durationSeconds) : 120
   }
   const response = await authorizedAxiosInstance.post(`seller/livestreams/${liveId}/pin-product`, body)
   return response?.data !== undefined ? response.data : response
@@ -236,4 +255,19 @@ export const updateLiveSessionAPI = async (liveId, payload) => {
 export const cancelLiveSessionAPI = async (liveId) => {
   const response = await authorizedAxiosInstance.delete(`seller/livestreams/${liveId}/schedule`)
   return response?.data !== undefined ? response.data : response
+}
+
+export const getUpcomingSessionsAPI = async (params = {}) => {
+  const page = params.page || 1
+  const size = params.limit || params.size || 20
+  const response = await authorizedAxiosInstance.get(`livestreams/upcoming?page=${page}&size=${size}`)
+  const raw = response?.data !== undefined ? response.data : response
+  const items = (raw?.items ?? (Array.isArray(raw) ? raw : [])).map(normalizeLiveSession)
+  return {
+    lives: items,
+    items,
+    totalCount: raw?.totalCount ?? items.length,
+    page: raw?.page ?? page,
+    size: raw?.size ?? size
+  }
 }

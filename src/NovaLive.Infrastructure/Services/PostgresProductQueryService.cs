@@ -25,6 +25,14 @@ public sealed class PostgresProductQueryService(AppDbContext dbContext) : IProdu
         var hasKeyword = !string.IsNullOrWhiteSpace(request.Keyword);
         var keyword = request.Keyword?.Trim() ?? string.Empty;
 
+        var catSlug = !string.IsNullOrWhiteSpace(request.CategorySlug)
+            ? request.CategorySlug.Trim().ToLowerInvariant()
+            : (!string.IsNullOrWhiteSpace(request.Category) && !Guid.TryParse(request.Category, out _)
+                ? request.Category.Trim().ToLowerInvariant()
+                : null);
+
+        var catId = request.CategoryId ?? (Guid.TryParse(request.Category, out var parsedGuid) ? parsedGuid : null);
+
         var page = Math.Max(1, request.Page);
         var size = Math.Clamp(request.Size, 1, 100);
         var offset = (page - 1) * size;
@@ -65,6 +73,7 @@ WITH filtered_spus AS (
       AND sh.deleted_at IS NULL
       AND (@shopId::uuid IS NULL OR s.shop_id = @shopId)
       AND (@categoryId::uuid IS NULL OR s.category_id = @categoryId)
+      AND (@categorySlug::text IS NULL OR lower(c.slug) = @categorySlug)
       AND (
           @hasKeyword::boolean = FALSE OR (
               (s.search_vector IS NOT NULL AND s.search_vector @@ websearch_to_tsquery(@textSearchConfig::regconfig, @keyword))
@@ -117,7 +126,8 @@ LIMIT @pageSize OFFSET @offset;";
         AddParam("textSearchConfig", PostgresSearchConfiguration.TextSearchConfig, DbType.String);
         AddParam("keyword", keyword, DbType.String);
         AddParam("shopId", request.ShopId, DbType.Guid);
-        AddParam("categoryId", request.CategoryId, DbType.Guid);
+        AddParam("categoryId", catId, DbType.Guid);
+        AddParam("categorySlug", catSlug, DbType.String);
         AddParam("minPrice", request.MinPrice, DbType.Decimal);
         AddParam("maxPrice", request.MaxPrice, DbType.Decimal);
         AddParam("pageSize", size, DbType.Int32);
@@ -165,6 +175,14 @@ LIMIT @pageSize OFFSET @offset;";
         ProductSearchRequest request,
         CancellationToken cancellationToken)
     {
+        var catSlug = !string.IsNullOrWhiteSpace(request.CategorySlug)
+            ? request.CategorySlug.Trim().ToLowerInvariant()
+            : (!string.IsNullOrWhiteSpace(request.Category) && !Guid.TryParse(request.Category, out _)
+                ? request.Category.Trim().ToLowerInvariant()
+                : null);
+
+        var catId = request.CategoryId ?? (Guid.TryParse(request.Category, out var parsedGuid) ? parsedGuid : null);
+
         var query =
             from spu in dbContext.Spus.AsNoTracking()
             join shop in dbContext.Shops.AsNoTracking() on spu.ShopId equals shop.Id
@@ -183,9 +201,14 @@ LIMIT @pageSize OFFSET @offset;";
             query = query.Where(item => item.Spu.ShopId == shopId);
         }
 
-        if (request.CategoryId is { } categoryId)
+        if (catId is { } categoryId)
         {
             query = query.Where(item => item.Spu.CategoryId == categoryId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(catSlug))
+        {
+            query = query.Where(item => item.Category.Slug.ToLower() == catSlug);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Keyword))

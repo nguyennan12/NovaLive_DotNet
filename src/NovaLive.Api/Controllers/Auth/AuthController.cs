@@ -46,9 +46,10 @@ public sealed class AuthController(ISender sender, SessionCookies cookies) : Api
         RespondSession(await Sender.Send(new LoginCommand(data, Ip, Device), ct));
 
     [AllowAnonymous, HttpPost("refresh"), RequireCookieCsrf]
-    public async Task<IActionResult> Refresh(CancellationToken ct)
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? body, CancellationToken ct)
     {
         var token = cookies.ReadRefresh(Request);
+        if (string.IsNullOrWhiteSpace(token)) token = body?.RefreshToken;
         if (string.IsNullOrWhiteSpace(token))
         {
             cookies.Clear(Response);
