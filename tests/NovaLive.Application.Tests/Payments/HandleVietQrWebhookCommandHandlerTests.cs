@@ -48,6 +48,24 @@ public class HandleVietQrWebhookCommandHandlerTests
             NullLogger<HandleVietQrWebhookCommandHandler>.Instance, _flashSales.Object);
     }
 
+
+    [Fact]
+    public async Task OnlineWebhook_CannotSettleCodPayment()
+    {
+        var order = ParentOrder.Create(Guid.NewGuid(), "ORD-COD", "{}", 100000, 0, 0, 100000, null, _now);
+        var payment = Payment.Create(order.Id, PaymentMethod.COD, 100000, _now);
+        var request = new VietQrWebhookRequest { TransactionId = "TX-COD", Content = "NOVA ORD-COD", Amount = 100000 };
+        _vietQrAdapterMock.Setup(v => v.ExtractOrderCode(request.ResolvedContent)).Returns(order.OrderCode);
+        _parentOrderRepositoryMock.Setup(p => p.GetByOrderCodeForUpdateAsync(order.OrderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(order);
+        _paymentRepositoryMock.Setup(p => p.GetForUpdateAsync(order.Id, It.IsAny<CancellationToken>())).ReturnsAsync(payment);
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid"), default);
+        result.Error.Code.Should().Be("Payment.InvalidMethod");
+        payment.Status.Should().Be(PaymentStatus.Pending);
+        order.PaymentStatus.Should().Be(ParentOrderPaymentStatus.Pending);
+        _outboxRepositoryMock.Verify(o => o.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_WhenValidSuccessWebhook_UpdatesPaymentParentOrderSubOrderCreditsWalletAndOutbox()
     {

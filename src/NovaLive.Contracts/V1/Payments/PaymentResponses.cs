@@ -11,13 +11,26 @@ public record PaymentInitiateResponse(
     string? QrCodeUrl,
     DateTime ExpiresAt);
 
+public record PaymentInitResponse(
+    Guid PaymentId,
+    Guid ParentOrderId,
+    string PaymentMethod,
+    decimal Amount,
+    string Status,
+    string? PaymentUrl,
+    string? QrPayload,
+    string? QrImageBase64,
+    DateTimeOffset? ExpiredAt,
+    VietQrResponse? VietQr = null);
+
 public record PaymentStatusResponse(
     Guid PaymentId,
     Guid OrderId,
     string PaymentMethod,
     decimal Amount,
     string Status,
-    DateTime? PaidAt);
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? ExpiredAt = null);
 
 public record MomoCreatePaymentResponse
 {
@@ -66,7 +79,8 @@ public record VietQrResponse(
     string AccountNumber,
     string BankBin,
     decimal Amount,
-    string Description);
+    string Description,
+    string? QrImageBase64 = null);
 
 public record VietQrWebhookResponse(
     bool Success,
@@ -81,3 +95,5 @@ public record PaymentSuccessEvent(
     string PaymentMethod,
     string? TransactionRef,
     DateTimeOffset PaidAt);
+
+public sealed record PaymentSuccessNotification(Guid PaymentId, Guid OrderId, decimal Amount, string PaymentMethod);

@@ -613,10 +613,10 @@ NovaLive
 ---
 
 ### T30 — [BE/API] Payment Initiator & Realtime Status Query
-- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev A
-- **SRS Requirement**: `FR-PAY-004`, `FR-PAY-005`, `FR-PAY-006`
+- **Status**: DONE | **Priority**: P0 | **Assign**: Dev A
+- **SRS Requirement**: `FR-PAY-001`, `FR-PAY-002`, `FR-PAY-004`, `FR-PAY-005`
 - **Detailed Technical Implementation**:
-  - `InitiatePaymentCommand`: Nhận `orderId`, `method` (MoMo / VietQR). Tra cứu `Payments` của order. Gọi `IPaymentGateway.InitiateAsync`, cập nhật `transaction_ref`, đặt thời hạn thanh toán `expired_at = NOW() + 15 phút`. Trả về `payUrl` / `qrCode`.
+  - `InitiatePaymentCommand`: Nhận `parentOrderId`, `paymentMethod` (MoMo / VietQR / COD). Kiểm tra chủ đơn, trạng thái Pending và phương thức đã chọn khi checkout. Gọi adapter MoMo/VietQR tương ứng, trả về URL hoặc payload + ảnh PNG base64 và hạn thanh toán 15 phút đã lưu; gọi lại không gia hạn giao dịch.
   - `GetPaymentStatusQuery`: Query trạng thái `Payments.status` từ DB/Redis cache cho frontend polling.
   - Endpoints `PaymentsController`: `POST /payments/initiate`, `GET /payments/{paymentId}/status`.
   - **Xử lý COD**: Đơn COD không cần gọi Initiate payment online. `Payments.status` giữ `Pending` cho đến khi đơn giao xong và ĐVVC đối soát COD thành công.
@@ -624,10 +624,12 @@ NovaLive
 - **API Contracts**: `InitiatePaymentRequest`, `PaymentInitResponse`, `PaymentStatusResponse` (`NovaLive.Contracts.V1.Payments`)
 - **Estimated Size**: M
 
+- **Implementation & verification**: [Payment, realtime và rating flows](payment-realtime-rating.md).
+
 ---
 
 ### T31 — [REALTIME] SignalR PaymentNotificationHub Integration
-- **Status**: MISSING | **Priority**: P0 | **Assign**: Dev C
+- **Status**: DONE | **Priority**: P0 | **Assign**: Dev C
 - **SRS Requirement**: `FR-NOTI-003`, `7.2 Realtime API`
 - **Detailed Technical Implementation**:
   - Implement `PaymentNotificationHub` tại route `wss://api.novalive.vn/hubs/payment`.
@@ -636,6 +638,8 @@ NovaLive
   - Cấu hình Redis Backplane (`AddStackExchangeRedis`) cho SignalR để đồng bộ notification giữa các container instances trong môi trường production.
 - **Dependencies**: T30
 - **Estimated Size**: M
+
+- **Implementation & verification**: [Payment, realtime và rating flows](payment-realtime-rating.md).
 
 ---
 
@@ -854,7 +858,7 @@ NovaLive
 ---
 
 ### T45 — [WORKER] Rating Calculation Background Worker
-- **Status**: MISSING | **Priority**: P2 | **Assign**: Dev C
+- **Status**: DONE | **Priority**: P2 | **Assign**: Dev C
 - **SRS Requirement**: `FR-REVIEW-007`
 - **Detailed Technical Implementation**:
   - Implement Background Worker `RatingCalculationWorker` chạy định kỳ 5 phút/lần.
@@ -864,6 +868,8 @@ NovaLive
   - Cập nhật `Shops.rating_avg`, `Shops.rating_count`.
 - **Dependencies**: T44
 - **Estimated Size**: S
+
+- **Implementation & verification**: [Payment, realtime và rating flows](payment-realtime-rating.md).
 
 ---
 

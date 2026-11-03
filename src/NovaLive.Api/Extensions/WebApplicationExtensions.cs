@@ -43,7 +43,7 @@ public static class WebApplicationExtensions
         // 8. Realtime SignalR Hubs
         app.MapHub<LivestreamHub>("/hubs/livestream");
         app.MapHub<OrderNotificationHub>("/hubs/order");
-        app.MapHub<PaymentNotificationHub>("/hubs/payment");
+        app.MapHub<PaymentNotificationHub>("/hubs/payment", options => options.CloseOnAuthenticationExpiration = true);
 
         // 9. Health Checks
         app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

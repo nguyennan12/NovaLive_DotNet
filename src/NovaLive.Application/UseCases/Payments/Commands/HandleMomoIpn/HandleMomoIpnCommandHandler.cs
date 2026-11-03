@@ -60,8 +60,10 @@ public sealed class HandleMomoIpnCommandHandler(
 
         if (Guid.TryParse(request.OrderId, out var parentOrderId))
         {
-            payment = await paymentRepository.GetForUpdateAsync(parentOrderId, cancellationToken);
+            // Match expiry/cancellation/VietQR: parent first, then payment, to avoid lock inversion.
             parentOrder = await parentOrderRepository.GetForUpdateAsync(parentOrderId, cancellationToken);
+            if (parentOrder is not null)
+                payment = await paymentRepository.GetForUpdateAsync(parentOrderId, cancellationToken);
         }
 
         if (payment is null)
@@ -78,6 +80,9 @@ public sealed class HandleMomoIpnCommandHandler(
             logger.LogWarning("Không tìm thấy Payment hoặc ParentOrder với mã: {OrderId}", request.OrderId);
             return PaymentErrors.PaymentNotFound;
         }
+
+        // A provider callback must never settle another method, especially a COD order.
+        if (payment.Method != PaymentMethod.MoMo) return PaymentErrors.InvalidMethod;
 
         // Kiểm tra nếu đơn hàng đã được đánh dấu thanh toán trước đó
         if (payment.Status == PaymentStatus.Success)

@@ -86,6 +86,8 @@ public static class ServiceCollectionExtensions
             options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
         });
 
+        services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, NovaLive.Api.Hubs.JwtUserIdProvider>();
+
         var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {

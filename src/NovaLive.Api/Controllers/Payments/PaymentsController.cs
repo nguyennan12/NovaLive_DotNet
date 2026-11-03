@@ -11,6 +11,8 @@ using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Application.UseCases.Payments;
+using NovaLive.Application.UseCases.Payments.Commands.InitiatePayment;
+using NovaLive.Application.UseCases.Payments.Queries.GetPaymentStatus;
 using NovaLive.Application.UseCases.Payments.Commands.HandleMomoIpn;
 using NovaLive.Application.UseCases.Payments.Commands.HandleVietQrWebhook;
 using NovaLive.Contracts.Common;
@@ -31,6 +33,21 @@ public sealed class PaymentsController(
     ILogger<PaymentsController> logger) : ApiControllerBase(sender)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [HttpPost("initiate")]
+    [HttpPost("/payments/initiate")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<PaymentInitResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Initiate([FromBody] InitiatePaymentRequest request, CancellationToken ct) =>
+        (await Sender.Send(new InitiatePaymentCommand(request), ct)).ToActionResult();
+
+    [HttpGet("{paymentId:guid}/status")]
+    [HttpGet("/payments/{paymentId:guid}/status")]
+    [Authorize]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetStatus(Guid paymentId, CancellationToken ct) =>
+        (await Sender.Send(new GetPaymentStatusQuery(paymentId), ct)).ToActionResult();
 
     [HttpPost("webhook/momo")]
     [HttpPost("/payments/webhook/momo")]
@@ -173,6 +190,11 @@ public sealed class PaymentsController(
                 Error.NotFound("Payment.NotFound", "Không tìm thấy thông tin thanh toán của đơn hàng.")).ToActionResult();
         }
 
+        var validation = PaymentInitiationRules.Validate(order, payment, PaymentMethod.MoMo, DateTimeOffset.UtcNow);
+        if (validation.IsFailure) return Result.Failure<MomoCreatePaymentResponse>(validation.Error).ToActionResult();
+
+        if (payment.Amount != decimal.Truncate(payment.Amount) || payment.Amount > long.MaxValue)
+            return Result.Failure<MomoCreatePaymentResponse>(PaymentErrors.InvalidAmount).ToActionResult();
         var momoAmount = (long)payment.Amount;
         var response = await momoAdapter.CreatePaymentUrlAsync(
             order.OrderCode,
@@ -181,6 +203,8 @@ public sealed class PaymentsController(
             request.ExtraData,
             ct);
 
+        if (response.ResultCode != 0 || string.IsNullOrWhiteSpace(response.PayUrl))
+            return Result.Failure<MomoCreatePaymentResponse>(PaymentErrors.GatewayFailed("Không thể tạo liên kết thanh toán MoMo.")).ToActionResult();
         return Ok(ApiResponse<MomoCreatePaymentResponse>.Ok(response, "Khởi tạo thanh toán MoMo thành công."));
     }
 
@@ -228,6 +252,9 @@ public sealed class PaymentsController(
             return Result.Failure<VietQrResponse>(
                 Error.NotFound("Payment.NotFound", "Không tìm thấy thông tin thanh toán của đơn hàng.")).ToActionResult();
         }
+
+        var validation = PaymentInitiationRules.Validate(order, payment, PaymentMethod.VietQR, DateTimeOffset.UtcNow);
+        if (validation.IsFailure) return Result.Failure<VietQrResponse>(validation.Error).ToActionResult();
 
         var response = vietQrAdapter.GenerateDynamicQr(order.OrderCode, payment.Amount, description);
         return Ok(ApiResponse<VietQrResponse>.Ok(response, "Tạo mã VietQR thành công."));
