@@ -25,6 +25,6 @@ function requireAddressProvider() {
     throw new Error('Chưa cấu hình nguồn địa chỉ vận chuyển. Không thể tải tỉnh/thành, quận/huyện, phường/xã. Vui lòng liên hệ bộ phận kỹ thuật.')
   }
 }
-export async function getProvinces(): Promise<Province[]> { if (MOCK_ONLY) return mocks.mockProvinces(); requireAddressProvider(); return getProvincesAPI() }
-export async function getDistricts(provinceId: number): Promise<District[]> { if (MOCK_ONLY) return mocks.mockDistricts(provinceId); requireAddressProvider(); return getDistrictsAPI(provinceId) }
-export async function getWards(districtId: number): Promise<Ward[]> { if (MOCK_ONLY) return mocks.mockWards(districtId); requireAddressProvider(); return getWardsAPI(districtId) }
+export async function getProvinces(): Promise<Province[]> { if (MOCK_ONLY) return mocks.mockProvinces(); requireAddressProvider(); return await getProvincesAPI() as unknown as Province[] }
+export async function getDistricts(provinceId: number): Promise<District[]> { if (MOCK_ONLY) return mocks.mockDistricts(provinceId); requireAddressProvider(); return await getDistrictsAPI(provinceId) as unknown as District[] }
+export async function getWards(districtId: number): Promise<Ward[]> { if (MOCK_ONLY) return mocks.mockWards(districtId); requireAddressProvider(); return await getWardsAPI(districtId) as unknown as Ward[] }

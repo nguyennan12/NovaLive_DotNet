@@ -8,6 +8,7 @@ using NovaLive.Application.UseCases.Orders;
 using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
+using NovaLive.Domain.Payments;
 using NovaLive.Domain.Shipping;
 using NovaLive.Domain.System;
 
@@ -47,13 +48,17 @@ public sealed class CreateShipmentOrderCommandHandler(
 
         var warehouse = await addresses.FindForShopAsync(request.PickupAddressId, shopId, ct);
         if (warehouse is null || warehouse.ShopId != shopId) return ShippingErrors.InvalidShopWarehouse;
-        if (warehouse.DistrictId is not > 0 || string.IsNullOrWhiteSpace(warehouse.WardCode))
+        if (warehouse.DistrictId is not > 0 || string.IsNullOrWhiteSpace(warehouse.WardCode)
+            || string.IsNullOrWhiteSpace(warehouse.WardName) || string.IsNullOrWhiteSpace(warehouse.DistrictName)
+            || string.IsNullOrWhiteSpace(warehouse.ProvinceName))
             return ShippingErrors.IncompleteWarehouseAddress;
 
         ShippingAddressSnapshot? recipient;
         try { recipient = JsonSerializer.Deserialize<ShippingAddressSnapshot>(parent.ShippingAddressJson, Json); }
         catch (JsonException) { return ShippingErrors.IncompleteRecipientAddress; }
         if (recipient is null || recipient.DistrictId is not > 0 || string.IsNullOrWhiteSpace(recipient.WardCode)
+            || string.IsNullOrWhiteSpace(recipient.WardName) || string.IsNullOrWhiteSpace(recipient.DistrictName)
+            || string.IsNullOrWhiteSpace(recipient.ProvinceName)
             || string.IsNullOrWhiteSpace(recipient.RecipientName) || string.IsNullOrWhiteSpace(recipient.Phone)
             || string.IsNullOrWhiteSpace(recipient.DetailAddress))
             return ShippingErrors.IncompleteRecipientAddress;
@@ -77,6 +82,8 @@ public sealed class CreateShipmentOrderCommandHandler(
         if (weight <= 0 || weight > int.MaxValue) return ShippingErrors.InvalidItems;
         var payment = await payments.GetByParentOrderIdAsync(parent.Id, ct);
         if (payment is null) return ShippingErrors.PaymentNotFound;
+        if (payment.Method != PaymentMethod.COD && payment.Status != PaymentStatus.Success)
+            return ShippingErrors.PaymentNotSettled;
         var cod = payment.Method == PaymentMethod.COD ? sub.SubTotal : 0m;
         var resolved = providers.Resolve(request.Provider);
         if (resolved.IsFailure) return resolved.Error;
@@ -85,14 +92,16 @@ public sealed class CreateShipmentOrderCommandHandler(
         int? serviceType = null;
         if (provider == ShippingProvider.GHN)
         {
-            if (!int.TryParse(request.ServiceCode, out var id) || id <= 0) return ShippingErrors.InvalidServiceCode;
+            if (!int.TryParse(request.ServiceCode, out var id) || id != 2) return ShippingErrors.InvalidServiceCode;
+            if (weight >= 20_000) return ShippingErrors.UnsupportedPackageWeight;
             serviceType = id;
         }
         var model = new ShippingShipmentCreateModel(sub.SubOrderCode,
             warehouse.ContactName, warehouse.ContactPhone, warehouse.DetailAddress, warehouse.WardName,
-            warehouse.DistrictName, warehouse.DistrictId.Value, warehouse.WardCode,
+            warehouse.DistrictName, warehouse.DistrictId.Value, warehouse.WardCode, warehouse.ProvinceName,
             recipient.RecipientName, recipient.Phone, recipient.DetailAddress, recipient.WardCode,
-            recipient.DistrictId.Value, cod, (int)weight, "KHONGCHOXEMHANG", packageItems,
+            recipient.DistrictId.Value, recipient.WardName, recipient.DistrictName, recipient.ProvinceName,
+            cod, (int)weight, "KHONGCHOXEMHANG", packageItems,
             ServiceTypeId: serviceType, ServiceCode: request.ServiceCode);
         Result<ShippingOrderCreateResult> result;
         try { result = await resolved.Value!.CreateShipmentAsync(model, ct); }

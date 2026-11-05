@@ -13,7 +13,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 // Keep the seller portal routes while reusing the richer pages from the original seller UI.
 const ProductsPage = lazy(() => import('~/features/Product/pages/ProductPage'))
 const ProductFormPage = lazy(() => import('./pages/ProductFormPage'))
-const InventoryPage = lazy(() => import('./pages/InventoryPage'))
+const InventoryPage = lazy(() => import('~/features/Inventory/pages/InventoryPage'))
 const OrdersPage = lazy(() => import('./pages/OrdersPage'))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'))
@@ -31,7 +31,7 @@ export default function SellerPortal() {
     <Route index element={<DashboardPage />} />
     <Route path='analytics' element={<DashboardPage />} />
     <Route path='profile' element={<ProfilePage />} />
-    <Route path='messages' element={<NotificationsPage />} />
+    <Route path='messages' element={<Navigate to='/seller/notifications' replace />} />
     <Route path='notifications' element={<NotificationsPage />} />
     <Route path='products' element={<ProductsPage />} />
     <Route path='products/new' element={<ProductFormPage />} />

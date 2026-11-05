@@ -3,6 +3,7 @@ using Moq;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.UseCases.Shipping.Commands.Webhook;
+using NovaLive.Application.UseCases.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
 using NovaLive.Domain.Pricing;
@@ -23,8 +24,9 @@ public sealed class ShippingWebhookTestContext
     public List<OutboxMessage> Messages { get; } = [];
     public ShippingOrder Shipment { get; }
     public SubOrder Sub { get; }
-    public HandleShippingWebhookCommandHandler Handler => new(Shipments.Object, Subs.Object, Histories.Object,
-        Outbox.Object, Clock.Object, NullLogger<HandleShippingWebhookCommandHandler>.Instance);
+    public ShippingDeliveryProcessor Processor => new(Shipments.Object, Subs.Object, Histories.Object,
+        Outbox.Object, Clock.Object, NullLogger<ShippingDeliveryProcessor>.Instance);
+    public HandleShippingWebhookCommandHandler Handler => new(Processor);
     public HandleShippingWebhookCommand Command(ShippingStatus status = ShippingStatus.Delivered) =>
         new(ShippingProvider.GHN, "TRACK-1", status, "{}", Now.AddHours(-1));
 

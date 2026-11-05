@@ -1,218 +1,239 @@
+using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Globalization;
-using QRCoder;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Contracts.V1.Payments;
+using QRCoder;
 
 namespace NovaLive.Infrastructure.Payments.VietQr;
 
 public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
 {
+    private static readonly Regex OrderCodeRegex = new(@"(?:NOVA|VQR)[\s_-]*([A-Za-z0-9_-]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly VietQrOptions _options;
+    private readonly HttpClient _http;
     private readonly ILogger<VietQrPaymentAdapter> _logger;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
+    private string? _providerToken;
+    private DateTimeOffset _providerTokenExpiresAt;
 
-    private static readonly Regex OrderCodeRegex = new(
-        @"(?:NOVA|VQR)[\s_-]*([A-Za-z0-9_-]+)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    public string GatewayName => "VietQR";
-
-    public VietQrPaymentAdapter(
-        IOptions<VietQrOptions> options,
-        ILogger<VietQrPaymentAdapter> logger)
+    public VietQrPaymentAdapter(HttpClient http, IOptions<VietQrOptions> options, ILogger<VietQrPaymentAdapter> logger)
     {
+        _http = http;
         _options = options.Value;
         _logger = logger;
     }
 
-    public VietQrResponse GenerateDynamicQr(string orderCode, decimal amount, string? description = null)
+    public string GatewayName => "VietQR";
+
+    public async Task<VietQrResponse> GenerateDynamicQrAsync(string orderCode, decimal amount, string? description = null, CancellationToken cancellationToken = default)
     {
-        var cleanOrderCode = orderCode.Trim();
-        var content = string.IsNullOrWhiteSpace(description)
-            ? $"NOVA {cleanOrderCode}"
-            : description.Trim();
+        EnsureProviderConfiguration();
+        if (amount <= 0 || amount != decimal.Truncate(amount) || amount > long.MaxValue)
+            throw new InvalidOperationException("Số tiền VietQR phải là số nguyên dương hợp lệ.");
 
-        var intAmount = (long)Math.Round(amount, MidpointRounding.AwayFromZero);
+        // The callback is correlated by this exact transfer content. Do not let a display
+        // description replace it, otherwise a successful bank transfer cannot settle the order.
+        var content = BuildContent(orderCode);
+        var token = await GetProviderTokenAsync(cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, BuildProviderUrl("/vqr/api/qr/generate-customer"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Content = JsonContent.Create(new
+        {
+            bankCode = _options.BankCode,
+            bankAccount = _options.AccountNumber,
+            userBankName = _options.AccountName,
+            content,
+            qrType = 0,
+            amount = (long)amount,
+            orderId = CreateProviderOrderId(orderCode),
+            transType = "C",
+            additionalData = Array.Empty<object>()
+        });
 
-        // 1. Tạo chuỗi mã QR theo chuẩn EMVCo NAPAS 247
-        var emvcoQr = BuildNapasEmvcoQr(_options.BankBin, _options.AccountNumber, intAmount, content);
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"VietQR Generate QR thất bại ({(int)response.StatusCode}): {ReadProviderMessage(raw)}");
 
-        // 2. Tạo URL ảnh mã QR QuickLink
-        var encodedContent = Uri.EscapeDataString(content);
-        var encodedName = Uri.EscapeDataString(_options.AccountName);
-        var qrDataUrl = $"https://img.vietqr.io/image/{_options.BankBin}-{_options.AccountNumber}-compact2.png?amount={intAmount}&addInfo={encodedContent}&accountName={encodedName}";
+        var provider = JsonSerializer.Deserialize<GenerateQrResponse>(raw, Json)
+            ?? throw new InvalidOperationException("VietQR trả về dữ liệu tạo QR không hợp lệ.");
+        if (string.IsNullOrWhiteSpace(provider.QrCode)) throw new InvalidOperationException("VietQR không trả về qrCode.");
+        var qrImage = Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(provider.QrCode, QRCodeGenerator.ECCLevel.M, 8));
+        return new VietQrResponse(provider.QrCode, provider.QrLink ?? string.Empty,
+            provider.UserBankName ?? _options.AccountName, provider.BankAccount ?? _options.AccountNumber,
+            provider.BankCode ?? _options.BankCode, ParseAmount(provider.Amount, amount), provider.Content ?? content, qrImage);
+    }
 
-        _logger.LogInformation(
-            "Đã sinh mã VietQR cho đơn hàng {OrderCode}, số tiền: {Amount} VND, nội dung: '{Content}'",
-            cleanOrderCode, intAmount, content);
+    public async Task<VietQrTestCallbackResponse> TriggerTestCallbackAsync(VietQrResponse qr, CancellationToken cancellationToken = default)
+    {
+        var baseUri = new Uri(_options.BaseUrl, UriKind.Absolute);
+        if (!string.Equals(baseUri.Host, "dev.vietqr.org", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Test Callback chỉ được phép với môi trường Sandbox dev.vietqr.org.");
 
-        return new VietQrResponse(
-            QrCode: emvcoQr,
-            QrDataUrl: qrDataUrl,
-            AccountName: _options.AccountName,
-            AccountNumber: _options.AccountNumber,
-            BankBin: _options.BankBin,
-            Amount: intAmount,
-            Description: content,
-            QrImageBase64: Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(emvcoQr, QRCodeGenerator.ECCLevel.M, 8)));
+        var token = await GetProviderTokenAsync(cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, BuildProviderUrl("/vqr/bank/api/test/transaction-callback"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Content = JsonContent.Create(new
+        {
+            bankAccount = qr.AccountNumber,
+            content = qr.Description,
+            amount = (long)qr.Amount,
+            transType = "C",
+            bankCode = _options.BankCode
+        });
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+        var result = JsonSerializer.Deserialize<VietQrTestCallbackResponse>(raw, Json)
+            ?? new VietQrTestCallbackResponse("FAILED", ReadProviderMessage(raw));
+        if (!response.IsSuccessStatusCode || !string.Equals(result.Status, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            throw new HttpRequestException($"VietQR Test Callback thất bại ({(int)response.StatusCode}): {result.Message}");
+        return result;
+    }
+
+    public bool TryIssueCallbackToken(string username, string password, out VietQrTokenResponse? response)
+    {
+        response = null;
+        if (!IsCallbackConfigurationValid() || !FixedTimeEquals(username, _options.CallbackUsername)
+            || !FixedTimeEquals(password, _options.CallbackPassword)) return false;
+        var now = DateTimeOffset.UtcNow;
+        var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.CallbackJwtSecret)), SecurityAlgorithms.HmacSha256);
+        var jwt = new JwtSecurityToken(
+            claims: [new Claim(JwtRegisteredClaimNames.Sub, username), new Claim("scope", "vietqr:transaction-sync")],
+            notBefore: now.UtcDateTime,
+            expires: now.AddSeconds(_options.CallbackTokenLifetimeSeconds).UtcDateTime,
+            signingCredentials: credentials);
+        response = new VietQrTokenResponse(new JwtSecurityTokenHandler { MapInboundClaims = false }.WriteToken(jwt), "Bearer", _options.CallbackTokenLifetimeSeconds);
+        return true;
+    }
+
+    public bool VerifyCallbackToken(string token)
+    {
+        if (!IsCallbackConfigurationValid() || string.IsNullOrWhiteSpace(token)) return false;
+        try
+        {
+            var principal = new JwtSecurityTokenHandler { MapInboundClaims = false }.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.CallbackJwtSecret)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
+                ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
+            }, out _);
+            return principal.HasClaim("scope", "vietqr:transaction-sync")
+                && string.Equals(principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, _options.CallbackUsername, StringComparison.Ordinal);
+        }
+        catch (Exception exception) when (exception is SecurityTokenException or ArgumentException) { return false; }
+    }
+
+    public bool IsExpectedReceivingAccount(string? bankAccount) =>
+        !string.IsNullOrWhiteSpace(bankAccount) && FixedTimeEquals(bankAccount.Trim(), _options.AccountNumber.Trim());
+
+    public bool IsExpectedOrderId(string orderCode, string? providerOrderId) =>
+        !string.IsNullOrWhiteSpace(providerOrderId)
+        && FixedTimeEquals(CreateProviderOrderId(orderCode), providerOrderId.Trim().ToUpperInvariant());
+
+    public bool VerifyWebhookSignature(string rawPayload, string? signature)
+    {
+        if (string.IsNullOrWhiteSpace(_options.WebhookSecret) || string.IsNullOrWhiteSpace(signature)) return false;
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_options.WebhookSecret));
+        var computed = Convert.ToHexStringLower(hmac.ComputeHash(Encoding.UTF8.GetBytes(rawPayload)));
+        return FixedTimeEquals(signature.ToLowerInvariant(), computed);
     }
 
     public string? ExtractOrderCode(string content)
     {
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            return null;
-        }
-
+        if (string.IsNullOrWhiteSpace(content)) return null;
         var match = OrderCodeRegex.Match(content);
-        if (match.Success && match.Groups.Count > 1)
-        {
-            return match.Groups[1].Value.Trim();
-        }
-
-        // Trường hợp người dùng chuyển khoản ghi thẳng mã đơn không có tiền tố NOVA
+        if (match.Success && match.Groups.Count > 1) return match.Groups[1].Value.Trim();
         var trimmed = content.Trim();
-        if (!trimmed.Contains(' ') && trimmed.Length >= 4)
-        {
-            return trimmed;
-        }
-
-        return null;
+        return !trimmed.Contains(' ') && trimmed.Length >= 4 ? trimmed : null;
     }
 
-    public bool VerifyWebhookSignature(string rawPayload, string? signature)
+    public async Task<PaymentIntentResult> CreatePaymentIntentAsync(PaymentIntentRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_options.WebhookSecret))
-        {
-            _logger.LogError("VietQR WebhookSecret chưa được cấu hình. Từ chối xác thực để đảm bảo an toàn.");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(signature))
-        {
-            return false;
-        }
-
-        var isDevelopment = string.Equals(
-            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
-            "Development",
-            StringComparison.OrdinalIgnoreCase);
-
-        if (isDevelopment &&
-            (string.Equals(signature, "test", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(signature, "sandbox", StringComparison.OrdinalIgnoreCase)))
-        {
-            _logger.LogInformation("VietQR Webhook được xác thực bằng chữ ký kiểm thử môi trường Development.");
-            return true;
-        }
-
-        var keyBytes = Encoding.UTF8.GetBytes(_options.WebhookSecret);
-        var messageBytes = Encoding.UTF8.GetBytes(rawPayload);
-
-        using var hmac = new HMACSHA256(keyBytes);
-        var computedHash = Convert.ToHexString(hmac.ComputeHash(messageBytes)).ToLowerInvariant();
-
-        var expectedBytes = Encoding.UTF8.GetBytes(computedHash);
-        var actualBytes = Encoding.UTF8.GetBytes(signature.ToLowerInvariant());
-
-        if (expectedBytes.Length != actualBytes.Length)
-        {
-            return false;
-        }
-
-        return CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
+        var response = await GenerateDynamicQrAsync(request.PaymentId.ToString("N"), request.Amount, request.Description, cancellationToken);
+        return new PaymentIntentResult(response.Description, response.QrDataUrl, response.QrCode);
     }
 
-    public Task<PaymentIntentResult> CreatePaymentIntentAsync(
-        PaymentIntentRequest request,
-        CancellationToken cancellationToken = default)
+    private async Task<string> GetProviderTokenAsync(CancellationToken cancellationToken)
     {
-        var response = GenerateDynamicQr(request.PaymentId.ToString("N"), request.Amount, request.Description);
-        return Task.FromResult(new PaymentIntentResult(response.Description, response.QrDataUrl, response.QrCode));
-    }
-
-    #region EMVCo NAPAS 247 Generator Helpers
-
-    private static string BuildNapasEmvcoQr(string bankBin, string accountNumber, long amount, string content)
-    {
-        var sb = new StringBuilder();
-
-        // Tag 00: Payload Format Indicator (01)
-        AppendTlv(sb, "00", "01");
-
-        // Tag 01: Point of Initiation Method (12: Dynamic QR)
-        AppendTlv(sb, "01", "12");
-
-        // Tag 38: Merchant Account Information (NAPAS)
-        var maiBuilder = new StringBuilder();
-        // Subtag 00: GUID "A000000727"
-        AppendTlv(maiBuilder, "00", "A000000727");
-
-        // Subtag 01: Beneficiary Organization & Account
-        var bnBuilder = new StringBuilder();
-        AppendTlv(bnBuilder, "00", bankBin);
-        AppendTlv(bnBuilder, "01", accountNumber);
-        AppendTlv(maiBuilder, "01", bnBuilder.ToString());
-
-        // Subtag 02: Service Code "QRIBFTTA"
-        AppendTlv(maiBuilder, "02", "QRIBFTTA");
-        AppendTlv(sb, "38", maiBuilder.ToString());
-
-        // Tag 53: Transaction Currency (704: VND)
-        AppendTlv(sb, "53", "704");
-
-        // Tag 54: Transaction Amount
-        if (amount > 0)
+        if (_providerToken is not null && _providerTokenExpiresAt > DateTimeOffset.UtcNow.AddSeconds(15)) return _providerToken;
+        await _tokenLock.WaitAsync(cancellationToken);
+        try
         {
-            AppendTlv(sb, "54", amount.ToString(CultureInfo.InvariantCulture));
+            if (_providerToken is not null && _providerTokenExpiresAt > DateTimeOffset.UtcNow.AddSeconds(15)) return _providerToken;
+            var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_options.ClientId}:{_options.ApiKey}"));
+            using var request = new HttpRequestMessage(HttpMethod.Post, BuildProviderUrl("/vqr/api/token_generate"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+            using var response = await _http.SendAsync(request, cancellationToken);
+            var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"VietQR Get Token thất bại ({(int)response.StatusCode}): {ReadProviderMessage(raw)}");
+            var token = JsonSerializer.Deserialize<VietQrTokenResponse>(raw, Json);
+            if (token is null || string.IsNullOrWhiteSpace(token.AccessToken) || token.ExpiresIn <= 0)
+                throw new InvalidOperationException("VietQR trả về access token không hợp lệ.");
+            _providerToken = token.AccessToken;
+            _providerTokenExpiresAt = DateTimeOffset.UtcNow.AddSeconds(token.ExpiresIn);
+            return _providerToken;
         }
-
-        // Tag 58: Country Code (VN)
-        AppendTlv(sb, "58", "VN");
-
-        // Tag 62: Additional Data Field Template
-        if (!string.IsNullOrWhiteSpace(content))
-        {
-            var addDataBuilder = new StringBuilder();
-            AppendTlv(addDataBuilder, "08", content);
-            AppendTlv(sb, "62", addDataBuilder.ToString());
-        }
-
-        // Tag 63: CRC16-CCITT Checksum
-        sb.Append("6304");
-        var crc = CalculateCrc16Ccitt(Encoding.ASCII.GetBytes(sb.ToString()));
-        sb.Append(crc.ToString("X4"));
-
-        return sb.ToString();
+        finally { _tokenLock.Release(); }
     }
 
-    private static void AppendTlv(StringBuilder sb, string tag, string value)
+    private void EnsureProviderConfiguration()
     {
-        sb.Append(tag);
-        sb.Append(value.Length.ToString("D2"));
-        sb.Append(value);
+        if (string.IsNullOrWhiteSpace(_options.ClientId) || string.IsNullOrWhiteSpace(_options.ApiKey)
+            || string.IsNullOrWhiteSpace(_options.BaseUrl) || string.IsNullOrWhiteSpace(_options.BankCode)
+            || string.IsNullOrWhiteSpace(_options.AccountNumber) || string.IsNullOrWhiteSpace(_options.AccountName))
+            throw new InvalidOperationException("VietQR chưa được cấu hình đủ username, password, bankCode và tài khoản nhận tiền.");
     }
 
-    private static ushort CalculateCrc16Ccitt(byte[] bytes)
+    private bool IsCallbackConfigurationValid() => !string.IsNullOrWhiteSpace(_options.CallbackUsername)
+        && !string.IsNullOrWhiteSpace(_options.CallbackPassword)
+        && Encoding.UTF8.GetByteCount(_options.CallbackJwtSecret) >= 32
+        && _options.CallbackTokenLifetimeSeconds > 0;
+
+    private string BuildProviderUrl(string path) => $"{_options.BaseUrl.TrimEnd('/')}{path}";
+
+    private static string BuildContent(string orderCode)
     {
-        ushort crc = 0xFFFF;
-        foreach (var b in bytes)
-        {
-            crc ^= (ushort)(b << 8);
-            for (int i = 0; i < 8; i++)
-            {
-                if ((crc & 0x8000) != 0)
-                    crc = (ushort)((crc << 1) ^ 0x1021);
-                else
-                    crc <<= 1;
-            }
-        }
-        return crc;
+        var content = $"NOVA {orderCode.Trim()}";
+        if (content.Length > 23 || content.Any(character => character > 127 || (!char.IsLetterOrDigit(character) && character != ' ' && character != '-')))
+            throw new InvalidOperationException("Nội dung VietQR tối đa 23 ký tự, không dấu và không chứa ký tự đặc biệt.");
+        return content;
     }
 
-    #endregion
+    private static string CreateProviderOrderId(string orderCode) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(orderCode)))[..13];
+    private static decimal ParseAmount(string? value, decimal fallback) => decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
+
+    private static string ReadProviderMessage(string raw)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            return document.RootElement.TryGetProperty("message", out var message) ? message.GetString() ?? raw : raw;
+        }
+        catch (JsonException) { return raw; }
+    }
+
+    private static bool FixedTimeEquals(string left, string right)
+    {
+        var leftBytes = Encoding.UTF8.GetBytes(left);
+        var rightBytes = Encoding.UTF8.GetBytes(right);
+        return leftBytes.Length == rightBytes.Length && CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
+    }
+
+    private sealed record GenerateQrResponse(string? BankCode, string? BankAccount, string? UserBankName, string? Amount, string? Content, string? QrCode, string? QrLink);
 }

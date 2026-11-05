@@ -1,24 +1,19 @@
-import { useState } from 'react'
-import { Box, Skeleton } from '@mui/material'
+import { useEffect, useState } from 'react'
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
+import { Box, Typography } from '@mui/material'
 
 const THUMB_COUNT = 4
 
 const ProductImageGallery = ({ thumbUrl, productName }) => {
   const [activeIdx, setActiveIdx] = useState(0)
   const [mainThumb, setMainThumb] = useState(thumbUrl)
+  const [imageFailed, setImageFailed] = useState(false)
 
-  if (!thumbUrl) {
-    return (
-      <Box>
-        <Skeleton variant="rectangular" height={460} sx={{ borderRadius: '16px' }} />
-        <Box sx={{ display: 'flex', gap: 1, mt: 1.5, px: 0.5 }}>
-          {Array.from({ length: THUMB_COUNT }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" width={64} height={64} sx={{ borderRadius: '10px' }} />
-          ))}
-        </Box>
-      </Box>
-    )
-  }
+  useEffect(() => {
+    setMainThumb(thumbUrl || '')
+    setActiveIdx(0)
+    setImageFailed(false)
+  }, [thumbUrl])
 
   return (
     <Box >
@@ -30,16 +25,24 @@ const ProductImageGallery = ({ thumbUrl, productName }) => {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <Box
-          component="img"
-          src={mainThumb}
-          alt={productName}
-          sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
+        {mainThumb ? (
+          <Box
+            component="img"
+            src={mainThumb}
+            onError={() => { setMainThumb(''); setImageFailed(true) }}
+            alt={productName}
+            sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        ) : (
+          <Box sx={{ width: '100%', height: '100%', bgcolor: '#eef0f3', color: '#9aa1aa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <ImageOutlinedIcon sx={{ fontSize: 54 }} />
+            <Typography variant="body2">Chưa có ảnh sản phẩm</Typography>
+          </Box>
+        )}
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mt: 1.5, px: 0.5 }}>
-        {Array.from({ length: THUMB_COUNT }).map((_, i) => (
+        {thumbUrl && !imageFailed && Array.from({ length: THUMB_COUNT }).map((_, i) => (
           <Box
             key={i}
             onClick={() => setActiveIdx(i)}
@@ -58,6 +61,7 @@ const ProductImageGallery = ({ thumbUrl, productName }) => {
             <Box
               component="img"
               src={thumbUrl}
+              onError={() => setImageFailed(true)}
               onClick={() => setMainThumb(thumbUrl)}
               alt={`${productName} ${i + 1}`}
               sx={{ width: '100%', height: '100%', objectFit: 'cover' }}

@@ -161,6 +161,48 @@ public class PaymentsControllerTests
     }
 
     [Fact]
+    public void VietQrCallbackToken_WithValidBasicCredentials_ReturnsDocumentedTokenShape()
+    {
+        var token = new VietQrTokenResponse("callback-jwt", "Bearer", 300);
+        _vietQrAdapterMock.Setup(v => v.TryIssueCallbackToken("vietqr", "secret", out token)).Returns(true);
+        var basic = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("vietqr:secret"));
+        _controller.HttpContext.Request.Headers.Authorization = $"Basic {basic}";
+
+        var result = _controller.VietQrCallbackToken();
+
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(token);
+    }
+
+    [Fact]
+    public async Task VietQrTransactionSync_WithValidBearer_UsesAuthenticatedCallbackPipeline()
+    {
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = "TX-DOC-001",
+            BankAccount = "0000123456789",
+            Amount = 100000,
+            TransType = "C",
+            Content = "NOVA ORD-123",
+            TransactionTime = 1793865600000,
+            ReferenceNumber = "REF-DOC-001",
+            OrderId = "ORDERDOC001"
+        };
+        _controller.HttpContext.Request.Headers.Authorization = "Bearer callback-jwt";
+        _vietQrAdapterMock.Setup(v => v.VerifyCallbackToken("callback-jwt")).Returns(true);
+        _senderMock.Setup(s => s.Send(
+                It.Is<HandleVietQrWebhookCommand>(command => command.IsAuthenticatedCallback),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new VietQrWebhookResponse(true, "OK", "ORD-123")));
+
+        var result = await _controller.VietQrTransactionSync(request, CancellationToken.None);
+
+        var response = result.Should().BeOfType<OkObjectResult>().Which.Value
+            .Should().BeOfType<VietQrTransactionSyncResponse>().Subject;
+        response.Error.Should().BeFalse();
+        response.Object!.RefTransactionId.Should().Be("TX-DOC-001");
+    }
+
+    [Fact]
     public async Task CreateMomoPayment_WhenOrderValid_LoadsServerAmountAndReturnsOk()
     {
         // Arrange
@@ -239,8 +281,8 @@ public class PaymentsControllerTests
             Amount: 150000,
             Description: "NOVA ORD-001");
 
-        _vietQrAdapterMock.Setup(v => v.GenerateDynamicQr("ORD-001", 150000, null))
-            .Returns(qrResponse);
+        _vietQrAdapterMock.Setup(v => v.GenerateDynamicQrAsync("ORD-001", 150000, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(qrResponse);
 
         // Act
         var result = await _controller.GenerateVietQr("ORD-001", null, CancellationToken.None);

@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <!-- Exclude generated intermediate C# files from default source items. -->
+    <Compile Remove="obj/**/*.cs" />
+  </ItemGroup>
+</Project>

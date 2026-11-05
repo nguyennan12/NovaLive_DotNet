@@ -88,6 +88,9 @@ public sealed class GhnCreateOrderRequest
     [JsonPropertyName("from_district_name")]
     public string FromDistrictName { get; set; } = string.Empty;
 
+    [JsonPropertyName("from_province_name")]
+    public string FromProvinceName { get; set; } = string.Empty;
+
     [JsonPropertyName("to_name")]
     public string ToName { get; set; } = string.Empty;
 
@@ -102,6 +105,15 @@ public sealed class GhnCreateOrderRequest
 
     [JsonPropertyName("to_district_id")]
     public int ToDistrictId { get; set; }
+
+    [JsonPropertyName("to_ward_name")]
+    public string ToWardName { get; set; } = string.Empty;
+
+    [JsonPropertyName("to_district_name")]
+    public string ToDistrictName { get; set; } = string.Empty;
+
+    [JsonPropertyName("to_province_name")]
+    public string ToProvinceName { get; set; } = string.Empty;
 
     [JsonPropertyName("weight")]
     public int Weight { get; set; }

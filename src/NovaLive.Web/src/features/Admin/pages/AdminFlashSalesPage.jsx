@@ -63,8 +63,9 @@ export const AdminFlashSalesPage = () => {
     try {
       await createAdminFlashSaleAPI({
         name: name.trim(),
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString()
+        startAt: new Date(startTime).toISOString(),
+        endAt: new Date(endTime).toISOString(),
+        bannerUrl: null
       })
       toast.success('Đã tạo khung giờ Flash Sale mới!')
       setCreateModalOpen(false)
@@ -138,20 +139,20 @@ export const AdminFlashSalesPage = () => {
               )
             },
             {
-              key: 'startTime',
+              key: 'startAt',
               label: 'Bắt đầu',
               render: (row) => (
                 <Typography variant="body2" color="text.secondary">
-                  {row.startTime ? new Date(row.startTime).toLocaleString('vi-VN') : '—'}
+                  {row.startAt ? new Date(row.startAt).toLocaleString('vi-VN') : '—'}
                 </Typography>
               )
             },
             {
-              key: 'endTime',
+              key: 'endAt',
               label: 'Kết thúc',
               render: (row) => (
                 <Typography variant="body2" color="text.secondary">
-                  {row.endTime ? new Date(row.endTime).toLocaleString('vi-VN') : '—'}
+                  {row.endAt ? new Date(row.endAt).toLocaleString('vi-VN') : '—'}
                 </Typography>
               )
             },
@@ -160,14 +161,18 @@ export const AdminFlashSalesPage = () => {
               label: 'Trạng thái',
               render: (row) => {
                 const now = new Date()
-                const start = new Date(row.startTime)
-                const end = new Date(row.endTime)
-                const isActive = now >= start && now <= end
+                const start = new Date(row.startAt)
+                const end = new Date(row.endAt)
+                const hasValidSchedule = Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())
+                const isActive = hasValidSchedule && now >= start && now <= end
+                const statusLabel = hasValidSchedule
+                  ? (isActive ? 'Đang diễn ra' : now < start ? 'Sắp mở' : 'Đã kết thúc')
+                  : (row.status || 'Không xác định')
                 return (
                   <Chip
-                    label={isActive ? 'Đang diễn ra' : now < start ? 'Sắp mở' : 'Đã kết thúc'}
+                    label={statusLabel}
                     size="small"
-                    color={isActive ? 'error' : 'default'}
+                    color={isActive ? 'error' : row.status === 'Scheduled' ? 'info' : 'default'}
                     sx={{ fontWeight: 600, borderRadius: 1.5 }}
                   />
                 )

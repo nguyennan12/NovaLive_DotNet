@@ -27,6 +27,20 @@ import { SellerCard } from '~/features/Seller/components/shared/SellerCard'
 import { DataTable } from '~/features/Seller/components/shared/DataTable'
 import { MoneyText } from '~/features/Seller/components/shared/MoneyText'
 
+const formatDiscountValue = (discount) => {
+  const type = String(discount.discountType ?? discount.discount_type ?? '')
+  const value = Number(discount.discountValue ?? discount.discount_value ?? 0)
+  const money = `${new Intl.NumberFormat('vi-VN').format(value)} ₫`
+
+  switch (type) {
+    case 'PercentCart': return `Giảm ${value}%`
+    case 'FixedCart': return `Giảm ${money}`
+    case 'PercentShip': return `Giảm phí ship ${value}%`
+    case 'FreeShip': return 'Miễn phí vận chuyển'
+    default: return `Giảm ${money}`
+  }
+}
+
 export const AdminDiscountsPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -162,7 +176,7 @@ export const AdminDiscountsPage = () => {
               label: 'Mức giảm',
               render: (row) => (
                 <Chip
-                  label={`Giảm ${row.discountPercent || row.discount_percent || 0}%`}
+                  label={formatDiscountValue(row)}
                   size="small"
                   color="secondary"
                   sx={{ fontWeight: 700, borderRadius: 1.5 }}
@@ -177,14 +191,21 @@ export const AdminDiscountsPage = () => {
             {
               key: 'maxDiscount',
               label: 'Giảm tối đa',
-              render: (row) => <MoneyText value={row.maxDiscountAmount || row.max_discount_amount || 0} />
+              render: (row) => {
+                const maxDiscount = row.maxDiscountAmount ?? row.max_discount_amount
+                return maxDiscount == null
+                  ? <Typography variant="body2" color="text.secondary">Không giới hạn</Typography>
+                  : <MoneyText value={maxDiscount} />
+              }
             },
             {
               key: 'validity',
               label: 'Thời hạn',
               render: (row) => (
                 <Typography variant="body2" color="text.secondary">
-                  {row.endDate ? new Date(row.endDate).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
+                  {row.validTo || row.valid_to
+                    ? new Date(row.validTo || row.valid_to).toLocaleDateString('vi-VN')
+                    : 'Vô thời hạn'}
                 </Typography>
               )
             },

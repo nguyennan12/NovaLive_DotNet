@@ -10,8 +10,6 @@ public sealed class ShippingProviderResolverTests
 {
     [Theory]
     [InlineData("GHN")]
-    [InlineData("GHTK")]
-    [InlineData("ViettelPost")]
     public void RegisteredProvider_IsResolvedByCode(string code)
     {
         var provider = new Mock<IShippingProvider>(); provider.SetupGet(p => p.ProviderCode).Returns(code);
@@ -19,8 +17,7 @@ public sealed class ShippingProviderResolverTests
     }
 
     [Theory]
-    [InlineData("GHTK")]
-    [InlineData("ViettelPost")]
+    [InlineData("GHN")]
     public void KnownUnregisteredProvider_IsUnavailable(string code) =>
         new ShippingProviderResolver([]).Resolve(code).Error.Should().Be(ShippingErrors.ProviderNotAvailable);
 

@@ -1,6 +1,6 @@
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRounded'
-import { Box, CircularProgress, Container, Tab, Tabs, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Container, Tab, Tabs, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -66,14 +66,15 @@ function OrderHistoryPage() {
 
   // Normal order queries (only active when not on 'returns' tab)
   const isReturnsTab = status === 'returns'
-  const { orders, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteOrders(
-    isReturnsTab ? 'none' : status
+  const { orders, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, isError: isOrdersError, refetch: refetchOrders } = useInfiniteOrders(
+    isReturnsTab ? 'all' : status,
+    !isReturnsTab
   )
   const lastOrderRef = useInfiniteScroll({ isFetchingNextPage, fetchNextPage, hasNextPage })
   const { cancelMutation, invalidateOrders } = useOrderMutation()
 
   // Returns query (only active when on 'returns' tab)
-  const { data: returnsData = [], isLoading: isLoadingReturns } = useQuery({
+  const { data: returnsData = [], isLoading: isLoadingReturns, isError: isReturnsError, refetch: refetchReturns } = useQuery({
     queryKey: ['my_returns'],
     queryFn: async () => {
       const res = await getMyReturnsAPI()
@@ -151,7 +152,11 @@ function OrderHistoryPage() {
       {isReturnsTab ? (
         /* Returns list */
         <Box>
-          {isLoadingReturns ? (
+          {isReturnsError ? (
+            <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => refetchReturns()}>Thử lại</Button>} sx={{ mb: 2 }}>
+              Không tải được yêu cầu trả hàng. Vui lòng thử lại.
+            </Alert>
+          ) : isLoadingReturns ? (
             Array.from({ length: 3 }).map((_, i) => <OrderHistoryCardSkeleton key={i} />)
           ) : returnsData.length === 0 ? (
             <Box sx={{
@@ -177,7 +182,11 @@ function OrderHistoryPage() {
       ) : (
         /* Standard Orders list */
         <Box>
-          {isLoading ? (
+          {isOrdersError ? (
+            <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => refetchOrders()}>Thử lại</Button>} sx={{ mb: 2 }}>
+              Không tải được đơn hàng. Vui lòng thử lại.
+            </Alert>
+          ) : isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <OrderHistoryCardSkeleton key={i} />)
           ) : orders.length === 0 ? (
             <Box sx={{

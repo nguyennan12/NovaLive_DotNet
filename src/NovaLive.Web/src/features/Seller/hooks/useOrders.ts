@@ -12,6 +12,7 @@ export const useCustomers = () => useSellerQuery(['customers'], service.getCusto
 export const useConfirmOrder = () => useSellerMutation(({ id, warehouseAddressId }: { id: string; warehouseAddressId: string }) => service.confirmOrder(id, warehouseAddressId), 'Đã xác nhận kho lấy hàng.')
 export const useCancelOrder = () => useSellerMutation(({ id, reason }: { id: string; reason: string }) => service.cancelOrder(id, reason), 'Đã hủy đơn hàng.')
 export const useCreateShipment = () => useSellerMutation(service.createShipment, 'Đã tạo vận đơn.')
+export const useSimulateShipmentDelivered = () => useSellerMutation(service.simulateShipmentDelivered, 'Đã giả lập GHN giao hàng thành công.')
 export const useTracking = (id: string, enabled: boolean) => useSellerQuery(['tracking', id], () => service.getTracking(id), enabled)
 export function usePrintLabel() {
   const [isPending, setIsPending] = useState(false)

@@ -51,11 +51,11 @@ public static class OrderMappings
     {
         if (children.Count == 0) return "pending";
         if (children.All(s => s.Status == SubOrderStatus.Cancelled)) return "cancelled";
-        if (children.Any(s => s.Status is SubOrderStatus.PendingPayment or SubOrderStatus.Confirmed)) return "pending";
-        if (children.Any(s => s.Status == SubOrderStatus.Processing)) return "processing";
+        if (children.Any(s => s.Status == SubOrderStatus.PendingPayment)) return "pending";
+        if (children.Any(s => s.Status is SubOrderStatus.Confirmed or SubOrderStatus.Processing)) return "confirmed";
         if (children.Any(s => s.Status == SubOrderStatus.Shipping)) return "shipped";
         if (children.All(s => s.Status is SubOrderStatus.Delivered or SubOrderStatus.Completed or SubOrderStatus.Cancelled)) return "delivered";
-        return "processing";
+        return "confirmed";
     }
     public static SubOrderListItemResponse ToListItem(this SubOrder s) =>
         new(s.Id, s.ParentOrderId, s.SubOrderCode, s.ShopId, s.SubTotal, s.Status.ToString(), s.CreatedAt);

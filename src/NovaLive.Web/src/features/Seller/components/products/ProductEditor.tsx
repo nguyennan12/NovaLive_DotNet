@@ -35,7 +35,6 @@ import { useShopPermissions } from '../../hooks/useShopPermissions'
 import { useUploadMedia } from '../../hooks/useShop'
 import { buildSkuMatrix, flattenCategories, productSchema } from '../../utils/product'
 import { SellerCard } from '../shared/SellerCard'
-import { MediaUpload } from '../shared/MediaUpload'
 import { errorMessage } from '../../utils/errors'
 
 interface DraftSku extends CreateSkuRequest {
@@ -193,8 +192,8 @@ export function ProductEditor({ initial }: { initial?: ProductDetail }) {
     setForm(f => ({ ...f, thumbnailUrl: localBlob }))
 
     try {
-      const res: any = await upload.mutateAsync({ file })
-      const remoteUrl = (typeof res === 'string' ? res : res?.url || res?.Url || res?.data?.url || res?.data?.Url) || localBlob
+      const res = await upload.mutateAsync({ file })
+      const remoteUrl = res.url || localBlob
       setForm(f => ({ ...f, thumbnailUrl: remoteUrl }))
     } catch (err) {
       setError(errorMessage(err))
@@ -723,7 +722,7 @@ export function ProductEditor({ initial }: { initial?: ProductDetail }) {
                           bgcolor: '#f8fafc'
                         }}
                       >
-                        <Grid container spacing={2} alignItems='flex-end'>
+                        <Grid container spacing={2} sx={{ alignItems: 'flex-end' }}>
                           <Grid size={{ xs: 12, sm: 5 }}>
                             <Typography
                               variant='caption'

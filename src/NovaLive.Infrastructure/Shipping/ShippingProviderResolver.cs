@@ -8,7 +8,7 @@ public sealed class ShippingProviderResolver(IEnumerable<IShippingProvider> prov
 {
     public Result<IShippingProvider> Resolve(string provider)
     {
-        if (provider is not ("GHN" or "GHTK" or "ViettelPost")) return ShippingErrors.UnsupportedProvider;
+        if (provider != "GHN") return ShippingErrors.UnsupportedProvider;
         var adapter = providers.SingleOrDefault(p => p.ProviderCode == provider);
         if (adapter is null) return ShippingErrors.ProviderNotAvailable;
         return Result<IShippingProvider>.Success(adapter);

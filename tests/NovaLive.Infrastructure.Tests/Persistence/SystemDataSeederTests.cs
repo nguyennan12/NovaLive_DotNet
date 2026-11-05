@@ -70,7 +70,7 @@ public sealed class SystemDataSeederTests
 
         permissionCounts[SystemRoleIds.Buyer].Should().Be(23);
         permissionCounts[SystemRoleIds.Seller].Should().Be(38);
-        permissionCounts[SystemRoleIds.Admin].Should().Be(26);
+        permissionCounts[SystemRoleIds.Admin].Should().Be(33);
 
         var registerPermissionId = await context.Permissions
             .Where(permission => permission.Code == PermissionCodes.Auth.Register)

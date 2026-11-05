@@ -45,6 +45,13 @@ export function mockCreateShipment(data: CreateShippingRequest): ShippingOrder |
   return { id: crypto.randomUUID(), subOrderId: order.id, provider: data.provider, trackingCode: `MOCK-${order.code}`, shippingFee: order.shippingFee, status: 'ReadyToPick', createdAt: new Date().toISOString() }
 }
 
+export function mockSimulateShipmentDelivered(id: string): unknown | Promise<unknown> {
+  const order = required(db().orders.find(item => item.id === id), 'Đơn hàng')
+  if (order.status === 'Delivered') return { id, status: order.status }
+  if (order.status !== 'Shipping') throw new Error('Chỉ có thể giả lập giao thành công cho vận đơn GHN đang giao.')
+  return mockTransition(id, 'Delivered', 'Giả lập GHN giao hàng thành công')
+}
+
 export function mockGetTracking(id: string): Tracking | Promise<Tracking> {
   const order = required(db().orders.find(item => item.id === id), 'Đơn hàng')
   return { subOrderId: id, provider: 'GHN', trackingCode: `MOCK-${order.code}`, status: order.status, isStale: false, events: order.timeline.map(item => ({ status: item.toStatus, description: item.note || '', occurredAt: item.changedAt })) }

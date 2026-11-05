@@ -11,7 +11,8 @@ const LiveProductListSheet = ({ liveShop, open, onClose, products = [] }) => {
   const navigate = useNavigate()
   const { cartCount } = useCart()
   const handleClick = (product) => {
-    navigate(`/product/${product.code}`)
+    const productId = product.spuId || product.spu_id || product.productId || product.product_id || product.id || product.code
+    if (productId) navigate(`/product/${productId}`)
   }
 
   return (

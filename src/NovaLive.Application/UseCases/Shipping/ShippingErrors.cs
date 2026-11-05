@@ -16,16 +16,23 @@ public static class ShippingErrors
         Error.Conflict("Shipping.InvalidOrderStatus", "Chỉ có thể tạo vận đơn cho đơn hàng Confirmed.");
     public static readonly Error InvalidServiceCode =
         Error.Validation("Shipping.InvalidServiceCode", "Mã dịch vụ vận chuyển không hợp lệ.");
+    public static readonly Error UnsupportedPackageWeight =
+        Error.Validation("Shipping.UnsupportedPackageWeight", "Hiện chỉ hỗ trợ tạo vận đơn GHN cho kiện hàng dưới 20 kg.");
     public static readonly Error InvalidItems =
         Error.Validation("Shipping.InvalidItems", "Sản phẩm hoặc tổng khối lượng vận chuyển không hợp lệ.");
     public static readonly Error PaymentNotFound =
         Error.Conflict("Shipping.PaymentNotFound", "Không tìm thấy phương thức thanh toán của đơn hàng.");
+    public static readonly Error PaymentNotSettled =
+        Error.Conflict("Shipping.PaymentNotSettled", "Đơn thanh toán trực tuyến phải thanh toán thành công trước khi tạo vận đơn.");
     public static readonly Error Unauthorized =
         Error.Unauthorized("Shipping.Unauthorized", "Vui lòng đăng nhập.");
     public static readonly Error UnsupportedProvider =
         Error.Validation("Shipping.UnsupportedProvider", "Đơn vị vận chuyển không được hỗ trợ.");
     public static readonly Error ProviderNotAvailable =
         Error.Conflict("Shipping.ProviderNotAvailable", "Đơn vị vận chuyển chưa được tích hợp.");
+    public static readonly Error InvalidDeliverySimulationStatus =
+        Error.Conflict("Shipping.InvalidDeliverySimulationStatus",
+            "Chỉ có thể giả lập giao thành công cho vận đơn GHN đang giao.");
 
     public static readonly Error WarehouseNotFound =
         Error.NotFound("Shipping.WarehouseNotFound", "Không tìm thấy thông tin kho xuất hàng.");

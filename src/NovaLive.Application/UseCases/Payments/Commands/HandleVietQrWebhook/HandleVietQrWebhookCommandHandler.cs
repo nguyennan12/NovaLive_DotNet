@@ -33,7 +33,7 @@ public sealed class HandleVietQrWebhookCommandHandler(
         var request = command.Request;
 
         // 0. Xác thực chữ ký Webhook (fail-closed nếu sai chữ ký hoặc chưa cấu hình Secret)
-        if (!vietQrAdapter.VerifyWebhookSignature(command.RawBody, command.Signature))
+        if (!command.IsAuthenticatedCallback && !vietQrAdapter.VerifyWebhookSignature(command.RawBody, command.Signature))
         {
             logger.LogWarning("Chữ ký Webhook VietQR không hợp lệ hoặc cấu hình WebhookSecret chưa hợp lệ.");
             return PaymentErrors.InvalidSignature;
@@ -47,6 +47,27 @@ public sealed class HandleVietQrWebhookCommandHandler(
         }
 
         var content = request.ResolvedContent;
+
+        // Transaction Sync uses C for incoming credit and D for outgoing debit.
+        // An outgoing transaction must never settle a buyer order.
+        if ((command.IsAuthenticatedCallback && string.IsNullOrWhiteSpace(request.TransType))
+            || (!string.IsNullOrWhiteSpace(request.TransType)
+                && !string.Equals(request.TransType, "C", StringComparison.OrdinalIgnoreCase)))
+        {
+            logger.LogWarning("Bỏ qua giao dịch VietQR không phải tiền vào: TransType={TransType}", request.TransType);
+            return PaymentErrors.InvalidTransactionType;
+        }
+
+        if (command.IsAuthenticatedCallback && !vietQrAdapter.IsExpectedReceivingAccount(request.BankAccount))
+            return PaymentErrors.InvalidReceivingAccount;
+
+        var existingTransaction = await paymentRepository.GetByTransactionRefAsync(transId, cancellationToken);
+        if (existingTransaction is not null)
+        {
+            if (existingTransaction.Status == PaymentStatus.Success)
+                return new VietQrWebhookResponse(true, "Transaction already processed", null);
+            return PaymentErrors.DuplicateTransaction;
+        }
 
         logger.LogInformation(
             "Nhận Webhook VietQR: TransId={TransId}, Amount={Amount}, Content={Content}, Bank={Bank}",
@@ -68,6 +89,9 @@ public sealed class HandleVietQrWebhookCommandHandler(
             return PaymentErrors.OrderNotFound;
         }
 
+        if (command.IsAuthenticatedCallback && !vietQrAdapter.IsExpectedOrderId(parentOrder.OrderCode, request.OrderId))
+            return PaymentErrors.InvalidProviderOrderId;
+
         // 3. Tra cứu Payments của đơn hàng
         var payment = await paymentRepository.GetForUpdateAsync(parentOrder.Id, cancellationToken);
         if (payment is null)
@@ -88,11 +112,12 @@ public sealed class HandleVietQrWebhookCommandHandler(
             return new VietQrWebhookResponse(true, "Transaction already processed", orderCode);
         }
 
-        // 5. Kiểm tra số tiền chuyển khớp chính xác: amount >= Payments.amount
-        if (request.Amount < payment.Amount)
+        // Dynamic VietQR carries an exact amount. Any mismatch must be reconciled manually,
+        // never credited automatically to a possibly different order.
+        if (request.Amount != payment.Amount)
         {
             logger.LogWarning(
-                "Số tiền chuyển khoản ({ReceivedAmount}) nhỏ hơn số tiền đơn hàng ({RequiredAmount}) cho đơn {OrderCode}",
+                "Số tiền chuyển khoản ({ReceivedAmount}) không khớp số tiền QR động ({RequiredAmount}) cho đơn {OrderCode}",
                 request.Amount, payment.Amount, orderCode);
             return PaymentErrors.InvalidAmount;
         }

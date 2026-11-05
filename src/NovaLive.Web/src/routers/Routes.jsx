@@ -65,13 +65,15 @@ const AppRoutes = () => {
       <Route element={<PrivateRoute allowedRoles={['Admin']} />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<Navigate to="/admin/overview" replace />} />
+          <Route path="/admin/dashboard" element={<AdminOverviewPage />} />
           <Route path="/admin/overview" element={<AdminOverviewPage />} />
           <Route path="/admin/shops" element={<AdminShopsPage />} />
           <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
           <Route path="/admin/categories" element={<AdminCategoriesPage />} />
           <Route path="/admin/flash-sales" element={<AdminFlashSalesPage />} />
           <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
-          <Route path="/admin/live" element={<AdminLivePage />} />
+          <Route path="/admin/livestreams" element={<AdminLivePage />} />
+          <Route path="/admin/live" element={<Navigate to="/admin/livestreams" replace />} />
           <Route path="/admin/reviews" element={<AdminReviewsPage />} />
         </Route>
       </Route>

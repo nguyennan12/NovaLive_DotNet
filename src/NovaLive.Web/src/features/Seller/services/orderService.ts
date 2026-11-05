@@ -16,6 +16,7 @@ export const getOrderCounts = async (range: Pick<OrderFilters, 'from' | 'to'>) =
 export const confirmOrder = (id: string, warehouseAddressId: string) => request<unknown>('Đơn hàng', { method: 'PUT', url: `seller/orders/${id}/confirm`, data: { warehouseAddressId } }, () => mocks.mockConfirmOrder(id, warehouseAddressId))
 export const cancelOrder = (id: string, reason: string) => request<unknown>('Đơn hàng', { method: 'POST', url: `seller/orders/${id}/cancel`, data: { reason } }, () => mocks.mockCancelOrder(id, reason))
 export const createShipment = (data: CreateShippingRequest) => request<ShippingOrder>('Vận chuyển', { method: 'POST', url: 'seller/shipping/create-order', data }, () => mocks.mockCreateShipment(data))
+export const simulateShipmentDelivered = (id: string) => request<unknown>('Vận chuyển', { method: 'POST', url: `seller/shipping/${id}/simulate-delivered` }, () => mocks.mockSimulateShipmentDelivered(id))
 export async function getTracking(id: string): Promise<Tracking> {
   const result = await request<Tracking | Tracking[]>('Vận chuyển', { url: `seller/shipping/${id}/tracking` }, () => mocks.mockGetTracking(id))
   return normalizeSellerTracking(result)

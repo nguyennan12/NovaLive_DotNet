@@ -7,7 +7,6 @@ import BarChartRounded from '@mui/icons-material/BarChartRounded'
 import CampaignOutlined from '@mui/icons-material/CampaignOutlined'
 import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined'
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined'
-import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded'
 import NotificationsNoneRounded from '@mui/icons-material/NotificationsNoneRounded'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import type { SvgIconComponent } from '@mui/icons-material'
@@ -48,7 +47,6 @@ export const sellerNavigation: SellerNavSection[] = [
   {
     label: 'PROFILE',
     items: [
-      { path: 'messages', label: 'Messages', icon: MailOutlineRounded },
       { path: 'notifications', label: 'Notifications', icon: NotificationsNoneRounded },
       { path: 'profile', label: 'Settings', icon: SettingsOutlined, aliases: ['settings'] }
     ]

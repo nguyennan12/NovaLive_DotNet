@@ -44,7 +44,7 @@ public sealed class InitiatePaymentCommandHandler(
             }
             else if (method == PaymentMethod.VietQR)
             {
-                var response = vietQr.GenerateDynamicQr(order.OrderCode, payment.Amount);
+                var response = await vietQr.GenerateDynamicQrAsync(order.OrderCode, payment.Amount, cancellationToken: ct);
                 qrDetails = response;
                 payload = response.QrCode;
                 image = response.QrImageBase64;
@@ -57,6 +57,10 @@ public sealed class InitiatePaymentCommandHandler(
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             return PaymentErrors.GatewayFailed("Cổng thanh toán phản hồi quá thời gian chờ.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            return PaymentErrors.GatewayFailed(exception.Message);
         }
         // A slow gateway call must not hand the buyer an already expired payment.
         if (payment.IsDueForExpiry(clock.UtcNow, TimeSpan.FromMinutes(15))) return PaymentErrors.PaymentExpired;

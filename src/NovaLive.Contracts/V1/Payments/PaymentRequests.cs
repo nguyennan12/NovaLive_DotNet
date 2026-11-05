@@ -68,7 +68,7 @@ public record MomoCreatePaymentRequest(
 
 public record VietQrWebhookRequest
 {
-    [JsonPropertyName("transactionId")]
+    [JsonPropertyName("transactionid")]
     public string? TransactionId { get; init; }
 
     [JsonPropertyName("id")]
@@ -95,6 +95,21 @@ public record VietQrWebhookRequest
     [JsonPropertyName("referenceCode")]
     public string? ReferenceCode { get; init; }
 
+    [JsonPropertyName("referencenumber")]
+    public string? ReferenceNumber { get; init; }
+
+    [JsonPropertyName("orderId")]
+    public string? OrderId { get; init; }
+
+    [JsonPropertyName("bankaccount")]
+    public string? BankAccount { get; init; }
+
+    [JsonPropertyName("transType")]
+    public string? TransType { get; init; }
+
+    [JsonPropertyName("transactiontime")]
+    public long? TransactionTime { get; init; }
+
     [JsonPropertyName("signature")]
     public string? Signature { get; init; }
 
@@ -105,7 +120,9 @@ public record VietQrWebhookRequest
     public string? ResolvedTransactionId =>
         !string.IsNullOrWhiteSpace(TransactionId)
             ? TransactionId
-            : Id?.ToString() ?? (!string.IsNullOrWhiteSpace(ReferenceCode) ? ReferenceCode : null);
+            : Id?.ToString() ?? (!string.IsNullOrWhiteSpace(ReferenceNumber)
+                ? ReferenceNumber
+                : (!string.IsNullOrWhiteSpace(ReferenceCode) ? ReferenceCode : null));
 
     [JsonIgnore]
     public string ResolvedContent =>
@@ -113,6 +130,24 @@ public record VietQrWebhookRequest
             ? Content
             : Description ?? string.Empty;
 }
+
+public sealed record VietQrTokenResponse(
+    [property: JsonPropertyName("access_token")] string AccessToken,
+    [property: JsonPropertyName("token_type")] string TokenType,
+    [property: JsonPropertyName("expires_in")] int ExpiresIn);
+
+public sealed record VietQrTransactionSyncObject(
+    [property: JsonPropertyName("reftransactionid")] string RefTransactionId);
+
+public sealed record VietQrTransactionSyncResponse(
+    [property: JsonPropertyName("error")] bool Error,
+    [property: JsonPropertyName("errorReason")] string? ErrorReason,
+    [property: JsonPropertyName("toastMessage")] string ToastMessage,
+    [property: JsonPropertyName("object")] VietQrTransactionSyncObject? Object);
+
+public sealed record VietQrTestCallbackResponse(
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("message")] string? Message);
 
 // Backward compatibility aliases
 public record MoMoWebhookPayload(

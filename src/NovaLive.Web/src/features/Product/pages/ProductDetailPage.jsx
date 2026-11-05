@@ -155,9 +155,9 @@ const ProductDetailPage = () => {
 
           {/* DESCRIPTION + ATTRIBUTE */}
           <Grid container size={12} spacing={2} sx={{ mt: 2 }}>
-            {product?.spu_description && (
+            {product && (
               <Grid size={{ xs: 12, md: 7 }}>
-                <ProductDescription text={product.spu_description} sx={{ height: '100%' }} />
+                <ProductDescription text={product.spu_description || 'Nhà bán hàng chưa bổ sung mô tả cho sản phẩm này.'} sx={{ height: '100%' }} />
               </Grid>
             )}
             {attributes.length > 0 && (

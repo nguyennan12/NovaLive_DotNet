@@ -13,11 +13,12 @@ export const useMyOrders = () => {
 }
 
 
-export const useInfiniteOrders = (status) => {
-  const { data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+export const useInfiniteOrders = (status, enabled = true) => {
+  const { data: infiniteData, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error, refetch } = useInfiniteQuery({
     queryKey: ['my_orders_infinite', status],
     queryFn: ({ pageParam = 1 }) => getMyOrdersAPI({ status, limit: LIMIT.ORDER, page: pageParam }),
     initialPageParam: 1,
+    enabled,
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.length < LIMIT.ORDER) {
         return undefined
@@ -36,6 +37,9 @@ export const useInfiniteOrders = (status) => {
     isLoading,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage
+    isFetchingNextPage,
+    isError,
+    error,
+    refetch
   }
 }

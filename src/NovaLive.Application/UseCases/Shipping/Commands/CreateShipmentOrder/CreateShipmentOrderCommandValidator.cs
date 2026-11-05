@@ -11,7 +11,8 @@ public sealed class CreateShipmentOrderCommandValidator : AbstractValidator<Crea
         {
             RuleFor(x => x.Request.SubOrderId).NotEmpty();
             RuleFor(x => x.Request.PickupAddressId).NotEmpty();
-            RuleFor(x => x.Request.Provider).Must(p => p is "GHN" or "GHTK" or "ViettelPost");
+            RuleFor(x => x.Request.Provider).Equal("GHN")
+                .WithMessage("Hiện hệ thống chỉ hỗ trợ đơn vị vận chuyển GHN.");
             RuleFor(x => x.Request.ServiceCode).NotEmpty().MaximumLength(50);
             When(x => x.Request.Provider == "GHN", () =>
                 RuleFor(x => x.Request.ServiceCode).Must(s => int.TryParse(s, out var id) && id > 0)

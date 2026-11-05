@@ -12,10 +12,12 @@ public static class ShippingStatusMapper
         if (provider != ShippingProvider.GHN) return null;
         return status?.Trim().ToLowerInvariant() switch
         {
-            "ready_for_pick" => ShippingStatus.ReadyToPick,
-            "storing" => ShippingStatus.Picking,
-            "delivery_fail" => ShippingStatus.Failed,
-            "return" or "returning" => ShippingStatus.Returned,
+            "ready_to_pick" or "ready_for_pick" => ShippingStatus.ReadyToPick,
+            "picking" or "money_collect_picking" or "picked" or "storing" => ShippingStatus.Picking,
+            "sorting" or "transporting" or "money_collect_delivering" => ShippingStatus.Delivering,
+            "delivery_fail" or "return_fail" or "exception" or "lost" or "damage" or "scrap" => ShippingStatus.Failed,
+            "waiting_to_return" or "return" or "return_transporting" or "return_sorting"
+                or "returning" or "returned" => ShippingStatus.Returned,
             "cancel" => ShippingStatus.Cancelled,
             _ => null
         };

@@ -60,8 +60,8 @@ public sealed class PaymentInitiationTests
     public async Task VietQr_ReturnsPayloadAndBase64()
     {
         Seed(PaymentMethod.VietQR);
-        qr.Setup(q => q.GenerateDynamicQr(order.OrderCode, 100000, null))
-            .Returns(new VietQrResponse("payload", "url", "name", "account", "bin", 100000, "NOVA ORD-123", "base64"));
+        qr.Setup(q => q.GenerateDynamicQrAsync(order.OrderCode, 100000, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new VietQrResponse("payload", "url", "name", "account", "bin", 100000, "NOVA ORD-123", "base64"));
         var result = await Initiate("VietQR");
         result.Value!.QrPayload.Should().Be("payload");
         result.Value!.QrImageBase64.Should().Be("base64");

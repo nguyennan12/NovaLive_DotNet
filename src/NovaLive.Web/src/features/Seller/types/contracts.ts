@@ -74,7 +74,7 @@ export interface OrderDetail extends OrderSummary {
   items: OrderItem[]; timeline: OrderTimeline[]
 }
 export interface OrderFilters extends PageRequest, DateRange { status?: string }
-export type ShippingProvider = 'GHN' | 'GHTK' | 'ViettelPost'
+export type ShippingProvider = 'GHN'
 export interface CreateShippingRequest { subOrderId: string; provider: ShippingProvider; serviceCode: string; pickupAddressId: string }
 export interface ShippingOrder { id: string; subOrderId: string; provider: string; trackingCode: string; shippingFee: number; status: string; createdAt: string }
 export interface TrackingEvent { status: string; description: string | null; occurredAt: string }

@@ -29,26 +29,30 @@ export const useFlashSale = () => {
   // Map flash sale items to the shape HomeProductCard expects
   const flashSaleProducts = useMemo(() => {
     const list = Array.isArray(itemsRaw) ? itemsRaw : (itemsRaw?.items ?? [])
-    return list.map(item => ({
-      _id: item.spuId || item.spu_id || item.id || item._id,
-      id: item.spuId || item.spu_id || item.id || item._id,
-      spu_id: item.spuId || item.spu_id || item.id,
-      sku_id: item.skuId || item.sku_id,
-      spu_name: item.spuName || item.spu_name || item.name,
-      name: item.spuName || item.spu_name || item.name,
-      spu_thumb: item.thumbnailUrl || item.spu_thumb || '',
-      thumbnailUrl: item.thumbnailUrl || item.spu_thumb || '',
-      spu_price: item.originalPrice ?? item.spu_price ?? item.price ?? 0,
-      original_price: item.originalPrice ?? item.spu_price ?? 0,
-      flash_price: item.flashPrice ?? item.flashsale_price ?? 0,
-      flashsale_price: item.flashPrice ?? item.flashsale_price ?? 0,
-      spu_code: item.skuCode || item.spu_code || '',
-      is_flash_sale: true,
-      total_sold: item.soldQty ?? item.flashsale_sold ?? 0,
-      flashsale_sold: item.soldQty ?? item.flashsale_sold ?? 0,
-      flashsale_stock: item.quantity ?? item.flashsale_stock ?? 0,
-      quantity: item.quantity ?? item.flashsale_stock ?? 0
-    }))
+    return list.map(item => {
+      const spuId = item.spuId || item.spu_id || item.productId || item.product_id
+      return {
+        _id: spuId,
+        id: spuId,
+        spu_id: spuId,
+        sku_id: item.skuId || item.sku_id,
+        spu_name: item.spuName || item.spu_name || item.name,
+        name: item.spuName || item.spu_name || item.name,
+        spu_thumb: item.thumbnailUrl || item.spu_thumb || '',
+        thumbnailUrl: item.thumbnailUrl || item.spu_thumb || '',
+        spu_price: item.originalPrice ?? item.spu_price ?? item.price ?? 0,
+        original_price: item.originalPrice ?? item.spu_price ?? 0,
+        flash_price: item.flashPrice ?? item.flashsale_price ?? 0,
+        flashsale_price: item.flashPrice ?? item.flashsale_price ?? 0,
+        // Product detail endpoints use the SPU ID, never a SKU code.
+        spu_code: spuId,
+        is_flash_sale: true,
+        total_sold: item.soldQty ?? item.flashsale_sold ?? 0,
+        flashsale_sold: item.soldQty ?? item.flashsale_sold ?? 0,
+        flashsale_stock: item.quantity ?? item.flashsale_stock ?? 0,
+        quantity: item.quantity ?? item.flashsale_stock ?? 0
+      }
+    })
   }, [itemsRaw])
 
   return {

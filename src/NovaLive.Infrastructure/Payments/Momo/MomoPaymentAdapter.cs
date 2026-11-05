@@ -34,6 +34,14 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         string? extraData = null,
         CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(_options.PartnerCode)
+            || string.IsNullOrWhiteSpace(_options.AccessKey)
+            || string.IsNullOrWhiteSpace(_options.SecretKey)
+            || string.IsNullOrWhiteSpace(_options.Endpoint))
+        {
+            throw new InvalidOperationException("MoMo chưa được cấu hình đầy đủ thông tin sandbox (PartnerCode, AccessKey, SecretKey, Endpoint).");
+        }
+
         var requestId = Guid.NewGuid().ToString("N");
         var actualExtraData = extraData ?? string.Empty;
         var requestType = _options.RequestType;
@@ -77,6 +85,16 @@ public sealed class MomoPaymentAdapter : IMomoPaymentAdapter
         if (result is null)
         {
             throw new InvalidOperationException("Không thể đọc phản hồi từ MoMo API.");
+        }
+
+        if (result.ResultCode != 0)
+        {
+            throw new InvalidOperationException($"MoMo từ chối tạo thanh toán ({result.ResultCode}): {result.Message}");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.PayUrl) && string.IsNullOrWhiteSpace(result.QrCodeUrl))
+        {
+            throw new InvalidOperationException("MoMo phản hồi thành công nhưng không có liên kết thanh toán hoặc mã QR.");
         }
 
         return result;

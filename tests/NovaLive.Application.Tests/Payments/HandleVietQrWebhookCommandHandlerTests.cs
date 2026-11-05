@@ -284,6 +284,78 @@ public class HandleVietQrWebhookCommandHandlerTests
         _shopWalletRepositoryMock.Verify(w => w.AddTransactionAsync(It.IsAny<ShopWalletTransaction>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_WhenAmountIsGreaterThanDynamicQrAmount_DoesNotAutoSettle()
+    {
+        const string orderCode = "ORD-VQR-OVERPAID";
+        var parentOrder = CreateTestParentOrder(orderCode, 200000m, _now.AddMinutes(-10));
+        var payment = Payment.Create(parentOrder.Id, PaymentMethod.VietQR, 200000m, _now.AddMinutes(-10));
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = "TXN_OVER",
+            Amount = 250000m,
+            Content = $"NOVA {orderCode}"
+        };
+        _vietQrAdapterMock.Setup(v => v.ExtractOrderCode(request.Content)).Returns(orderCode);
+        _parentOrderRepositoryMock.Setup(p => p.GetByOrderCodeForUpdateAsync(orderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(parentOrder);
+        _paymentRepositoryMock.Setup(p => p.GetForUpdateAsync(parentOrder.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(payment);
+
+        var result = await _handler.Handle(new HandleVietQrWebhookCommand(request, "{}", "valid_sig"), default);
+
+        result.Error.Should().Be(PaymentErrors.InvalidAmount);
+        payment.Status.Should().Be(PaymentStatus.Pending);
+    }
+
+    [Fact]
+    public async Task TransactionSync_WhenProviderOrderIdDoesNotMatch_IsRejected()
+    {
+        const string orderCode = "ORD-VQR-001";
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = "TX-ORDER-MISMATCH",
+            BankAccount = "0000123456789",
+            Amount = 100000,
+            TransType = "C",
+            Content = $"NOVA {orderCode}",
+            OrderId = "WRONGORDERID"
+        };
+        _vietQrAdapterMock.Setup(v => v.IsExpectedReceivingAccount(request.BankAccount)).Returns(true);
+        _vietQrAdapterMock.Setup(v => v.ExtractOrderCode(request.Content)).Returns(orderCode);
+        _vietQrAdapterMock.Setup(v => v.IsExpectedOrderId(orderCode, request.OrderId)).Returns(false);
+        _parentOrderRepositoryMock.Setup(p => p.GetByOrderCodeForUpdateAsync(orderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateTestParentOrder(orderCode, request.Amount, _now));
+
+        var result = await _handler.Handle(
+            new HandleVietQrWebhookCommand(request, "{}", IsAuthenticatedCallback: true), default);
+
+        result.Error.Should().Be(PaymentErrors.InvalidProviderOrderId);
+        _paymentRepositoryMock.Verify(
+            repository => repository.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TransactionSync_DebitTransaction_IsRejectedBeforeChangingPayment()
+    {
+        var request = new VietQrWebhookRequest
+        {
+            TransactionId = "TX-DEBIT",
+            BankAccount = "0000123456789",
+            Amount = 100000,
+            TransType = "D",
+            Content = "NOVA ORD-001"
+        };
+
+        var result = await _handler.Handle(
+            new HandleVietQrWebhookCommand(request, "{}", IsAuthenticatedCallback: true), default);
+
+        result.Error.Should().Be(PaymentErrors.InvalidTransactionType);
+        _parentOrderRepositoryMock.Verify(
+            repository => repository.GetByOrderCodeForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static ParentOrder CreateTestParentOrder(string orderCode, decimal total, DateTimeOffset now)
     {
         return ParentOrder.Create(Guid.NewGuid(), orderCode, "{}", total, 0m, 0m, total, null, now);

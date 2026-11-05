@@ -16,9 +16,8 @@ export function MediaUpload({ label, urls, onChange, multiple = false, video = f
       const max = file.type.startsWith('video/') ? 100 : 10
       if (file.size > max * 1024 * 1024) { setError(`Tệp ${file.name} vượt quá giới hạn ${max} MB.`); return }
       try {
-        const res: any = await upload.mutateAsync({ file })
-        const url = typeof res === 'string' ? res : res?.url || res?.Url || res?.data?.url || res?.data?.Url
-        if (url) result.push(url)
+        const res = await upload.mutateAsync({ file })
+        if (res.url) result.push(res.url)
       } catch { return }
     }
     onChange(result)

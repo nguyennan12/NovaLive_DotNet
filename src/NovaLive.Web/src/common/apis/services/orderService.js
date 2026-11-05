@@ -45,15 +45,17 @@ export const normalizeOrder = (o) => {
     ? null
     : subStatuses.every((value) => value === 'cancelled')
       ? 'cancelled'
-      : subStatuses.some((value) => ['pendingpayment', 'confirmed', 'pending'].includes(value))
+      : subStatuses.some((value) => ['pendingpayment', 'pending'].includes(value))
         ? 'pending'
-        : subStatuses.includes('processing')
-          ? 'processing'
-          : subStatuses.includes('shipping')
-            ? 'shipped'
-            : subStatuses.every((value) => ['delivered', 'completed', 'cancelled'].includes(value))
-              ? 'delivered'
-              : 'processing'
+        : subStatuses.some((value) => value === 'confirmed')
+          ? 'confirmed'
+          : subStatuses.includes('processing')
+            ? 'confirmed'
+            : subStatuses.includes('shipping')
+              ? 'shipped'
+              : subStatuses.every((value) => ['delivered', 'completed', 'cancelled'].includes(value))
+                ? 'delivered'
+                : 'confirmed'
   const status = String(o.status || o.order_status || detailStatus || o.paymentStatus || 'pending').toLowerCase()
 
   let rawItems = o.items || o.order_products || []

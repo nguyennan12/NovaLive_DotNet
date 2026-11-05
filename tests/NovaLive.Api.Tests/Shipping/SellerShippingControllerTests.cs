@@ -7,6 +7,7 @@ using NovaLive.Api.Controllers.Orders;
 using NovaLive.Api.Controllers.Shipping;
 using NovaLive.Application.UseCases.Shipping;
 using NovaLive.Application.UseCases.Shipping.Commands.CreateShipmentOrder;
+using NovaLive.Application.UseCases.Shipping.Commands.SimulateShipmentDelivered;
 using NovaLive.Application.UseCases.Shipping.Queries.GetOrderTracking;
 using NovaLive.Application.UseCases.Shipping.Queries.GetShippingLabel;
 using NovaLive.Contracts.V1.Shipping;
@@ -44,7 +45,7 @@ public sealed class SellerShippingControllerTests
     }
 
     [Fact]
-    public async Task CreationAndBothTrackingActions_DispatchCorrectRequestAndScope()
+    public async Task CreationSimulationAndBothTrackingActions_DispatchCorrectRequestAndScope()
     {
         var sender = new Mock<ISender>(MockBehavior.Strict); var id = Guid.NewGuid();
         var request = new CreateShippingOrderRequest(id, "GHN", "2", Guid.NewGuid());
@@ -54,9 +55,12 @@ public sealed class SellerShippingControllerTests
             .ReturnsAsync(Result<IReadOnlyList<TrackingResponse>>.Success([]));
         sender.Setup(s => s.Send(new GetOrderTrackingQuery(id, false), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<IReadOnlyList<TrackingResponse>>.Success([]));
+        sender.Setup(s => s.Send(new SimulateShipmentDeliveredCommand(id), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
         var seller = new SellerShippingController(sender.Object);
         ((ObjectResult)await seller.CreateOrder(request, default)).StatusCode.Should().Be(201);
         ((ObjectResult)await seller.GetTracking(id, default)).StatusCode.Should().Be(200);
+        ((ObjectResult)await seller.SimulateDelivered(id, default)).StatusCode.Should().Be(200);
         ((ObjectResult)await new OrdersController(sender.Object).GetTracking(id, default)).StatusCode.Should().Be(200);
         sender.VerifyAll();
     }
