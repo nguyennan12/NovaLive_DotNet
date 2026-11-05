@@ -8,7 +8,9 @@ import { LIMIT } from '~/common/utils/constant'
 import { useStockHistory } from '../../hooks/useInventory'
 
 const fmt = (iso) => {
+  if (!iso) return '—'
   const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return '—'
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -27,6 +29,11 @@ const StockHistory = ({ loading: externalLoading = false }) => {
     setPage(value)
   }
 
+  const handleTypeChange = (event) => {
+    setType(event.target.value)
+    setPage(1)
+  }
+
   return (
     <SectionCard
       title='Stock History'
@@ -35,7 +42,7 @@ const StockHistory = ({ loading: externalLoading = false }) => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={handleTypeChange}
             size='small'
             sx={{
               fontSize: '0.78rem', height: 34, borderRadius: '8px', minWidth: 110,
@@ -45,6 +52,10 @@ const StockHistory = ({ loading: externalLoading = false }) => {
             <MenuItem value='all' sx={{ fontSize: '0.78rem' }}>All Types</MenuItem>
             <MenuItem value='IN' sx={{ fontSize: '0.78rem' }}>Stock In</MenuItem>
             <MenuItem value='OUT' sx={{ fontSize: '0.78rem' }}>Stock Out</MenuItem>
+            <MenuItem value='RESERVATION' sx={{ fontSize: '0.78rem' }}>Reservations</MenuItem>
+            <MenuItem value='SaleConfirmed' sx={{ fontSize: '0.78rem' }}>Order fulfillment</MenuItem>
+            <MenuItem value='ManualAdjust' sx={{ fontSize: '0.78rem' }}>Manual adjustment</MenuItem>
+            <MenuItem value='ReturnIn' sx={{ fontSize: '0.78rem' }}>Return to stock</MenuItem>
           </Select>
         </Box>
       }
@@ -117,10 +128,14 @@ const StockHistory = ({ loading: externalLoading = false }) => {
                 letterSpacing: '-0.02em'
               }}
             >
-              {h.inven_type === 'IN' ? '+' : '-'}{h.inven_quantity}
+              {h.inven_type === 'RESERVE_IN'
+                ? `Hold +${h.inven_quantity}`
+                : h.inven_type === 'RESERVE_OUT'
+                  ? `Release −${h.inven_quantity}`
+                  : `${h.inven_type === 'IN' ? '+' : '−'}${h.inven_quantity}`}
             </Typography>
 
-            <Typography sx={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmt(h.updatedAt)}</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: '#6b7280' }}>{fmt(h.createdAt)}</Typography>
 
             <Typography sx={{ fontSize: '0.72rem', color: '#6b7280' }} noWrap>{h.inven_userEmail}</Typography>
 

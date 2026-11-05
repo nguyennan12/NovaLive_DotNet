@@ -135,7 +135,19 @@ public sealed class InventoryRepository(IAppDbContext dbContext) : IInventoryRep
             baseQuery = baseQuery.Where(x => x.History.SkuId == skuId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(changeType) && Enum.TryParse<InventoryChangeType>(changeType, ignoreCase: true, out var parsedType))
+        if (string.Equals(changeType, "IN", StringComparison.OrdinalIgnoreCase))
+        {
+            baseQuery = baseQuery.Where(x => x.History.QtyChange > 0);
+        }
+        else if (string.Equals(changeType, "OUT", StringComparison.OrdinalIgnoreCase))
+        {
+            baseQuery = baseQuery.Where(x => x.History.QtyChange < 0);
+        }
+        else if (string.Equals(changeType, "RESERVATION", StringComparison.OrdinalIgnoreCase))
+        {
+            baseQuery = baseQuery.Where(x => x.History.QtyChange == 0 && x.History.ReservedChange != 0);
+        }
+        else if (!string.IsNullOrWhiteSpace(changeType) && Enum.TryParse<InventoryChangeType>(changeType, ignoreCase: true, out var parsedType))
         {
             baseQuery = baseQuery.Where(x => x.History.ChangeType == parsedType);
         }

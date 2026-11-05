@@ -1,12 +1,10 @@
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
-import { Autocomplete, Box, Button, FormControl, FormHelperText, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material'
+import { Autocomplete, Box, Button, TextField, Typography } from '@mui/material'
 import { Controller, FormProvider, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import SectionCard from '../shared/SectionCard'
 import { useStockAdjustment } from '../../hooks/useInventory'
-
-const WAREHOUSES = ['Kho Hồ Chí Minh', 'Kho Hà Nội', 'Kho Đà Nẵng', 'Kho Cần Thơ']
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
@@ -28,9 +26,7 @@ const StockInForm = ({ skus }) => {
     defaultValues: {
       product: null,
       stock: '',
-      location: '',
-      note: '',
-      type: 'IN'
+      note: ''
     }
   })
   const { handleSubmit, reset, control } = methods
@@ -45,7 +41,7 @@ const StockInForm = ({ skus }) => {
     await adjustStock({
       skuId,
       qtyChange: Number(data.stock),
-      changeType: 'Restock',
+      changeType: 'Import',
       note: data.note || 'Nhập kho hàng hóa'
     })
     reset()
@@ -64,7 +60,7 @@ const StockInForm = ({ skus }) => {
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit, onError)}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
 
           {/* Product select */}
           <Controller
@@ -77,11 +73,6 @@ const StockInForm = ({ skus }) => {
                 options={skus}
                 getOptionLabel={(o) => {
                   return `${o.spu_name} — ${o.sku_id}`
-                }}
-                onInputChange={(_, value, reason) => {
-                  if (reason === 'input' || reason === 'clear') {
-                    setParams(prev => ({ ...prev, keyword: value, page: 1 }))
-                  }
                 }}
                 value={value ?? null}
                 onChange={(_, data) => onChange(data)}
@@ -121,12 +112,13 @@ const StockInForm = ({ skus }) => {
             control={control}
             rules={{
               required: 'Quantity is required!',
-              min: { value: 0, message: 'Stock cannot be negative' }
+              min: { value: 1, message: 'Enter at least 1 unit' }
             }}
             render={({ field, fieldState: { error } }) => {
               return (<TextField
                 {...field}
                 fullWidth
+                label='Quantity *'
                 size="small"
                 type="number"
                 placeholder="0"
@@ -142,47 +134,6 @@ const StockInForm = ({ skus }) => {
           />
 
 
-          {/* Warehouse */}
-          <Controller
-            name='location'
-            control={control}
-            rules={{ required: 'Warehouse is required' }}
-            render={({ field, fieldState: { error } }) => (
-              <FormControl size="small" error={!!error}>
-                <InputLabel
-                  sx={{
-                    fontSize: '0.8rem',
-                    '&.Mui-focused': { color: 'secondary.main' }
-                  }}
-                >
-                  Warehouse Location *
-                </InputLabel>
-                <Select
-                  {...field}
-                  label="Warehouse Location *"
-                  sx={{
-                    fontSize: '0.85rem',
-                    borderRadius: '8px',
-                    bgcolor: '#fafafa',
-                    '& fieldset': { borderColor: '#eeeeee' },
-                    '&:hover fieldset': { borderColor: 'secondary.main' },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'secondary.main',
-                      borderWidth: '1.5px'
-                    }
-                  }}
-                >
-                  {WAREHOUSES.map((w) => (
-                    <MenuItem key={w} value={w} sx={{ fontSize: '0.82rem' }}>
-                      {w}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {error && <FormHelperText>{error.message}</FormHelperText>}
-              </FormControl>
-            )}
-          />
-
           {/* Note */}
           <Controller
             name='note'
@@ -192,8 +143,6 @@ const StockInForm = ({ skus }) => {
                 <TextField
                   label='Note'
                   size='small'
-                  multiline
-                  rows={2}
                   {...field}
                   placeholder='e.g. Received from supplier, batch #...'
                   sx={fieldSx}
@@ -206,7 +155,7 @@ const StockInForm = ({ skus }) => {
             type="submit"
             variant='contained'
             startIcon={<AddRoundedIcon />}
-            onClick={handleSubmit}
+            disabled={isSubmitting}
             sx={{
               bgcolor: 'secondary.main',
               color: '#fff',

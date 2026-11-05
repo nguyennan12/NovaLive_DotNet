@@ -5,7 +5,7 @@ import SectionCard from '../shared/SectionCard'
 import StatusBadge from '../shared/StatusBadge'
 
 
-const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, params, setParams }) => {
+const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, totalCount = 0, params, setParams }) => {
 
   const handlePageChange = (event, value) => {
     setParams(prev => ({ ...prev, page: value }))
@@ -24,7 +24,7 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
   return (
     <SectionCard
       title='Product Stock'
-      subtitle={`${skus.length} products`}
+      subtitle={`${totalCount} SKU variants · stock shown is available quantity`}
       sx={{
         opacity: isStale ? 0.5 : 1,
         transition: 'opacity 0.2s ease-in-out'
@@ -47,27 +47,31 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
         </Box>
       }
     >
-      {/* Table header */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr 1fr',
-          gap: 1,
-          px: 1.5,
-          py: 1,
-          bgcolor: '#f9fafb',
-          borderRadius: '8px',
-          mb: 1
-        }}
-      >
-        {['Product', 'SKU', 'Stock', 'Status'].map((h) => (
+      <Box sx={{ maxHeight: { xs: 320, md: 410 }, overflowY: 'auto', pr: 0.5 }}>
+        {/* Table header */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 1fr 1fr 1fr',
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            bgcolor: '#f9fafb',
+            borderRadius: '8px',
+            mb: 1,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1
+          }}
+        >
+        {['Product', 'SKU', 'Available', 'Status'].map((h) => (
           <Typography key={h} sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {h}
           </Typography>
         ))}
-      </Box>
+        </Box>
 
-      {loading ? (
+        {loading ? (
         Array.from({ length: 5 }).map((_, i) => (
           <Box key={i} sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 1, px: 1.5, py: 1.25, borderBottom: '1px solid #f3f4f6' }}>
             {[180, 90, 50, 80].map((w, j) => (
@@ -75,9 +79,9 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
             ))}
           </Box>
         ))
-      ) : skus.length === 0 ? (
+        ) : skus.length === 0 ? (
         <EmptyState icon={InventoryRoundedIcon} title='No products found' subtitle='Try changing the filters' />
-      ) : (
+        ) : (
         skus.map((p) => {
           return <Box
             key={p._id}
@@ -98,6 +102,9 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
                 {p.spu_name}
               </Typography>
               <Typography sx={{ fontSize: '0.7rem', color: '#9ca3af' }}>{p.sku_name ? p.sku_name : 'No Variation'}</Typography>
+              <Typography sx={{ fontSize: '0.66rem', color: '#9ca3af' }}>
+                Physical {p.qtyOnHand ?? p.availableQty} · Reserved {p.total_reserved ?? 0}
+              </Typography>
             </Box>
             <Typography sx={{ fontSize: '0.78rem', color: '#6b7280', alignSelf: 'center', fontFamily: 'monospace' }}>
               {p.sku_id}
@@ -117,7 +124,8 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
             </Box>
           </Box>
         })
-      )}
+        )}
+      </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
         <Pagination
