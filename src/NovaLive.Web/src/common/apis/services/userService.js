@@ -36,8 +36,8 @@ export const resendOtpAPI = async (data) => {
   return await authorizedAxiosInstance.post('auth/resend-otp', payload)
 }
 
-export const refreshTokenAPI = async (refreshToken) => {
-  return await authorizedAxiosInstance.post('auth/refresh', refreshToken ? { refreshToken } : {})
+export const refreshTokenAPI = async () => {
+  return await authorizedAxiosInstance.post('auth/refresh')
 }
 
 export const logoutAPI = async () => {

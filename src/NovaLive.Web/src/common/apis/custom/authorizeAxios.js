@@ -42,7 +42,7 @@ authorizedAxiosInstance.interceptors.response.use(
       originalRequest._retry = true
       if (!refreshTokenPromise) {
         refreshTokenPromise = import('~/common/apis/services/userService')
-          .then(({ refreshTokenAPI }) => refreshTokenAPI(currentUser?.refreshToken))
+          .then(({ refreshTokenAPI }) => refreshTokenAPI())
           .then((res) => {
             const raw = res?.data !== undefined ? res.data : res
             const current = store.getState()?.user?.currentUser
@@ -51,7 +51,9 @@ authorizedAxiosInstance.interceptors.response.use(
             if (current && (token || raw?.user)) {
               const next = { ...current, ...raw?.user }
               if (token) next.accessToken = token
+              else delete next.accessToken
               if (refreshToken) next.refreshToken = refreshToken
+              else delete next.refreshToken
               store.dispatch(setCurrentUser(next))
             }
             return res
@@ -79,7 +81,7 @@ authorizedAxiosInstance.interceptors.response.use(
       }
       return refreshTokenPromise.then((res) => {
         const raw = res?.data !== undefined ? res.data : res
-        const refreshedToken = raw?.accessToken || raw?.tokens?.accessToken || store.getState()?.user?.currentUser?.accessToken
+        const refreshedToken = raw?.accessToken || raw?.tokens?.accessToken
         if (refreshedToken) {
           if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
             originalRequest.headers.set('Authorization', `Bearer ${refreshedToken}`)

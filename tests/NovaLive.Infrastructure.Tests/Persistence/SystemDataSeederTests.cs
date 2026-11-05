@@ -30,7 +30,7 @@ public sealed class SystemDataSeederTests
         (await context.Roles.CountAsync()).Should().Be(3);
         (await context.Resources.CountAsync()).Should().Be(19);
         (await context.Permissions.CountAsync()).Should().Be(58);
-        (await context.Categories.CountAsync()).Should().Be(5);
+        (await context.Categories.CountAsync()).Should().Be(20);
         (await context.Roles.Select(role => role.Id).Distinct().CountAsync()).Should().Be(3);
         (await context.Resources.Select(resource => resource.Code).Distinct().CountAsync()).Should().Be(19);
         (await context.Permissions.Select(permission => permission.Code).Distinct().CountAsync()).Should().Be(58);
