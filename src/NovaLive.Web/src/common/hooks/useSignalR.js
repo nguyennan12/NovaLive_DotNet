@@ -22,7 +22,10 @@ export const usePaymentHub = ({ paymentId, onPaymentSuccess, enabled = true } = 
     connectionRef.current = connection
 
     connection.on('PaymentSuccess', (payload) => {
-      onPaymentSuccessRef.current?.(payload)
+      // The buyer can have multiple payment tabs connected to the same user.
+      if (String(payload?.paymentId).toLowerCase() === String(paymentId).toLowerCase()) {
+        onPaymentSuccessRef.current?.(payload)
+      }
     })
 
     const start = async () => {

@@ -153,6 +153,7 @@ public static class DependencyInjection
             .Validate(o => o.BatchSize > 0, "OrderTimeout:BatchSize must be positive.")
             .ValidateOnStart();
         services.AddHostedService<TimeoutOrderRollbackWorker>();
+        services.AddHostedService<RatingCalculationWorker>();
         services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging

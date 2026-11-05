@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace NovaLive.Contracts.V1.Payments;
 
 public record InitiatePaymentRequest(
-    Guid OrderId,
+    Guid ParentOrderId,
     string PaymentMethod);
 
 public record MomoIpnRequest

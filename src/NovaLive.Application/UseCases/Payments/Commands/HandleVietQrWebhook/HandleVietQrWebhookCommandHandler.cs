@@ -76,6 +76,9 @@ public sealed class HandleVietQrWebhookCommandHandler(
             return PaymentErrors.PaymentNotFound;
         }
 
+        // A provider callback must never settle another method, especially a COD order.
+        if (payment.Method != PaymentMethod.VietQR) return PaymentErrors.InvalidMethod;
+
         // 4. Idempotency Check: nếu giao dịch này hoặc đơn hàng đã thanh toán thành công trước đó
         if (payment.Status == PaymentStatus.Success)
         {

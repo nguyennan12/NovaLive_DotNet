@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Globalization;
+using QRCoder;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NovaLive.Application.Abstractions.ThirdParty;
@@ -55,7 +57,8 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
             AccountNumber: _options.AccountNumber,
             BankBin: _options.BankBin,
             Amount: intAmount,
-            Description: content);
+            Description: content,
+            QrImageBase64: Convert.ToBase64String(PngByteQRCodeHelper.GetQRCode(emvcoQr, QRCodeGenerator.ECCLevel.M, 8)));
     }
 
     public string? ExtractOrderCode(string content)
@@ -165,7 +168,7 @@ public sealed class VietQrPaymentAdapter : IVietQrPaymentAdapter
         // Tag 54: Transaction Amount
         if (amount > 0)
         {
-            AppendTlv(sb, "54", amount.ToString());
+            AppendTlv(sb, "54", amount.ToString(CultureInfo.InvariantCulture));
         }
 
         // Tag 58: Country Code (VN)
