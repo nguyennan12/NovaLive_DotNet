@@ -24,7 +24,7 @@ const ProductStockList = ({ loading = false, isStale = false, skus, totalPages, 
   return (
     <SectionCard
       title='Product Stock'
-      subtitle={`${totalCount} SKU variants · stock shown is available quantity`}
+      subtitle={`${totalCount} SKU variants · current available stock after reservations and stock movements`}
       sx={{
         opacity: isStale ? 0.5 : 1,
         transition: 'opacity 0.2s ease-in-out'
