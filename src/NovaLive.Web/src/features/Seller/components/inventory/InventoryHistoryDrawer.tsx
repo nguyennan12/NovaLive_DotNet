@@ -20,7 +20,7 @@ export function InventoryHistoryDrawer({ item, onClose }: { item: InventoryItem;
       { key: 'before', label: 'Trước', render: row => row.qtyBefore },
       { key: 'change', label: 'Thay đổi', render: row => `${row.qtyChange > 0 ? '+' : ''}${row.qtyChange}` },
       { key: 'after', label: 'Sau', render: row => row.qtyAfter },
-      { key: 'reserved', label: 'Giữ chỗ (trước / đổi)', render: row => `${row.reservedBefore} / ${row.reservedChange > 0 ? '+' : ''}${row.reservedChange}` },
+      { key: 'reserved', label: 'Giữ chỗ trước và thay đổi', render: row => `${row.reservedBefore} / ${row.reservedChange > 0 ? '+' : ''}${row.reservedChange}` },
       { key: 'ref', label: 'Tham chiếu', render: row => <>{row.refType || '—'}<br />{row.refId}</> },
       { key: 'actor', label: 'Người thực hiện / Ghi chú', render: row => <>{row.createdBy || 'Hệ thống'}<br />{row.note}</> }
     ]} />

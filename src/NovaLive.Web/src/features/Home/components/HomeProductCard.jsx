@@ -15,6 +15,8 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
   const code = product.id || product._id || product.spu_id || product.spu_code || product.slug || ''
   const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
   const sold = product.total_sold ?? product.soldCount ?? 0
+  const flashSold = product.flashsale_sold ?? product.soldQty ?? 0
+  const flashStock = product.flashsale_stock ?? product.quantity ?? 0
 
   return (
     <Box
@@ -74,12 +76,56 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
             </Typography>
           )}
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
-          <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
-          <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
-            {formatSold(sold)} lượt mua
-          </Typography>
-        </Box>
+        {isFlashSale ? (
+          <Box sx={{ mt: 0.75 }}>
+            <Box sx={{
+              position: 'relative',
+              height: 15,
+              borderRadius: 8,
+              bgcolor: 'rgba(232, 71, 42, 0.12)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: 0.5
+            }}>
+              <Box sx={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: `${Math.min(100, Math.max(12, Math.round((flashSold / Math.max(1, flashStock)) * 100)))}%`,
+                background: 'linear-gradient(90deg, #ff6a00 0%, #ee0979 100%)',
+                borderRadius: 8
+              }} />
+              <Typography sx={{
+                position: 'relative',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                color: '#fff',
+                lineHeight: 1,
+                zIndex: 1,
+                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                whiteSpace: 'nowrap'
+              }}>
+                {flashSold >= flashStock ? 'ĐÃ BÁN HẾT' : `Đã bán ${flashSold}`}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
+              <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
+              <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
+                {formatSold(sold)} lượt mua
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
+            <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
+            <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
+              {formatSold(sold)} lượt mua
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Box >
   )
@@ -92,6 +138,8 @@ const LandscapeCard = ({ product }) => {
   const code = product.id || product._id || product.spu_id || product.spu_code || product.slug || ''
   const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
   const sold = product.total_sold ?? product.soldCount ?? 0
+  const flashSold = product.flashsale_sold ?? product.soldQty ?? 0
+  const flashStock = product.flashsale_stock ?? product.quantity ?? 0
 
   return (
     <Box

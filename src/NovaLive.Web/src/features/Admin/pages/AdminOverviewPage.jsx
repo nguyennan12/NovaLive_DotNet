@@ -180,7 +180,7 @@ export const AdminOverviewPage = () => {
                   value: <MoneyText value={report.totalGmv || 0} />
                 },
                 {
-                  label: 'Doanh thu phí sàn (5%)',
+                  label: 'Doanh thu phí sàn 5%',
                   value: <MoneyText value={report.totalPlatformFeeRevenue || 0} />
                 },
                 {

@@ -83,7 +83,8 @@ public static class ProductMappings
         string shopName,
         string categoryName,
         IEnumerable<PublicSkuResponse> skus,
-        IEnumerable<ProductAttributeDto> attributes)
+        IEnumerable<ProductAttributeDto> attributes,
+        int soldCount = 0)
     {
         var skuList = skus.ToList();
         var minPrice = skuList.Count > 0 ? skuList.Min(s => s.SellPrice) : 0m;
@@ -104,7 +105,7 @@ public static class ProductMappings
             MinPrice: minPrice,
             MaxPrice: maxPrice,
             Rating: 5.0,
-            SoldCount: 0,
+            SoldCount: soldCount,
             Status: spu.Status.ToString(),
             CreatedAt: spu.CreatedAt.UtcDateTime,
             Skus: skuList,

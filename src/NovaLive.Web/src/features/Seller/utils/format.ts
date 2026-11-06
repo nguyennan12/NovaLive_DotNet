@@ -24,7 +24,19 @@ export function localInput(value: string) {
 }
 export const inputToUtc = (value: string) => new Date(`${value}+07:00`).toISOString()
 export const dayToUtc = (value: string, end = false) => value ? new Date(`${value}T${end ? '23:59:59.999' : '00:00:00'}+07:00`).toISOString() : undefined
-export const todayInput = () => new Intl.DateTimeFormat('sv-SE', { timeZone: SELLER_TIMEZONE }).format(new Date())
+
+const inputDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: SELLER_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+})
+
+export function dateInput(date = new Date()) {
+  const { year, month, day } = Object.fromEntries(inputDateFormatter.formatToParts(date).map(({ type, value }) => [type, value]))
+  return `${year}-${month}-${day}`
+}
+
 export function normalizeSellerTracking(result: Tracking | Tracking[] | null | undefined): Tracking {
   // The shared backend query returns a list; each seller sub-order has one shipment.
   const tracking = Array.isArray(result) ? result[0] : result

@@ -13,8 +13,8 @@ public sealed class SubOrder : AuditableEntity
         ItemAmount = price.ItemsSubtotal, ShippingFee = price.ShippingFee, ShopDiscountAmount = price.ShopDiscountAmount,
         PlatformDiscountAmount = price.PlatformDiscountAmount, ShippingDiscountAmount = price.ShippingDiscountAmount,
         SubTotal = price.ShopTotal, Status = cod ? SubOrderStatus.Confirmed : SubOrderStatus.PendingPayment,
+        SellerEarnings = Math.Round(price.ShopTotal * 0.95m, 2),
         ConfirmedAt = cod ? now : null, CreatedAt = now, UpdatedAt = now, OrderSource = orderSource
-        // T32: calculate SellerEarnings using the configured commission policy at settlement.
     };
 
     public Guid ParentOrderId { get; private set; }
@@ -123,6 +123,27 @@ public sealed class SubOrder : AuditableEntity
             ConfirmedAt = now;
             UpdatedAt = now;
         }
+
+        if (SellerEarnings == 0m && SubTotal > 0m)
+        {
+            SetEarnings();
+        }
+    }
+
+    public void SetEarnings(decimal platformFeeRate = 0.05m)
+    {
+        SellerEarnings = Math.Round(SubTotal * (1m - platformFeeRate), 2);
+    }
+
+    public Result MarkAsCompleted(DateTimeOffset now)
+    {
+        if (Status != SubOrderStatus.Delivered)
+            return Result.Failure(OrderStateErrors.InvalidStatusTransition);
+
+        Status = SubOrderStatus.Completed;
+        CompletedAt = now;
+        UpdatedAt = now;
+        return Result.Success();
     }
 
     public Result CancelForPaymentTimeout(DateTimeOffset now)

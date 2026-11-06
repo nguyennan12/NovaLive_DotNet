@@ -141,7 +141,7 @@ export const AdminPayoutsPage = () => {
   return (
     <>
       <PageHeader
-        title="Duyệt giải ngân ví (Payouts)"
+        title="Duyệt giải ngân ví đối tác"
         description="Kiểm tra và xử lý các yêu cầu rút tiền từ số dư ví của các gian hàng."
         action={
           <Button

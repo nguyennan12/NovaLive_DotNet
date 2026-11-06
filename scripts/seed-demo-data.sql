@@ -366,8 +366,19 @@ CROSS JOIN LATERAL (
 
 INSERT INTO flash_sale_items (id, campaign_id, sku_id, shop_id, flash_price, quantity,
                               per_user_limit, reserved_qty, sold_qty, status, created_at)
-SELECT item_id, campaign_id, sku_id, shop_id, round(sell_price * 0.80, 2), 30, 2, 0,
-       CASE campaign_key WHEN 'ended' THEN 12 WHEN 'active' THEN 3 ELSE 0 END,
+SELECT item_id, campaign_id, sku_id, shop_id, round(sell_price * 0.80, 2),
+       CASE (row_number() over (partition by campaign_id order by item_id)) % 4
+           WHEN 1 THEN 30
+           WHEN 2 THEN 25
+           WHEN 3 THEN 20
+           ELSE 35
+       END,
+       2, 0,
+       CASE campaign_key 
+           WHEN 'ended' THEN 26 + ((row_number() over (partition by campaign_id order by item_id)) % 5)
+           WHEN 'active' THEN 14 + ((row_number() over (partition by campaign_id order by item_id)) % 6) * 2
+           ELSE 0 
+       END,
        CASE campaign_key WHEN 'active' THEN 'Approved' WHEN 'upcoming' THEN 'Pending' ELSE 'Ended' END,
        now()
 FROM _demo_flash_items

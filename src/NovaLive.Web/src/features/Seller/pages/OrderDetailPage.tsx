@@ -116,7 +116,7 @@ export default function OrderDetailPage() {
                 }}
               >
                 {/* Left: Status & Metadata Badges */}
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" sx={{ gap: 1 }}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                   <StatusBadge status={order.status} />
 
                   <Chip
@@ -182,7 +182,7 @@ export default function OrderDetailPage() {
                 </Stack>
 
                 {/* Right: Operational Action Buttons */}
-                <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                   {order.status === 'ReturnRequested' && (
                     <Button
                       component={Link}
@@ -692,7 +692,7 @@ export default function OrderDetailPage() {
                         <StatusBadge status={item.toStatus} />
                         <Typography variant="caption" sx={{ color: '#94a3b8' }}>•</Typography>
                         <Chip
-                          label={roleLabel(item.changedByRole)}
+                          label={roleLabel(item.changedByRole || undefined)}
                           size="small"
                           sx={{
                             height: 20,

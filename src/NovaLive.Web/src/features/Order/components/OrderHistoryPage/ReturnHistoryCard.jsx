@@ -13,7 +13,7 @@ export const RETURN_STATUS_CONFIG = {
     borderColor: 'rgba(245,158,11,0.25)'
   },
   SellerApproved: {
-    label: 'Shop đồng ý (Gửi hàng)',
+    label: 'Shop đồng ý gửi hàng',
     color: '#0095ff',
     bgColor: 'rgba(0,149,255,0.1)',
     borderColor: 'rgba(0,149,255,0.25)'
@@ -37,7 +37,7 @@ export const RETURN_STATUS_CONFIG = {
     borderColor: 'rgba(22,163,74,0.25)'
   },
   BuyerWins: {
-    label: 'Buyer thắng (Đang hoàn)',
+    label: 'Buyer thắng đang hoàn tiền',
     color: '#16a34a',
     bgColor: 'rgba(22,163,74,0.1)',
     borderColor: 'rgba(22,163,74,0.25)'

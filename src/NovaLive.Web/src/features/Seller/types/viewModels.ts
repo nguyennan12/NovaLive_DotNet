@@ -5,10 +5,12 @@ import type { Review } from './contracts'
 export interface SellerDashboard {
   totalSalesRevenue: number; totalOrdersCount: number; walletAvailableBalance: number; pendingOrdersCount: number
   dailyRevenue: { date: string; revenue: number; ordersCount: number }[]
+  monthlyRevenue?: { month: string; revenue: number; ordersCount: number }[]
   orderStatuses: { status: string; count: number }[]
   topSkus: { skuId: string; spuName: string; skuCode: string; soldQuantity: number; totalRevenue: number }[]
   recentLives: { sessionId: string; title: string; peakViewers: number; totalOrdersCount: number; totalRevenue: number; date: string }[]
   actions: { pendingOrders: number; expiringReturns: number; lowStockSkus: number }
+  walletOverview?: { balance: number; lockedBalance: number; currency: string; recentTransactions: any[] }
 }
 export interface SellerNotification { id: string; title: string; content: string; isRead: boolean; createdAt: string; link: string | null }
 export interface SellerLive { id: string; title: string; status: string; peakViewers: number; totalRevenue: number; totalOrdersCount: number; startedAt: string | null; endedAt: string | null }

@@ -61,16 +61,13 @@ public sealed class AdminDashboardReadRepository(AppDbContext db) : IAdminDashbo
             {
                 Count = group.Count(),
                 PopulatedCount = group.Count(subOrder => subOrder.SellerEarnings > 0m),
-                PlatformFee = group.Sum(subOrder => subOrder.SubTotal - subOrder.SellerEarnings)
+                CalculatedFee = group.Sum(subOrder => subOrder.SellerEarnings > 0m
+                    ? subOrder.SubTotal - subOrder.SellerEarnings
+                    : Math.Round(subOrder.SubTotal * 0.05m, 2))
             })
             .SingleOrDefaultAsync(ct);
-        // T32 currently does not populate SellerEarnings. Do not mistake the entity's
-        // default zero for a calculated seller earning and report SubTotal as platform fee.
-        decimal? totalPlatformFeeRevenue = sellerEarningsSummary is null
-            ? 0m
-            : sellerEarningsSummary.PopulatedCount == sellerEarningsSummary.Count
-                ? sellerEarningsSummary.PlatformFee
-                : null;
+        
+        decimal? totalPlatformFeeRevenue = sellerEarningsSummary?.CalculatedFee ?? 0m;
 
         var deliveredSubOrders = db.SubOrders.AsNoTracking().Where(subOrder => subOrder.DeliveredAt != null);
         if (from is not null) deliveredSubOrders = deliveredSubOrders.Where(subOrder => subOrder.DeliveredAt >= from);

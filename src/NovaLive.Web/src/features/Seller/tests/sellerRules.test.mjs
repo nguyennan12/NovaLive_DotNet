@@ -109,6 +109,13 @@ test('Datetime-local inputs round-trip with UTC+7, independent of host timezone'
   assert.equal(format.dayToUtc('2026-10-24', true), '2026-10-24T16:59:59.999Z')
 })
 
+test('Seller date filters use padded ISO dates after Vietnam midnight', () => {
+  const date = format.dateInput(new Date('2026-02-06T18:00:00Z'))
+  assert.equal(date, '2026-02-07')
+  assert.equal(format.dayToUtc(date), '2026-02-06T17:00:00.000Z')
+  assert.equal(format.dayToUtc(date, true), '2026-02-07T16:59:59.999Z')
+})
+
 test('Seller tracking accepts the backend list contract and reports missing shipments clearly', () => {
   const event = { status: 'Shipping', description: 'Đang giao', occurredAt: '2026-10-24T01:05:00Z' }
   const tracking = { subOrderId: 'sub-order', provider: 'GHN', trackingCode: 'GHN-123', status: 'Shipping', events: [event], isStale: false }

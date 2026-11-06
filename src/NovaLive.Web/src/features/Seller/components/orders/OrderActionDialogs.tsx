@@ -81,7 +81,7 @@ export function OrderActionDialogs({
       onClose={pending ? undefined : onClose}
       fullWidth
       maxWidth="sm"
-      PaperProps={{ sx: { borderRadius: '12px' } }}
+      slotProps={{ paper: { sx: { borderRadius: '12px' } } }}
       aria-labelledby="order-action-title"
     >
       <DialogTitle id="order-action-title" sx={{ fontWeight: 700, fontSize: '1.1rem', pt: 2.5, px: 3 }}>

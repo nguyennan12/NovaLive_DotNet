@@ -54,7 +54,7 @@ const ProfileActionButton = ({ currentUser, isShop, isPendingApproval, navigate 
             }
           }}
         >
-          Quản trị sàn (Admin)
+          Quản trị sàn
         </Button>
       )}
 

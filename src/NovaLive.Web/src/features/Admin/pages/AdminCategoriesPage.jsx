@@ -186,7 +186,7 @@ export const AdminCategoriesPage = () => {
             },
             {
               key: 'slug',
-              label: 'Đường dẫn (Slug)',
+              label: 'Đường dẫn tĩnh Slug',
               render: (row) => (
                 <Typography variant="body2" color="text.secondary">
                   {row.slug || '—'}

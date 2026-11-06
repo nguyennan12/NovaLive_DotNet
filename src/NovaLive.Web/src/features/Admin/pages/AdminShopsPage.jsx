@@ -157,7 +157,7 @@ export const AdminShopsPage = () => {
   return (
     <>
       <PageHeader
-        title="Quản trị & Phê duyệt Shop (KYC)"
+        title="Quản trị và phê duyệt hồ sơ Shop"
         description="Kiểm tra hồ sơ định danh KYC, phê duyệt mở gian hàng và quản lý trạng thái hoạt động."
         action={
           <Button
