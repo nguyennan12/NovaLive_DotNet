@@ -1,13 +1,16 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Contracts.V1.Payments;
 using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
 using NovaLive.Domain.Payments;
 using NovaLive.Domain.Shops;
+using NovaLive.Domain.System;
 
 namespace NovaLive.Infrastructure.System;
 
@@ -17,6 +20,7 @@ public sealed class CODReconciliationConsumer(
     ISubOrderRepository subOrders,
     IShopWalletRepository wallets,
     IShopWalletTransactionRepository walletTransactions,
+    IOutboxRepository outbox,
     ITransactionManager transactions,
     IDateTimeProvider clock,
     ILogger<CODReconciliationConsumer> logger) : IConsumer<ShipmentDeliveredEvent>
@@ -127,6 +131,24 @@ public sealed class CODReconciliationConsumer(
                 var settled = payment.MarkCodSuccess(now);
                 if (settled.IsFailure)
                     throw new InvalidOperationException($"Unable to mark COD Payment for ParentOrder {parent.Id} successful: {settled.Error.Code}.");
+
+                // COD has no payment-gateway webhook, so this consumer owns the payment-success
+                // integration event. InventorySyncConsumer consumes it to convert Hold into
+                // SaleConfirmed (stock out). Publishing on a replay is intentional: the inventory
+                // ledger and notification consumer are idempotent, and this repairs deliveries
+                // settled by an older deployment that omitted this event.
+                await outbox.AddAsync(new OutboxMessage(
+                    nameof(PaymentSuccessEvent),
+                    JsonSerializer.Serialize(new PaymentSuccessEvent(
+                        payment.Id,
+                        parent.Id,
+                        parent.OrderCode,
+                        payment.Amount,
+                        payment.Method.ToString(),
+                        payment.TransactionRef,
+                        payment.PaidAt ?? now),
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    now), ct);
             }
 
             return true;

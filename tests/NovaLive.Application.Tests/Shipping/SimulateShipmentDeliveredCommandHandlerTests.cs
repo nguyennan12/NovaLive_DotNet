@@ -35,7 +35,7 @@ public sealed class SimulateShipmentDeliveredCommandHandlerTests
     }
 
     [Fact]
-    public async Task RepeatedSimulation_IsIdempotent()
+    public async Task RepeatedSimulation_ReplaysSettlementButDoesNotDuplicateOrderTransition()
     {
         var c = await ShippingFulfillmentTestContext.Build();
         await c.Create();
@@ -43,7 +43,7 @@ public sealed class SimulateShipmentDeliveredCommandHandlerTests
         (await c.SimulateHandler.Handle(new(c.Sub.Id), default)).IsSuccess.Should().BeTrue();
         (await c.SimulateHandler.Handle(new(c.Sub.Id), default)).IsSuccess.Should().BeTrue();
 
-        c.Orders.Checkout.Messages.Count(message => message.EventType == nameof(ShipmentDeliveredEvent)).Should().Be(1);
+        c.Orders.Checkout.Messages.Count(message => message.EventType == nameof(ShipmentDeliveredEvent)).Should().Be(2);
         c.Orders.Checkout.HistoryList.Count(history => history.ToStatus == nameof(SubOrderStatus.Delivered)).Should().Be(1);
     }
 

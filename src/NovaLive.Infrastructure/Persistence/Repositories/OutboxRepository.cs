@@ -13,6 +13,26 @@ public sealed class OutboxRepository(AppDbContext db) : IOutboxRepository
     public Task<bool> HasCodSettlementEligibleShipmentDeliveredEventAsync(Guid shipmentId, CancellationToken ct)
     {
         var shipmentIdText = shipmentId.ToString();
+
+        if (db.Database.IsNpgsql())
+        {
+            // Payload is jsonb in PostgreSQL. Using string.Contains here makes Npgsql
+            // translate the predicate as a text operation against jsonb and fails at
+            // runtime. Query the JSON properties explicitly instead.
+            return db.OutboxMessages.FromSqlInterpolated($"""
+                SELECT *
+                FROM public.outbox_messages
+                WHERE event_type = 'ShipmentDeliveredEvent'
+                  AND payload->>'shippingOrderId' = {shipmentIdText}
+                  AND (
+                    COALESCE((payload->>'isVerifiedWebhook')::boolean, false)
+                    OR COALESCE((payload->>'isSellerConfirmedDelivery')::boolean, false)
+                  )
+                """)
+                .AsNoTracking()
+                .AnyAsync(ct);
+        }
+
         const string verifiedSignal = "\"isVerifiedWebhook\":true";
         const string sellerConfirmedSignal = "\"isSellerConfirmedDelivery\":true";
         return db.OutboxMessages.AsNoTracking().AnyAsync(message =>

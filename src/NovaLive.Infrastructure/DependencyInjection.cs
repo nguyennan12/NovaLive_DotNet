@@ -233,8 +233,9 @@ public static class DependencyInjection
                 if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var publicUri)
                     && publicUri.Scheme is "http" or "https")
                 {
-                    options.Endpoint = publicUri.Authority;
-                    options.UseSsl = publicUri.Scheme == Uri.UriSchemeHttps;
+                    // The public URL is only for links returned to browsers. The S3
+                    // client must keep using Minio:Endpoint (normally Render's private
+                    // host) so uploads do not go through the public reverse proxy.
                     options.CdnBaseUrl = publicUri.GetLeftPart(UriPartial.Authority);
                 }
 

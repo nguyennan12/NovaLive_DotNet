@@ -64,7 +64,12 @@ public sealed class ShippingDeliveryProcessor(
             // an explicit seller confirmation. Ordinary polling state updates are not enough.
             var hasSettlementEligibleDeliverySignal = (isVerifiedDeliveredWebhook || isSellerConfirmedDelivered) && !newlyDelivered
                 && await outbox.HasCodSettlementEligibleShipmentDeliveredEventAsync(shipment.Id, ct);
-            if (newlyDelivered || ((isVerifiedDeliveredWebhook || isSellerConfirmedDelivered) && !hasSettlementEligibleDeliverySignal))
+            // An explicit seller reconciliation may be repeated to repair downstream settlement
+            // (wallet/payment/inventory) after an older deployment or transient consumer failure.
+            // Those consumers use immutable/idempotent ledgers, while the order timeline below
+            // remains single-write through newlyDelivered.
+            if (newlyDelivered || isSellerConfirmedDelivered
+                || (isVerifiedDeliveredWebhook && !hasSettlementEligibleDeliverySignal))
                 await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
                     new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
                         shipment.Provider.ToString(), shipment.TrackingCode!, sub.DeliveredAt!.Value,

@@ -60,8 +60,6 @@ services:
         value: "199979"
       - key: Ghn__WebhookSecret
         sync: false
-      - key: Email__Provider
-        value: Logging
       - key: Email__LogOtp
         value: "false"
       - key: Cors__AllowedOrigins__0
