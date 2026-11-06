@@ -14,7 +14,9 @@ public sealed record AdminDashboardReadModel(
     decimal? TotalPlatformFeeRevenue,
     decimal ReturnRatePercent,
     decimal DisputeRatePercent,
-    IReadOnlyList<PendingSellerPayoutReadModel> PendingPayouts);
+    IReadOnlyList<PendingSellerPayoutReadModel> PendingPayouts,
+    IReadOnlyList<DailyRevenuePointReadModel>? DailyRevenue = null,
+    IReadOnlyList<MonthlyRevenuePointReadModel>? MonthlyRevenue = null);
 
 public sealed record PendingSellerPayoutReadModel(
     Guid Id,

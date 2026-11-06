@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { LIMIT } from '~/common/utils/constant'
 import ProductStockList from '../components/InventoryPage/ProductStockList'
+import ReservedStock from '../components/InventoryPage/ReservedStock'
 import StockHistory from '../components/InventoryPage/StockHistory'
 import StockInForm from '../components/InventoryPage/StockInForm'
 import StockOutForm from '../components/InventoryPage/StockOutForm'
@@ -78,7 +79,6 @@ const InventoryPage = () => {
           <StockOverviewChart />
         </Grid>
 
-
         <Grid size={{ xs: 12, md: 6 }}>
           <StockInForm skus={adjustmentSkus} />
         </Grid>
@@ -86,7 +86,7 @@ const InventoryPage = () => {
           <StockOutForm skus={adjustmentSkus} />
         </Grid>
 
-        <Grid size={12}>
+        <Grid size={{ xs: 12, lg: 7 }}>
           <ProductStockList
             loading={isLoading}
             isStale={isPlaceholderData}
@@ -96,6 +96,9 @@ const InventoryPage = () => {
             params={params}
             setParams={setParams}
           />
+        </Grid>
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <ReservedStock />
         </Grid>
 
         <Grid size={12}>

@@ -2,7 +2,6 @@ import { Box, Container } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import { useConfirm } from 'material-ui-confirm'
 import { logoutUserAPI, selectCurrentUser } from '~/store/user/userSlice'
-import { useShop } from '~/features/Shop/hooks/useShop'
 import ActivityStatsCard from '../components/ProfilePage/ActivityStatsCard'
 import PersonalInfoCard from '../components/ProfilePage/PersonalInfoCard'
 import ProfileHeader from '../components/ProfilePage/ProfileHeader'
@@ -14,13 +13,9 @@ import { useProfileMutation } from '../hooks/useProfileMutation'
 
 function ProfilePage() {
   const currentUser = useSelector(selectCurrentUser)
-  const { shop } = useShop()
-  const isShop = Boolean(
-    currentUser?.shopId ||
-    currentUser?.user_shop ||
-    currentUser?.roles?.includes('Seller') ||
-    shop?.shop_status?.toLowerCase() === 'active'
-  )
+  const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
+  const hasSellerRole = roles.some(role => String(role).toLowerCase() === 'seller')
+  const isShop = hasSellerRole
 
   const { profile, isLoading } = useProfile()
   const { updateProfile, isUpdating, changePassword, isChangingPassword } = useProfileMutation()

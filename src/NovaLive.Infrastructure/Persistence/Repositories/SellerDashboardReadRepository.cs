@@ -87,7 +87,7 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
         var pendingOrdersCount = await baseOrdersQuery
             .CountAsync(s => s.Status == SubOrderStatus.Confirmed && s.WarehouseAddressId == null, ct);
 
-        // 4. Daily Revenue Points
+        // 4. Daily Revenue Points (filling all days in period)
         var dailyLedger = wallet is null
             ? new List<DailyLedgerEntry>()
             : await db.ShopWalletTransactions.AsNoTracking()
@@ -98,13 +98,58 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
                 .Select(tx => new DailyLedgerEntry(tx.Type, tx.Amount, tx.CreatedAt))
                 .ToListAsync(ct);
 
-        var dailyRevenue = dailyLedger
+        var dailyMap = dailyLedger
             .GroupBy(tx => tx.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd"))
-            .Select(g => new DailyRevenuePointReadModel(
-                g.Key,
-                g.Sum(tx => tx.Amount),
-                g.Count(tx => tx.Type == WalletTxType.OrderRevenue)))
-            .OrderBy(day => day.Date)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Revenue = g.Sum(tx => tx.Amount),
+                Count = g.Count(tx => tx.Type == WalletTxType.OrderRevenue)
+            });
+
+        var startDate = (from ?? now.AddDays(-29)).UtcDateTime.Date;
+        var endDate = (to ?? now).UtcDateTime.Date;
+        if (endDate < startDate) endDate = startDate;
+        var totalDays = Math.Min(90, (endDate - startDate).Days + 1);
+
+        var dailyRevenue = Enumerable.Range(0, totalDays)
+            .Select(offset =>
+            {
+                var d = startDate.AddDays(offset).ToString("yyyy-MM-dd");
+                return new DailyRevenuePointReadModel(
+                    d,
+                    dailyMap.TryGetValue(d, out var entry) ? entry.Revenue : 0m,
+                    dailyMap.TryGetValue(d, out var entry2) ? entry2.Count : 0);
+            })
+            .ToList();
+
+        // 4.1 Monthly Revenue Points (12 months of current year)
+        var currentYear = (to ?? now).UtcDateTime.Year;
+        var startOfYear = new DateTimeOffset(new DateTime(currentYear, 1, 1), TimeSpan.Zero);
+        var endOfYear = new DateTimeOffset(new DateTime(currentYear, 12, 31, 23, 59, 59), TimeSpan.Zero);
+
+        var yearlyLedger = wallet is null
+            ? new List<DailyLedgerEntry>()
+            : await db.ShopWalletTransactions.AsNoTracking()
+                .Where(tx => tx.WalletId == wallet.Id
+                    && (tx.Type == WalletTxType.OrderRevenue || tx.Type == WalletTxType.OrderRefund)
+                    && tx.CreatedAt >= startOfYear
+                    && tx.CreatedAt <= endOfYear)
+                .Select(tx => new DailyLedgerEntry(tx.Type, tx.Amount, tx.CreatedAt))
+                .ToListAsync(ct);
+
+        var monthlyGroup = yearlyLedger
+            .GroupBy(tx => tx.CreatedAt.UtcDateTime.Month)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Revenue = g.Sum(tx => tx.Amount),
+                Count = g.Count(tx => tx.Type == WalletTxType.OrderRevenue)
+            });
+
+        var monthlyRevenue = Enumerable.Range(1, 12)
+            .Select(m => new MonthlyRevenuePointReadModel(
+                $"Tháng {m}",
+                monthlyGroup.TryGetValue(m, out var val) ? val.Revenue : 0m,
+                monthlyGroup.TryGetValue(m, out var val2) ? val2.Count : 0))
             .ToList();
 
         // 5. Order Statuses Breakdown
@@ -259,7 +304,8 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
             topSkus,
             recentLives,
             actions,
-            walletOverview);
+            walletOverview,
+            monthlyRevenue);
     }
 
     private sealed record DailyLedgerEntry(WalletTxType Type, decimal Amount, DateTimeOffset CreatedAt);

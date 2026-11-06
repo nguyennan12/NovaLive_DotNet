@@ -25,10 +25,10 @@ const ProfileActionButton = ({ currentUser, isShop, isPendingApproval, navigate 
   const userRoles = Array.isArray(currentUser?.roles)
     ? currentUser.roles
     : currentUser?.role
-    ? [currentUser.role]
-    : []
+      ? [currentUser.role]
+      : []
   const isAdmin = userRoles.some((r) => String(r).toLowerCase() === 'admin')
-  const isSeller = Boolean(isShop || currentUser?.shopId || currentUser?.user_shop || userRoles.some((r) => String(r).toLowerCase() === 'seller'))
+  const isSeller = Boolean(isShop && userRoles.some((r) => String(r).toLowerCase() === 'seller'))
 
   return (
     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
@@ -58,27 +58,7 @@ const ProfileActionButton = ({ currentUser, isShop, isPendingApproval, navigate 
         </Button>
       )}
 
-      {isSeller ? (
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<StorefrontRoundedIcon sx={{ fontSize: '16px !important' }} />}
-          onClick={() => navigate('/dashboard/shop')}
-          sx={{
-            borderColor: '#8b5cf6',
-            color: '#8b5cf6',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            py: 0.6,
-            px: 1.5,
-            borderRadius: '8px',
-            textTransform: 'none',
-            '&:hover': { background: 'rgba(139,92,246,0.08)', borderColor: '#7c3aed' }
-          }}
-        >
-          Kênh Người Bán
-        </Button>
-      ) : isPendingApproval ? (
+      {isPendingApproval ? (
         <Tooltip title="Cửa hàng của bạn đang được Ban Quản Trị xem xét và duyệt. Vui lòng chờ thông báo!">
           <Chip
             icon={<HourglassEmptyRoundedIcon sx={{ fontSize: '16px !important', color: '#d97706 !important' }} />}
@@ -98,6 +78,26 @@ const ProfileActionButton = ({ currentUser, isShop, isPendingApproval, navigate 
             }}
           />
         </Tooltip>
+      ) : isSeller ? (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<StorefrontRoundedIcon sx={{ fontSize: '16px !important' }} />}
+          onClick={() => navigate('/dashboard/shop')}
+          sx={{
+            borderColor: '#8b5cf6',
+            color: '#8b5cf6',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            py: 0.6,
+            px: 1.5,
+            borderRadius: '8px',
+            textTransform: 'none',
+            '&:hover': { background: 'rgba(139,92,246,0.08)', borderColor: '#7c3aed' }
+          }}
+        >
+          Kênh Người Bán
+        </Button>
       ) : (
         <>
           <Button

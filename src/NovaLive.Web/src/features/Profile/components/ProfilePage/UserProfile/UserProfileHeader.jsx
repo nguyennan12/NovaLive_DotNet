@@ -45,12 +45,8 @@ const UserProfileHeader = ({ profile, isLoading }) => {
   const queryClient = useQueryClient()
 
   const shopStatus = shop?.shop_status?.toLowerCase()
-  const isShop = Boolean(
-    currentUser?.shopId ||
-    currentUser?.user_shop ||
-    currentUser?.roles?.includes('Seller') ||
-    shopStatus === 'active'
-  )
+  const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
+  const isShop = roles.some(role => String(role).toLowerCase() === 'seller')
   const isPendingApproval = shopStatus === 'pending'
 
   const uploadAvatar = useUpload({

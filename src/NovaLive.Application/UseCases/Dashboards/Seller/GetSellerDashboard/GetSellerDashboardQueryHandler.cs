@@ -26,6 +26,10 @@ public sealed class GetSellerDashboardQueryHandler(
             .Select(d => new DailyRevenuePointDto(d.Date, d.Revenue, d.OrdersCount))
             .ToArray();
 
+        var monthlyRevenue = data.MonthlyRevenue?
+            .Select(m => new MonthlyRevenuePointDto(m.Month, m.Revenue, m.OrdersCount))
+            .ToArray() ?? [];
+
         var orderStatuses = data.OrderStatuses
             .Select(s => new OrderStatusBreakdownDto(s.Status, s.Count))
             .ToArray();
@@ -73,7 +77,8 @@ public sealed class GetSellerDashboardQueryHandler(
             topSkus,
             recentLives,
             actions,
-            walletOverview);
+            walletOverview,
+            monthlyRevenue);
 
         return response;
     }

@@ -69,6 +69,8 @@ function Profiles() {
 
   const displayName = currentUser?.user_name || currentUser?.fullName || 'Hồ sơ của tôi'
   const displayEmail = currentUser?.email || ''
+  const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
+  const hasSellerRole = userRoles.some(role => String(role).toLowerCase() === 'seller')
 
   return (
     <Box>
@@ -162,12 +164,14 @@ function Profiles() {
           </Box>
         </MenuItem>
 
-        <MenuItem onClick={() => { handleClose(); navigate('/dashboard/shop') }}>
-          <ListItemIcon sx={{ color: '#8b5cf6' }}>
-            <StorefrontRoundedIcon fontSize="small" />
-          </ListItemIcon>
-          Kênh Người Bán (Shop)
-        </MenuItem>
+        {hasSellerRole && (
+          <MenuItem onClick={() => { handleClose(); navigate('/dashboard/shop') }}>
+            <ListItemIcon sx={{ color: '#8b5cf6' }}>
+              <StorefrontRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            Kênh Người Bán (Shop)
+          </MenuItem>
+        )}
 
         <Divider />
 

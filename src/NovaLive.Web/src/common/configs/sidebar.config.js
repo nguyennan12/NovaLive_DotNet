@@ -3,7 +3,7 @@ import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined'
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined'
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined'
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded'
 import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded'
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
@@ -27,8 +27,8 @@ export const NAV_SECTIONS = [
     items: [
       { key: 'live', label: 'Live', icon: LiveTvOutlinedIcon, badge: null, path: '/live' },
       { key: 'discounts', label: 'Discounts', icon: LocalOfferOutlinedIcon, badge: null, path: '/discounts' },
-      { key: 'finance', label: 'Finance', icon: AccountBalanceOutlinedIcon, badge: null, path: '/finance' },
-      { key: 'shipping', label: 'Shipping & Fulfillment', icon: LocalShippingOutlinedIcon, badge: null, path: '/shipping' }
+      { key: 'flash-sales', label: 'Flash Sales', icon: BoltRoundedIcon, badge: null, path: '/flash-sales' },
+      { key: 'finance', label: 'Finance', icon: AccountBalanceOutlinedIcon, badge: null, path: '/finance' }
     ]
   }
 ]

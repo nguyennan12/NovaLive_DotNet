@@ -12,6 +12,7 @@ public sealed class AdminDashboardReadRepository(AppDbContext db) : IAdminDashbo
     public async Task<AdminDashboardReadModel> GetAsync(DateTimeOffset? from, DateTimeOffset? to,
         CancellationToken ct)
     {
+        var now = DateTimeOffset.UtcNow;
         var paidOrders = db.ParentOrders.AsNoTracking()
             .Where(order => order.PaymentStatus == ParentOrderPaymentStatus.Paid);
         if (from is not null) paidOrders = paidOrders.Where(order => order.CreatedAt >= from);
@@ -108,6 +109,61 @@ public sealed class AdminDashboardReadRepository(AppDbContext db) : IAdminDashbo
                 payout.ScheduledAt))
             .ToListAsync(ct);
 
+        var dailyOrderData = await paidOrders
+            .Select(order => new { order.GrandTotal, order.CreatedAt })
+            .ToListAsync(ct);
+
+        var dailyMap = dailyOrderData
+            .GroupBy(order => order.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd"))
+            .ToDictionary(group => group.Key, group => new
+            {
+                Revenue = group.Sum(order => order.GrandTotal),
+                Count = group.Count()
+            });
+
+        var startDate = (from ?? now.AddDays(-29)).UtcDateTime.Date;
+        var endDate = (to ?? now).UtcDateTime.Date;
+        if (endDate < startDate) endDate = startDate;
+        var totalDays = Math.Min(90, (endDate - startDate).Days + 1);
+
+        var dailyRevenue = Enumerable.Range(0, totalDays)
+            .Select(offset =>
+            {
+                var d = startDate.AddDays(offset).ToString("yyyy-MM-dd");
+                return new DailyRevenuePointReadModel(
+                    d,
+                    dailyMap.TryGetValue(d, out var entry) ? entry.Revenue : 0m,
+                    dailyMap.TryGetValue(d, out var entry2) ? entry2.Count : 0);
+            })
+            .ToList();
+
+        // 12 months of current year
+        var currentYear = (to ?? now).UtcDateTime.Year;
+        var startOfYear = new DateTimeOffset(new DateTime(currentYear, 1, 1), TimeSpan.Zero);
+        var endOfYear = new DateTimeOffset(new DateTime(currentYear, 12, 31, 23, 59, 59), TimeSpan.Zero);
+
+        var yearlyPaidOrders = await db.ParentOrders.AsNoTracking()
+            .Where(order => order.PaymentStatus == ParentOrderPaymentStatus.Paid
+                && order.CreatedAt >= startOfYear
+                && order.CreatedAt <= endOfYear)
+            .Select(order => new { order.GrandTotal, order.CreatedAt })
+            .ToListAsync(ct);
+
+        var monthlyGroup = yearlyPaidOrders
+            .GroupBy(order => order.CreatedAt.UtcDateTime.Month)
+            .ToDictionary(group => group.Key, group => new
+            {
+                Revenue = group.Sum(order => order.GrandTotal),
+                Count = group.Count()
+            });
+
+        var monthlyRevenue = Enumerable.Range(1, 12)
+            .Select(m => new MonthlyRevenuePointReadModel(
+                $"Tháng {m}",
+                monthlyGroup.TryGetValue(m, out var val) ? val.Revenue : 0m,
+                monthlyGroup.TryGetValue(m, out var val2) ? val2.Count : 0))
+            .ToList();
+
         return new AdminDashboardReadModel(
             orderSummary?.TotalGmv ?? 0m,
             orderSummary?.TotalOrdersCount ?? 0,
@@ -117,7 +173,9 @@ public sealed class AdminDashboardReadRepository(AppDbContext db) : IAdminDashbo
             totalPlatformFeeRevenue,
             returnRatePercent,
             disputeRatePercent,
-            pendingPayouts);
+            pendingPayouts,
+            dailyRevenue,
+            monthlyRevenue);
     }
 
     private static decimal ToPercent(int numerator, int denominator) =>

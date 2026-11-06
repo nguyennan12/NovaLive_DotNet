@@ -4,7 +4,6 @@ import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded'
 import PlayArrow from '@mui/icons-material/PlayArrow'
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
-import LiveTvRoundedIcon from '@mui/icons-material/LiveTvRounded'
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded'
@@ -18,8 +17,7 @@ const ADMIN_NAVIGATION = [
   {
     label: 'Điều hành & Giám sát',
     items: [
-      { path: 'dashboard', label: 'Tổng quan sàn', icon: DashboardRoundedIcon, exact: true },
-      { path: 'livestreams', label: 'Giám sát Live', icon: LiveTvRoundedIcon }
+      { path: 'dashboard', label: 'Tổng quan sàn', icon: DashboardRoundedIcon, exact: true }
     ]
   },
   {

@@ -27,7 +27,12 @@ export const useShopMutation = () => {
   const registerMutation = useMutation({
     mutationFn: registerShopAPI,
     onSuccess: (data) => {
-      if (data?.id) dispatch(setCurrentUser({ ...currentUser, shopId: data.id, user_shop: data.id }))
+      if (data?.id) {
+        dispatch(setCurrentUser({ ...currentUser, shopId: data.id, user_shop: data.id }))
+        // Reflect the newly-created Pending shop immediately. Waiting for an
+        // invalidation refetch left the profile in its pre-registration state.
+        queryClient.setQueryData(['my_shop', currentUser?._id], data)
+      }
       queryClient.invalidateQueries({ queryKey: ['my_profile', currentUser?._id] })
       queryClient.invalidateQueries({ queryKey: ['my_shop', currentUser?._id] })
       toast.success('Đăng ký cửa hàng thành công!')

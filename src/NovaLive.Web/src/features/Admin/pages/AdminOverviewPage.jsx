@@ -13,6 +13,15 @@ import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded'
 import { Link } from 'react-router-dom'
 import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
+import {
   getAdminDashboardReportAPI,
   getAdminShopsAPI,
   getAdminPayoutsAPI
@@ -22,8 +31,11 @@ import { PageHeader } from '~/features/Seller/components/shared/PageHeader'
 import { QueryState } from '~/features/Seller/components/shared/QueryState'
 import { MoneyText } from '~/features/Seller/components/shared/MoneyText'
 import { DataTable } from '~/features/Seller/components/shared/DataTable'
+import { DateRangeFilter, useDateFilter } from '~/features/Seller/components/shared/DateRangeFilter'
+import { money } from '~/features/Seller/utils/format'
 
 export const AdminOverviewPage = () => {
+  const filter = useDateFilter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [report, setReport] = useState(null)
@@ -35,7 +47,7 @@ export const AdminOverviewPage = () => {
     setError(null)
     try {
       const [reportRes, shopsRes, payoutsRes] = await Promise.allSettled([
-        getAdminDashboardReportAPI(),
+        getAdminDashboardReportAPI(filter.range),
         getAdminShopsAPI({ status: 'Pending', size: 1 }),
         getAdminPayoutsAPI({ status: 'Pending', size: 1 })
       ])
@@ -62,7 +74,7 @@ export const AdminOverviewPage = () => {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [filter.range.from, filter.range.to])
 
   const pendingPayoutsList = report?.pendingPayouts || []
 
@@ -90,6 +102,16 @@ export const AdminOverviewPage = () => {
           </Button>
         }
       />
+
+      <Box sx={{ mb: 2.5 }}>
+        <DateRangeFilter value={filter.dates} onChange={filter.setDates} />
+      </Box>
+
+      {!filter.valid && (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: '12px' }}>
+          Vui lòng chọn khoảng ngày hợp lệ để xem báo cáo.
+        </Alert>
+      )}
 
       <QueryState loading={loading} error={error} onRetry={loadData}>
         {report && (
@@ -215,6 +237,52 @@ export const AdminOverviewPage = () => {
                 </Grid>
               ))}
             </Grid>
+
+            {/* Platform Daily Revenue Chart */}
+            <SellerCard title="Tổng doanh thu toàn sàn theo ngày">
+              <QueryState
+                loading={false}
+                error={null}
+                empty={!report.dailyRevenue || !report.dailyRevenue.length}
+                emptyText="Chưa có dữ liệu doanh thu toàn sàn trong khoảng thời gian này."
+                onRetry={loadData}
+              >
+                <Box sx={{ height: 320, minWidth: 0, pt: 1 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={report.dailyRevenue || []}>
+                      <defs>
+                        <linearGradient id="adminRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#94a3b8"
+                        fontSize={12}
+                        tickFormatter={(value) => String(value).slice(5).split('-').reverse().join('/')}
+                      />
+                      <YAxis
+                        width={80}
+                        stroke="#94a3b8"
+                        fontSize={12}
+                        tickFormatter={(value) => `${Number(value) / 1000}k`}
+                      />
+                      <Tooltip formatter={(value) => money(Number(value))} />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        name="Tổng GMV"
+                        stroke="#2563eb"
+                        strokeWidth={2.5}
+                        fill="url(#adminRevenueGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Box>
+              </QueryState>
+            </SellerCard>
 
             {/* Pending Payouts Table */}
             <SellerCard

@@ -6,7 +6,7 @@ import LocalOfferOutlined from '@mui/icons-material/LocalOfferOutlined'
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined'
 import LiveTvOutlined from '@mui/icons-material/LiveTvOutlined'
 import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined'
-import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined'
+import BoltRounded from '@mui/icons-material/BoltRounded'
 import NotificationsNoneRounded from '@mui/icons-material/NotificationsNoneRounded'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import type { SvgIconComponent } from '@mui/icons-material'
@@ -29,7 +29,7 @@ export const sellerNavigation: SellerNavSection[] = [
     label: 'GENERAL',
     items: [
       { path: '', label: 'Dashboard', icon: GridViewRounded, aliases: ['dashboard'] },
-      { path: 'orders', label: 'Orders', icon: ShoppingBagOutlined, aliases: ['returns'] },
+      { path: 'orders', label: 'Orders', icon: ShoppingBagOutlined, aliases: ['returns', 'shipping'] },
       { path: 'products', label: 'Products', icon: Inventory2Outlined },
       { path: 'inventory', label: 'Inventory', icon: WarehouseOutlined },
       { path: 'customers', label: 'Customers', icon: PeopleAltOutlined }
@@ -40,8 +40,8 @@ export const sellerNavigation: SellerNavSection[] = [
     items: [
       { path: 'live', label: 'Live', icon: LiveTvOutlined },
       { path: 'discounts', label: 'Discounts', icon: LocalOfferOutlined },
-      { path: 'wallet', label: 'Finance', icon: AccountBalanceOutlined, aliases: ['finance'] },
-      { path: 'shipping', label: 'Shipping & Fulfillment', icon: LocalShippingOutlined }
+      { path: 'flash-sales', label: 'Flash Sales', icon: BoltRounded },
+      { path: 'wallet', label: 'Finance', icon: AccountBalanceOutlined, aliases: ['finance'] }
     ]
   },
   {
@@ -56,5 +56,6 @@ export const sellerNavigation: SellerNavSection[] = [
 export const legacySellerPaths: Record<string, string> = {
   finance: 'wallet',
   settings: 'profile',
-  messages: 'notifications'
+  messages: 'notifications',
+  shipping: 'orders'
 }
