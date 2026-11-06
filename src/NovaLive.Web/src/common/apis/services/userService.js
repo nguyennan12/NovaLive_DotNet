@@ -86,12 +86,18 @@ export const getMyProfileAPI = async () => {
 
 export const updateMyProfileAPI = async (data) => {
   const request = {
-    fullName: data.fullName || data.user_name,
+    fullName: (data.fullName || data.user_name || '').trim(),
     phone: data.phone ?? data.user_phone ?? null,
     birthday: data.birthday ?? data.user_birthday ?? null,
     gender: data.gender ?? data.user_gender ?? null,
     avatarUrl: data.avatarUrl ?? data.user_avatar ?? null
   }
+
+  if (typeof request.phone === 'string' && !request.phone.trim()) request.phone = null
+  if (typeof request.birthday === 'string' && !request.birthday.trim()) request.birthday = null
+  if (typeof request.gender === 'string' && !request.gender.trim()) request.gender = null
+  if (typeof request.avatarUrl === 'string' && !request.avatarUrl.trim()) request.avatarUrl = null
+
   return normalizeUserProfile(await authorizedAxiosInstance.put('users/me', request))
 }
 

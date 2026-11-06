@@ -12,7 +12,7 @@ import { glassSx } from '~/theme'
 const DISABLED_ITEMS = [
   {
     icon: <SecurityIcon sx={{ color: '#8b5cf6', fontSize: 20 }} />,
-    label: 'Xác thực 2 bước (2FA)',
+    label: 'Xác thực 2 bước 2FA',
     desc: 'Tăng cường bảo mật tài khoản',
     badge: 'Sắp ra mắt'
   },

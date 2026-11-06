@@ -47,7 +47,8 @@ export const useFlashSale = () => {
         // Product detail endpoints use the SPU ID, never a SKU code.
         spu_code: spuId,
         is_flash_sale: true,
-        total_sold: item.soldQty ?? item.flashsale_sold ?? 0,
+        total_sold: item.totalSoldCount ?? item.soldCount ?? item.total_sold ?? item.soldQty ?? 0,
+        soldCount: item.totalSoldCount ?? item.soldCount ?? item.total_sold ?? 0,
         flashsale_sold: item.soldQty ?? item.flashsale_sold ?? 0,
         flashsale_stock: item.quantity ?? item.flashsale_stock ?? 0,
         quantity: item.quantity ?? item.flashsale_stock ?? 0

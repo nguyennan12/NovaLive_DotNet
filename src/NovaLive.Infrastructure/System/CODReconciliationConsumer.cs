@@ -92,6 +92,9 @@ public sealed class CODReconciliationConsumer(
                 }
 
                 // Match the existing online settlement path, which credits SubOrder.SubTotal.
+                if (subOrder.SellerEarnings == 0m && subOrder.SubTotal > 0m)
+                    subOrder.SetEarnings();
+
                 var revenueAmount = subOrder.SubTotal;
                 if (revenueAmount <= 0)
                     throw new InvalidOperationException($"COD SubOrder {subOrder.Id} has a non-positive settlement amount.");

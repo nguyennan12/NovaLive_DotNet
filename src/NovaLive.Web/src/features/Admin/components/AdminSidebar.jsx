@@ -23,8 +23,8 @@ const ADMIN_NAVIGATION = [
   {
     label: 'Quản trị đối tác',
     items: [
-      { path: 'shops', label: 'Duyệt Shop (KYC)', icon: StorefrontRoundedIcon },
-      { path: 'payouts', label: 'Duyệt Payout (Ví)', icon: AccountBalanceWalletRoundedIcon }
+      { path: 'shops', label: 'Duyệt hồ sơ Shop', icon: StorefrontRoundedIcon },
+      { path: 'payouts', label: 'Duyệt giải ngân ví', icon: AccountBalanceWalletRoundedIcon }
     ]
   },
   {

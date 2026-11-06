@@ -99,7 +99,7 @@ export default function DashboardPage() {
     })
   }, [data])
 
-  const chartData = chartMode === 'month' ? monthlyChartData : (data?.dailyRevenue || [])
+  const chartData = (chartMode === 'month' ? monthlyChartData : (data?.dailyRevenue || [])) as any[]
 
   return (
     <>

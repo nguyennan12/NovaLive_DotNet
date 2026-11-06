@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Box, Paper, Typography } from '@mui/material'
 
-export function SellerCard({ children, title, action }: { children: ReactNode; title?: string; action?: ReactNode }) {
+export function SellerCard({ children, title, action }: { children: ReactNode; title?: ReactNode; action?: ReactNode }) {
   return (
     <Paper
       elevation={0}
@@ -21,9 +21,13 @@ export function SellerCard({ children, title, action }: { children: ReactNode; t
     >
       {(title || action) && (
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'center', mb: 2 }}>
-          <Typography component='h2' sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#1e293b' }}>
-            {title}
-          </Typography>
+          {typeof title === 'string' ? (
+            <Typography component='h2' sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#1e293b' }}>
+              {title}
+            </Typography>
+          ) : (
+            title
+          )}
           {action}
         </Box>
       )}

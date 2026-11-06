@@ -1,10 +1,10 @@
 import { Box, MenuItem, TextField } from '@mui/material'
 import { useState } from 'react'
 import type { DateRange } from '../../types/contracts'
-import { dayToUtc, todayInput } from '../../utils/format'
+import { dateInput, dayToUtc } from '../../utils/format'
 
 export function useDateFilter() {
-  const today = todayInput()
+  const today = dateInput()
   const initialFrom = `${today.substring(0, 7)}-01`
   const [dates, setDates] = useState({ from: initialFrom, to: today })
   const valid = !dates.from || !dates.to || dates.from <= dates.to
@@ -25,14 +25,14 @@ export function DateRangeFilter({
   const applyPreset = (key: string) => {
     setPreset(key)
     if (key === 'custom') return
-    const to = todayInput()
+    const to = dateInput()
     if (key === 'month') {
       onChange({ from: `${to.substring(0, 7)}-01`, to })
       return
     }
     const from = new Date(`${to}T00:00:00+07:00`)
     from.setUTCDate(from.getUTCDate() - Number(key) + 1)
-    onChange({ from: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }).format(from), to })
+    onChange({ from: dateInput(from), to })
   }
 
   return (

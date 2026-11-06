@@ -31,7 +31,7 @@ export function ConfirmDialog({
       onClose={pending ? undefined : onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { borderRadius: '12px' } }}
+      slotProps={{ paper: { sx: { borderRadius: '12px' } } }}
       aria-labelledby="seller-confirm-title"
       aria-describedby="seller-confirm-description"
     >

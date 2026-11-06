@@ -23,13 +23,14 @@ import CircleIcon from '@mui/icons-material/Circle'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAPI, selectCurrentUser } from '~/store/user/userSlice'
+import { resolveMediaUrl } from '~/common/utils/formatters'
 import AdminSidebar from './AdminSidebar'
 
 const ROUTE_LABELS = {
   '/admin': 'Tổng quan sàn',
   '/admin/dashboard': 'Tổng quan sàn',
   '/admin/shops': 'Phê duyệt & Quản trị Shop',
-  '/admin/payouts': 'Duyệt giải ngân ví (Payout)',
+  '/admin/payouts': 'Duyệt giải ngân ví',
   '/admin/livestreams': 'Giám sát Livestream Realtime',
   '/admin/categories': 'Quản lý Cây danh mục',
   '/admin/flash-sales': 'Chiến dịch Flash Sale sàn',
@@ -163,7 +164,7 @@ export const AdminLayout = () => {
               }}
             >
               <Avatar
-                src={currentUser?.user_avatar || ''}
+                src={resolveMediaUrl(currentUser?.user_avatar || '')}
                 sx={{
                   width: 32,
                   height: 32,

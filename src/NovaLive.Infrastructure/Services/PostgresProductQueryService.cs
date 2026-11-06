@@ -41,9 +41,9 @@ public sealed class PostgresProductQueryService(AppDbContext dbContext) : IProdu
         {
             "price_asc" => "min_price ASC, created_at DESC",
             "price_desc" => "max_price DESC, created_at DESC",
-            "best_selling" or "sold_desc" => hasKeyword ? "rank DESC, created_at DESC" : "created_at DESC",
+            "best_selling" or "sold_desc" => "sold_count DESC, created_at DESC",
             "newest" or "created_at_desc" => "created_at DESC",
-            _ => hasKeyword ? "rank DESC, created_at DESC" : "created_at DESC"
+            _ => hasKeyword ? "rank DESC, sold_count DESC, created_at DESC" : "created_at DESC"
         };
 
         var sql = $@"
@@ -59,6 +59,7 @@ WITH filtered_spus AS (
         s.created_at,
         MIN(sk.sell_price) AS min_price,
         MAX(sk.sell_price) AS max_price,
+        COALESCE(sales.sold_count, 0) AS sold_count,
         CASE 
             WHEN @hasKeyword::boolean THEN ts_rank(COALESCE(s.search_vector, to_tsvector(@textSearchConfig::regconfig, s.name)), websearch_to_tsquery(@textSearchConfig::regconfig, @keyword))
             ELSE 0.0
@@ -67,6 +68,14 @@ WITH filtered_spus AS (
     JOIN shops sh ON s.shop_id = sh.id
     JOIN categories c ON s.category_id = c.id
     JOIN skus sk ON sk.spu_id = s.id AND sk.is_active = TRUE AND sk.deleted_at IS NULL
+    LEFT JOIN (
+        SELECT sk2.spu_id, SUM(oi.quantity)::integer AS sold_count
+        FROM order_items oi
+        JOIN skus sk2 ON sk2.id = oi.sku_id
+        JOIN sub_orders so ON so.id = oi.sub_order_id
+        WHERE so.status NOT IN ('Cancelled', 'PendingPayment')
+        GROUP BY sk2.spu_id
+    ) sales ON sales.spu_id = s.id
     WHERE s.status = 'Active' 
       AND s.deleted_at IS NULL 
       AND sh.status = 'Active' 
@@ -80,7 +89,7 @@ WITH filtered_spus AS (
               OR s.name % @keyword
           )
       )
-    GROUP BY s.id, s.shop_id, sh.shop_name, s.category_id, c.name, s.name, s.thumbnail_url, s.created_at, s.search_vector
+    GROUP BY s.id, s.shop_id, sh.shop_name, s.category_id, c.name, s.name, s.thumbnail_url, s.created_at, s.search_vector, sales.sold_count
     HAVING 
         (@minPrice::numeric IS NULL OR MAX(sk.sell_price) >= @minPrice)
         AND (@maxPrice::numeric IS NULL OR MIN(sk.sell_price) <= @maxPrice)
@@ -95,6 +104,7 @@ SELECT
     thumbnail_url,
     min_price,
     max_price,
+    sold_count,
     rank,
     COUNT(*) OVER() AS total_count
 FROM filtered_spus
@@ -151,6 +161,7 @@ LIMIT @pageSize OFFSET @offset;";
                 : reader.GetString(reader.GetOrdinal("thumbnail_url"));
             var minPrice = reader.GetDecimal(reader.GetOrdinal("min_price"));
             var maxPrice = reader.GetDecimal(reader.GetOrdinal("max_price"));
+            var soldCount = reader.GetInt32(reader.GetOrdinal("sold_count"));
             var rank = Convert.ToDecimal(reader.GetDouble(reader.GetOrdinal("rank")));
 
             items.Add(new ProductSummaryResponse(
@@ -164,7 +175,7 @@ LIMIT @pageSize OFFSET @offset;";
                 MinPrice: minPrice,
                 MaxPrice: maxPrice,
                 Rating: 5.0,
-                SoldCount: 0,
+                SoldCount: soldCount,
                 SearchRank: Math.Round(rank, 4)));
         }
 
@@ -255,11 +266,21 @@ LIMIT @pageSize OFFSET @offset;";
 
         var allItems = await grouped.ToListAsync(cancellationToken);
         var total = allItems.Count;
+        var spuIds = allItems.Select(x => x.Id).ToList();
+        var salesDict = await (
+            from oi in dbContext.OrderItems.AsNoTracking()
+            join sk in dbContext.Skus.AsNoTracking() on oi.SkuId equals sk.Id
+            join so in dbContext.SubOrders.AsNoTracking() on oi.SubOrderId equals so.Id
+            where spuIds.Contains(sk.SpuId) && so.Status != SubOrderStatus.Cancelled && so.Status != SubOrderStatus.PendingPayment
+            group oi by sk.SpuId into g
+            select new { SpuId = g.Key, SoldCount = g.Sum(x => x.Quantity) }
+        ).ToDictionaryAsync(x => x.SpuId, x => x.SoldCount, cancellationToken);
 
         var ordered = (request.SortBy?.Trim().ToLowerInvariant()) switch
         {
             "price_asc" => allItems.OrderBy(x => x.MinPrice).ThenByDescending(x => x.CreatedAt),
             "price_desc" => allItems.OrderByDescending(x => x.MaxPrice).ThenByDescending(x => x.CreatedAt),
+            "best_selling" or "sold_desc" => allItems.OrderByDescending(x => salesDict.GetValueOrDefault(x.Id, 0)).ThenByDescending(x => x.CreatedAt),
             _ => allItems.OrderByDescending(x => x.CreatedAt)
         };
 
@@ -282,7 +303,7 @@ LIMIT @pageSize OFFSET @offset;";
             MinPrice: x.MinPrice,
             MaxPrice: x.MaxPrice,
             Rating: 5.0,
-            SoldCount: 0,
+            SoldCount: salesDict.GetValueOrDefault(x.Id, 0),
             SearchRank: 0m)).ToList();
 
         return PagedResult<ProductSummaryResponse>.Create(items, page, size, total);

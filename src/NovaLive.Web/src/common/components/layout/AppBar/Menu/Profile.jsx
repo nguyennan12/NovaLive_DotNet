@@ -4,6 +4,7 @@ import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded'
 import Settings from '@mui/icons-material/Settings'
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
+import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
@@ -19,6 +20,7 @@ import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { logoutUserAPI, selectCurrentUser } from '~/store/user/userSlice'
+import { resolveMediaUrl } from '~/common/utils/formatters'
 
 export const iconBoxSx = {
   display: 'flex',
@@ -69,8 +71,12 @@ function Profiles() {
 
   const displayName = currentUser?.user_name || currentUser?.fullName || 'Hồ sơ của tôi'
   const displayEmail = currentUser?.email || ''
+  const avatarUrl = resolveMediaUrl(currentUser?.user_avatar || currentUser?.avatarUrl || '')
   const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
-  const hasSellerRole = userRoles.some(role => String(role).toLowerCase() === 'seller')
+  const normalizedRoles = userRoles.map(role => String(role).toLowerCase())
+  const hasAdminRole = normalizedRoles.includes('admin')
+  const hasSellerRole = normalizedRoles.includes('seller')
+  const isBuyerOnly = !hasAdminRole && !hasSellerRole
 
   return (
     <Box>
@@ -83,7 +89,7 @@ function Profiles() {
           aria-haspopup="true"
           aria-expanded={open ? 'true' : undefined}
         >
-          {currentUser?.user_avatar ? (
+          {avatarUrl ? (
             <Avatar
               sx={{
                 width: 36,
@@ -91,7 +97,7 @@ function Profiles() {
                 border: '1.5px solid rgba(83,155,255,0.3)',
                 boxShadow: '0 2px 6px rgba(52,133,247,0.15)'
               }}
-              src={currentUser.user_avatar}
+              src={avatarUrl}
               alt={displayName}
             />
           ) : (
@@ -124,8 +130,8 @@ function Profiles() {
         }}
       >
         <MenuItem onClick={() => { handleClose(); navigate('/profile') }} sx={{ py: 1.25 }}>
-          {currentUser?.user_avatar ? (
-            <Avatar sx={{ width: 32, height: 32, mr: 1.5 }} src={currentUser.user_avatar} />
+          {avatarUrl ? (
+            <Avatar sx={{ width: 32, height: 32, mr: 1.5 }} src={avatarUrl} />
           ) : (
             <Box sx={{ ...iconBoxSx, width: 32, height: 32, minWidth: 32, mr: 1.5 }}>
               <PersonOutlineRoundedIcon sx={{ fontSize: '1.1rem' }} />
@@ -152,24 +158,42 @@ function Profiles() {
           Hồ sơ cá nhân
         </MenuItem>
 
-        <Divider />
-
-        <MenuItem onClick={() => { handleClose(); navigate('/admin/dashboard') }} sx={{ bgcolor: 'rgba(52, 101, 200, 0.04)' }}>
-          <ListItemIcon sx={{ color: '#2563eb' }}>
-            <AdminPanelSettingsRoundedIcon fontSize="small" />
+        <MenuItem onClick={() => { handleClose(); navigate('/orders') }}>
+          <ListItemIcon>
+            <ShoppingBagOutlinedIcon fontSize="small" sx={{ color: 'secondary.main' }} />
           </ListItemIcon>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <span>Quản trị sàn (Admin)</span>
-            <Chip label="Admin" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, ml: 1 }} />
-          </Box>
+          Đơn mua của tôi
         </MenuItem>
 
+        {(hasAdminRole || hasSellerRole || isBuyerOnly) && <Divider />}
+
+        {hasAdminRole && (
+          <MenuItem onClick={() => { handleClose(); navigate('/admin/dashboard') }} sx={{ bgcolor: 'rgba(52, 101, 200, 0.04)' }}>
+            <ListItemIcon sx={{ color: '#2563eb' }}>
+              <AdminPanelSettingsRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span>Quản trị sàn</span>
+              <Chip label="Admin" size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, ml: 1 }} />
+            </Box>
+          </MenuItem>
+        )}
+
         {hasSellerRole && (
-          <MenuItem onClick={() => { handleClose(); navigate('/dashboard/shop') }}>
+          <MenuItem onClick={() => { handleClose(); navigate('/seller') }}>
             <ListItemIcon sx={{ color: '#8b5cf6' }}>
               <StorefrontRoundedIcon fontSize="small" />
             </ListItemIcon>
-            Kênh Người Bán (Shop)
+            Kênh Người Bán
+          </MenuItem>
+        )}
+
+        {isBuyerOnly && (
+          <MenuItem onClick={() => { handleClose(); navigate('/profile') }}>
+            <ListItemIcon sx={{ color: '#8b5cf6' }}>
+              <StorefrontRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            Đăng ký bán hàng
           </MenuItem>
         )}
 

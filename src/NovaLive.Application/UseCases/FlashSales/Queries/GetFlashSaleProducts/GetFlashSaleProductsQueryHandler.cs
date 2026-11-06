@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.Services;
 using NovaLive.Application.Common.Messaging;
@@ -12,7 +14,8 @@ public sealed class GetFlashSaleProductsQueryHandler(
     IFlashSaleRepository flashSaleRepository,
     ISkuRepository skuRepository,
     ISpuRepository spuRepository,
-    ICacheService cacheService)
+    ICacheService cacheService,
+    IAppDbContext dbContext)
     : IQueryHandler<GetFlashSaleProductsQuery, PagedResult<FlashSaleItemResponse>>
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(15);
@@ -55,16 +58,29 @@ public sealed class GetFlashSaleProductsQueryHandler(
                 var spus = await spuRepository.GetByIdsAsync(spuIds, cancellationToken);
                 var spuMap = spus.ToDictionary(s => s.Id);
 
+                var spuSales = await (
+                    from oi in dbContext.OrderItems.AsNoTracking()
+                    join sku in dbContext.Skus.AsNoTracking() on oi.SkuId equals sku.Id
+                    join so in dbContext.SubOrders.AsNoTracking() on oi.SubOrderId equals so.Id
+                    where spuIds.Contains(sku.SpuId)
+                        && so.Status != SubOrderStatus.Cancelled
+                        && so.Status != SubOrderStatus.PendingPayment
+                    group oi.Quantity by sku.SpuId into g
+                    select new { SpuId = g.Key, SoldCount = g.Sum() }
+                ).ToDictionaryAsync(x => x.SpuId, x => x.SoldCount, cancellationToken);
+
                 var responses = items.Select(item =>
                 {
                     skuMap.TryGetValue(item.SkuId, out var sku);
                     Spu? spu = null;
+                    var totalSold = 0;
                     if (sku != null)
                     {
                         spuMap.TryGetValue(sku.SpuId, out spu);
+                        spuSales.TryGetValue(sku.SpuId, out totalSold);
                     }
 
-                    return item.ToResponse(sku, spu);
+                    return item.ToResponse(sku, spu, totalSold);
                 }).ToList();
 
                 return PagedResult<FlashSaleItemResponse>.Create(responses, query.Page, query.Size, totalCount);

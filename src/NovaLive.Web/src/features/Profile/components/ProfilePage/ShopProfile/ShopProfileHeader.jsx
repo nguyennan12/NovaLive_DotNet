@@ -18,6 +18,7 @@ import { uploadShopLogoAPI } from '~/common/apis/services/uploadService'
 import { updateShopAPI } from '~/common/apis/services/shopService'
 import { useUpload } from '~/common/hooks/useUpload'
 import { useShop, useShopMutation } from '~/features/Shop/hooks/useShop'
+import { resolveMediaUrl } from '~/common/utils/formatters'
 import { useNavigate } from 'react-router-dom'
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded'
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
@@ -166,7 +167,7 @@ const ShopProfileHeader = () => {
         email: shop?.email || shop?.shop_contact?.email
       })
     },
-    afterUpload: () => queryClient.refetchQueries({ queryKey: ['my_shop', currentUser?._id] }),
+    afterUpload: () => queryClient.invalidateQueries({ queryKey: ['my_shop'] }),
     pendingMsg: 'Đang tải lên logo cửa hàng...',
     successMsg: 'Cập nhật logo thành công!',
     errorMsg: 'Upload logo thất bại!'
@@ -181,6 +182,7 @@ const ShopProfileHeader = () => {
     ? [currentUser.role]
     : []
   const isAdmin = userRoles.some((r) => String(r).toLowerCase() === 'admin')
+  const logoSrc = resolveMediaUrl(shop?.shop_logo || shop?.logoUrl || '')
 
   return (
     <>
@@ -189,7 +191,7 @@ const ShopProfileHeader = () => {
         <Box sx={{ px: 3, pb: 3, position: 'relative' }}>
           <Box sx={{ position: 'relative', display: 'inline-block', mt: '-48px', mb: 1 }}>
             <Avatar
-              src={shop?.shop_logo || ''}
+              src={logoSrc}
               sx={{
                 width: 96, height: 96,
                 border: '4px solid #fff',
@@ -200,6 +202,7 @@ const ShopProfileHeader = () => {
             >
               {shop?.shop_name?.[0]?.toUpperCase()}
             </Avatar>
+            <input {...uploadShopLogo.fileInputProps} />
             <Tooltip title="Đổi logo cửa hàng">
               <IconButton
                 size="small"
@@ -212,7 +215,6 @@ const ShopProfileHeader = () => {
                 }}
                 onClick={uploadShopLogo.openFileDialog}
               >
-                <input {...uploadShopLogo.fileInputProps} />
                 <CameraAltIcon sx={{ fontSize: 13 }} />
               </IconButton>
             </Tooltip>
@@ -271,7 +273,7 @@ const ShopProfileHeader = () => {
                     '&:hover': { background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)' }
                   }}
                 >
-                  Quản trị sàn (Admin)
+                  Quản trị sàn
                 </Button>
               )}
 

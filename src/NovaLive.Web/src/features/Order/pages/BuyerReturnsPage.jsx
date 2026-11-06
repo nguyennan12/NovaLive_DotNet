@@ -35,12 +35,12 @@ import { getMyReturnsAPI } from '~/common/apis/services/returnService'
 
 const RETURN_STATUS_CONFIG = {
   Pending: { label: 'Chờ Shop xử lý', color: '#f59e0b', bgcolor: '#fef3c7', border: '#fde68a' },
-  SellerApproved: { label: 'Shop đã duyệt (Gửi hàng)', color: '#0095ff', bgcolor: '#eff6ff', border: '#bfdbfe' },
+  SellerApproved: { label: 'Shop đã duyệt gửi hàng', color: '#0095ff', bgcolor: '#eff6ff', border: '#bfdbfe' },
   SellerRejected: { label: 'Shop từ chối', color: '#dc2626', bgcolor: '#fef2f2', border: '#fecaca' },
   AdminDispute: { label: 'Đang phân xử bởi Admin', color: '#8b5cf6', bgcolor: '#f5f3ff', border: '#ddd6fe' },
   Completed: { label: 'Hoàn tiền thành công', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
-  BuyerWins: { label: 'Buyer thắng (Đang hoàn tiền)', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
-  SellerWins: { label: 'Seller thắng (Từ chối hoàn)', color: '#64748b', bgcolor: '#f1f5f9', border: '#e2e8f0' }
+  BuyerWins: { label: 'Buyer thắng đang hoàn tiền', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
+  SellerWins: { label: 'Seller thắng từ chối hoàn', color: '#64748b', bgcolor: '#f1f5f9', border: '#e2e8f0' }
 }
 
 const REASON_MAP = {
