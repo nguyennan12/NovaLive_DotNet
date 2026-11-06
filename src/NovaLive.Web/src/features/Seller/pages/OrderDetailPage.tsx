@@ -43,6 +43,7 @@ import { MoneyText } from '../components/shared/MoneyText'
 import { OrderActionDialogs } from '../components/orders/OrderActionDialogs'
 import { TrackingPanel } from '../components/orders/TrackingPanel'
 import { snapshot } from '../utils/format'
+import { sellerBtnStyles } from '../theme/sellerBtnStyles'
 
 export default function OrderDetailPage() {
   const { id } = useParams()
@@ -89,11 +90,10 @@ export default function OrderDetailPage() {
             size="small"
             startIcon={<ArrowBackRounded fontSize="small" />}
             sx={{
-              borderColor: 'divider',
-              color: 'text.secondary',
-              textTransform: 'none',
-              borderRadius: 2,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+              ...sellerBtnStyles.transSecondary,
+              px: 2,
+              py: 0.6,
+              fontSize: '0.82rem'
             }}
           >
             Về danh sách
@@ -188,10 +188,14 @@ export default function OrderDetailPage() {
                       component={Link}
                       to={`/seller/returns?subOrderId=${order.id}`}
                       variant="contained"
-                      color="warning"
                       size="small"
                       startIcon={<AssignmentReturnRounded fontSize="small" />}
-                      sx={{ borderRadius: '8px', fontWeight: 700, textTransform: 'none' }}
+                      sx={{
+                        ...sellerBtnStyles.warning,
+                        px: 2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
+                      }}
                     >
                       Mở yêu cầu trả hàng
                     </Button>
@@ -205,12 +209,10 @@ export default function OrderDetailPage() {
                       onClick={() => setAction('confirm')}
                       startIcon={<WarehouseRounded fontSize="small" />}
                       sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderColor: '#cbd5e1',
-                        color: '#334155',
-                        '&:hover': { bgcolor: '#f8fafc' }
+                        ...sellerBtnStyles.transSecondary,
+                        px: 2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
                       }}
                     >
                       {order.warehouseAddressId ? 'Đổi kho lấy hàng' : 'Xác nhận & Chọn kho'}
@@ -225,11 +227,10 @@ export default function OrderDetailPage() {
                       onClick={() => setAction('ship')}
                       startIcon={<LocalShippingRounded fontSize="small" />}
                       sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        bgcolor: '#2563eb',
-                        '&:hover': { bgcolor: '#1d4ed8' }
+                        ...sellerBtnStyles.primary,
+                        px: 2.2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
                       }}
                     >
                       Giao hàng
@@ -239,12 +240,16 @@ export default function OrderDetailPage() {
                   {order.status === 'Shipping' && (
                     <Button
                       variant="contained"
-                      color="success"
                       size="small"
                       disabled={!canOperate}
                       onClick={() => setAction('deliver')}
                       startIcon={<CheckCircleRounded fontSize="small" />}
-                      sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 700 }}
+                      sx={{
+                        ...sellerBtnStyles.success,
+                        px: 2.2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
+                      }}
                     >
                       Xác nhận đã giao
                     </Button>
@@ -253,11 +258,15 @@ export default function OrderDetailPage() {
                   {['Delivered', 'ReturnRequested'].includes(order.status) && order.paymentMethod === 'COD' && (
                     <Button
                       variant="outlined"
-                      color="secondary"
                       size="small"
                       disabled={!canOperate}
                       onClick={() => setAction('deliver')}
-                      sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                      sx={{
+                        ...sellerBtnStyles.transSecondary,
+                        px: 2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
+                      }}
                     >
                       Đối soát COD đã giao
                     </Button>
@@ -265,15 +274,15 @@ export default function OrderDetailPage() {
 
                   {shipped && (
                     <Button
-                      variant={tracking ? 'contained' : 'outlined'}
+                      variant="outlined"
                       size="small"
                       onClick={() => setTracking(!tracking)}
                       startIcon={<AltRouteRounded fontSize="small" />}
                       sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderColor: '#cbd5e1'
+                        ...sellerBtnStyles.transSecondary,
+                        px: 2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
                       }}
                     >
                       {tracking ? 'Ẩn hành trình' : 'Xem hành trình'}
@@ -282,18 +291,15 @@ export default function OrderDetailPage() {
 
                   {['PendingPayment', 'Confirmed', 'Processing'].includes(order.status) && (
                     <Button
-                      color="error"
                       variant="outlined"
                       size="small"
                       onClick={() => setAction('cancel')}
                       startIcon={<CancelOutlined fontSize="small" />}
                       sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        borderColor: '#fca5a5',
-                        color: '#dc2626',
-                        '&:hover': { bgcolor: '#fef2f2', borderColor: '#f87171' }
+                        ...sellerBtnStyles.transDanger,
+                        px: 2,
+                        py: 0.75,
+                        fontSize: '0.85rem'
                       }}
                     >
                       Hủy đơn

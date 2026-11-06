@@ -58,8 +58,13 @@ public sealed class SellerReturnTestContext
             .Callback((InventoryHistory h, CancellationToken _) => StockLedger.Add(h)).Returns(Task.CompletedTask);
         Buyer.Subs.Setup(s => s.GetIdsByShopAsync(Shop.Id, It.IsAny<CancellationToken>())).ReturnsAsync([Buyer.Sub.Id]);
         Buyer.Returns.Setup(r => r.GetSellerPagedAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<ReturnStatus?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>(), It.IsAny<Guid?>()))
-            .ReturnsAsync((IEnumerable<Guid> ids, ReturnStatus? state, int page, int size, CancellationToken _) =>
-            { var rows = Buyer.Saved.Where(r => ids.Contains(r.SubOrderId) && (state == null || r.Status == state)).ToList(); return (rows.Skip((page - 1) * size).Take(size).ToList(), (long)rows.Count); });
+            .ReturnsAsync((IEnumerable<Guid> ids, ReturnStatus? state, int page, int size, CancellationToken _, Guid? onlySubOrderId) =>
+            {
+                var rows = Buyer.Saved.Where(r => ids.Contains(r.SubOrderId)
+                    && (state == null || r.Status == state)
+                    && (onlySubOrderId == null || r.SubOrderId == onlySubOrderId)).ToList();
+                return (rows.Skip((page - 1) * size).Take(size).ToList(), (long)rows.Count);
+            });
     }
     public static async Task<SellerReturnTestContext> Create(bool approve = false)
     {
