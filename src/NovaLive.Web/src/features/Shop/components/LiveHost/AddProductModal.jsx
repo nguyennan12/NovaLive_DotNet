@@ -4,16 +4,16 @@ import CloseIcon from '@mui/icons-material/Close'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import ShoppingBagRoundedIcon from '@mui/icons-material/ShoppingBagRounded'
 import {
-  Box, CircularProgress, Dialog, DialogContent,
+  Box, Button, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, IconButton, InputAdornment, TextField, Typography
 } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { getSellerProductsAPI } from '~/common/apis/services/productService'
 import { useDebounce } from '~/common/hooks/useDebounce'
 import { formatVND } from '~/common/utils/formatters'
 
-const SkuCard = ({ item, added, onAdd, isAdding }) => {
+const SkuCard = ({ item, added, selected, onToggle, isAdding }) => {
   const thumb = item.thumbnailUrl || item.spu_thumb
   const name = item.name || item.spu_name
   const firstSku = item.skus?.[0] || item.sku_list?.[0]
@@ -37,8 +37,8 @@ const SkuCard = ({ item, added, onAdd, isAdding }) => {
       p: 1.25,
       borderRadius: 2,
       border: '1px solid',
-      borderColor: added ? 'rgba(52,133,247,0.35)' : 'rgba(0,0,0,0.08)',
-      bgcolor: added ? 'rgba(52,133,247,0.05)' : '#fafafa',
+      borderColor: added || selected ? 'rgba(52,133,247,0.55)' : 'rgba(0,0,0,0.08)',
+      bgcolor: added || selected ? 'rgba(52,133,247,0.06)' : '#fafafa',
       mb: 1,
       transition: 'all 0.15s ease'
     }}>
@@ -91,14 +91,21 @@ const SkuCard = ({ item, added, onAdd, isAdding }) => {
 
       {/* Nút thêm / đã thêm */}
       <Box sx={{ flexShrink: 0 }}>
-        {added ? (
+        {added || selected ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.2, color: '#3485f7' }}>
-            <CheckCircleIcon sx={{ fontSize: 22 }} />
-            <Typography sx={{ fontSize: '0.6rem', fontWeight: 600 }}>Đã thêm</Typography>
+            <IconButton
+              onClick={() => !added && onToggle(item)}
+              disabled={added || isAdding}
+              size="small"
+              sx={{ color: '#3485f7', p: 0.25 }}
+            >
+              <CheckCircleIcon sx={{ fontSize: 24 }} />
+            </IconButton>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 600 }}>{added ? 'Đã thêm' : 'Đã chọn'}</Typography>
           </Box>
         ) : (
           <IconButton
-            onClick={() => onAdd(item)}
+            onClick={() => onToggle(item)}
             disabled={isAdding}
             size="small"
             sx={{
@@ -122,7 +129,15 @@ const SkuCard = ({ item, added, onAdd, isAdding }) => {
 
 const AddProductModal = ({ open, onClose, liveProducts = [], onAddProduct, isAdding }) => {
   const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState({})
   const keyword = useDebounce(search, 300)
+
+  const handleClose = () => {
+    if (isAdding) return
+    setSearch('')
+    setSelected({})
+    onClose()
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['seller-products-for-live', keyword],
@@ -144,23 +159,46 @@ const AddProductModal = ({ open, onClose, liveProducts = [], onAddProduct, isAdd
     })
   }
 
-  const handleAdd = (item) => {
+  const toRequest = (item) => {
     const firstSku = item.skus?.[0] || item.sku_list?.[0]
     const skuId = firstSku?.id || firstSku?._id || item.id || item._id
     const price = firstSku?.sellPrice ?? firstSku?.price ?? item.minPrice ?? item.price ?? 0
 
-    onAddProduct({
+    return {
       skuId,
       productId: item.id || item._id,
       flashPrice: price,
       durationSeconds: 120
+    }
+  }
+
+  const itemKey = (item) => String(toRequest(item).skuId)
+  const selectedItems = useMemo(() => Object.values(selected), [selected])
+
+  const toggleSelected = (item) => {
+    const key = itemKey(item)
+    setSelected(current => {
+      const next = { ...current }
+      if (next[key]) delete next[key]
+      else next[key] = item
+      return next
     })
+  }
+
+  const handleAddSelected = async () => {
+    if (selectedItems.length === 0) return
+    try {
+      await onAddProduct(selectedItems.map(toRequest))
+      setSelected({})
+    } catch {
+      // Mutation displays the API error and keeps the selection for retry.
+    }
   }
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
@@ -174,7 +212,7 @@ const AddProductModal = ({ open, onClose, liveProducts = [], onAddProduct, isAdd
         <Typography fontWeight={700} fontSize="0.98rem">
           Thêm sản phẩm vào live
         </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: '#cacacaff' }}>
+        <IconButton onClick={handleClose} size="small" sx={{ color: '#cacacaff' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
@@ -224,12 +262,24 @@ const AddProductModal = ({ open, onClose, liveProducts = [], onAddProduct, isAdd
               key={(item.id || item._id)?.toString()}
               item={item}
               added={isSkuAdded(item)}
-              onAdd={handleAdd}
+              selected={!!selected[itemKey(item)]}
+              onToggle={toggleSelected}
               isAdding={isAdding}
             />
           ))
         )}
       </DialogContent>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #eee' }}>
+        <Button onClick={handleClose} disabled={isAdding} sx={{ textTransform: 'none' }}>Đóng</Button>
+        <Button
+          variant="contained"
+          onClick={handleAddSelected}
+          disabled={selectedItems.length === 0 || isAdding}
+          sx={{ textTransform: 'none', borderRadius: 2, minWidth: 150 }}
+        >
+          {isAdding ? <CircularProgress size={18} color="inherit" /> : `Thêm ${selectedItems.length} sản phẩm`}
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }

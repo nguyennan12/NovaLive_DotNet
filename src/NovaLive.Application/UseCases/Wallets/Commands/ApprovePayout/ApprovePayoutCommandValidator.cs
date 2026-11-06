@@ -8,7 +8,9 @@ public sealed class ApprovePayoutCommandValidator : AbstractValidator<ApprovePay
     {
         RuleFor(x => x.PayoutId).NotEmpty();
         RuleFor(x => x.Request.TransferRef)
+            .NotEmpty()
             .MaximumLength(100)
-            .When(x => !string.IsNullOrEmpty(x.Request.TransferRef));
+            .Must(value => !string.IsNullOrWhiteSpace(value))
+            .WithMessage("Cần nhập mã giao dịch ngân hàng sau khi đã chuyển khoản.");
     }
 }

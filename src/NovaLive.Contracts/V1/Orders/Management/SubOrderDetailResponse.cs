@@ -4,4 +4,5 @@ public sealed record SubOrderDetailResponse(Guid Id, Guid ParentOrderId, string 
     decimal ItemAmount, decimal ShippingFee, decimal ShopDiscountAmount, decimal PlatformDiscountAmount,
     decimal ShippingDiscountAmount, decimal SubTotal, string Status, string? CancelReason,
     string PaymentStatus, string PaymentMethod, DateTimeOffset CreatedAt,
+    DateTimeOffset? DeliveredAt,
     IReadOnlyList<OrderItemDetailResponse> Items, IReadOnlyList<OrderTimelineResponse> Timeline);

@@ -19,6 +19,7 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
     ICartRepository carts, IInventoryRepository inventories, IParentOrderRepository parents,
     ISubOrderRepository subs, IOrderItemRepository orderItems, IOrderStatusHistoryRepository histories,
     IPaymentRepository payments, IDiscountRepository discounts, IOutboxRepository outbox,
+    ILivestreamProductRepository livestreamProducts,
     ICurrentUser user, IDateTimeProvider clock, IFlashSaleRepository flashSales) : ICommandHandler<CheckoutCommand, CheckoutResponse>
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -106,7 +107,9 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
             {
                 var sub = SubOrder.Create(parent.Id, $"{parent.OrderCode}-S{responseSubs.Count + 1}",
                     draft.Warehouses[shop.ShopId].Id, shop, method == PaymentMethod.COD, now,
-                    shop.Items.Any(i => draft.FlashSaleItems.ContainsKey(i.SkuId)) ? OrderSource.FlashSale : OrderSource.Online);
+                    shop.Items.Any(i => draft.FlashSaleItems.ContainsKey(i.SkuId)) ? OrderSource.FlashSale
+                        : selected.Any(item => item.ShopId == shop.ShopId && item.LivestreamSessionId.HasValue)
+                            ? OrderSource.Livestream : OrderSource.Online);
                 await subs.AddAsync(sub, ct);
                 await histories.AddAsync(OrderStatusHistory.Create(sub.Id, null, SubOrderStatus.PendingPayment,
                     buyer, OrderRole.Buyer, "Checkout", now), ct);
@@ -130,6 +133,16 @@ public sealed class CheckoutCommandHandler(CheckoutDraftBuilder builder, ITransa
             }
             var payment = Payment.Create(parent.Id, method, price.GrandTotal, now);
             await payments.AddAsync(payment, ct);
+            foreach (var item in selected.Where(item => item.LivestreamSessionId.HasValue))
+            {
+                var liveProduct = await livestreamProducts.GetBySessionAndSkuAsync(
+                    item.LivestreamSessionId!.Value, item.SkuId, ct);
+                if (liveProduct is not null)
+                {
+                    liveProduct.RecordSold(item.Quantity);
+                    livestreamProducts.Update(liveProduct);
+                }
+            }
             carts.RemoveItems(selected);
             foreach (var voucher in draft.Vouchers.OrderBy(v => v.Id))
             {

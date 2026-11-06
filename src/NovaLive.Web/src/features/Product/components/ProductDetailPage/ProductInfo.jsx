@@ -4,7 +4,7 @@ import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded'
 import NearMeIcon from '@mui/icons-material/NearMe'
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded'
 import ShoppingBasketRoundedIcon from '@mui/icons-material/ShoppingBasketRounded'
-import { Box, Chip, Divider, Rating, Skeleton, Tooltip, Typography } from '@mui/material'
+import { Box, Chip, Skeleton, Tooltip, Typography } from '@mui/material'
 import { useSelector } from 'react-redux'
 import { selectCategories } from '~/store/product/categorySlice'
 import { slugCateToNameCate } from '~/common/utils/converter'
@@ -75,21 +75,8 @@ const ProductInfo = ({ product, selectedSku, flashSaleItem }) => {
 
       </Box>
 
-      {/* Rating + sold row */}
+      {/* Sold count; product rating is shown from real review records below. */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1, flexWrap: 'wrap' }}>
-        <Rating
-          value={product.spu_ratingsAvg ?? 0}
-          precision={0.5}
-          readOnly
-          size="small"
-          sx={{ color: 'fourth.main' }}
-        />
-        <Typography sx={{ fontSize: '0.82rem', color: 'fourth.main', fontWeight: 600 }}>
-          {(product.spu_ratingsAvg ?? 0).toFixed(1)}
-        </Typography>
-
-        <Divider orientation="vertical" flexItem sx={{ borderColor: '#e0e0e0' }} />
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
           <ShoppingBasketRoundedIcon sx={{ fontSize: 13, color: '#aaa' }} />
           <Typography sx={{ fontSize: '0.78rem', color: '#aaa', fontWeight: 500 }}>

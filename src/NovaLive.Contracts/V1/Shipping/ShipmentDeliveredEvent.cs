@@ -8,4 +8,8 @@ public sealed record ShipmentDeliveredEvent(
     string Provider,
     string TrackingCode,
     DateTimeOffset DeliveredAt,
-    bool IsVerifiedWebhook = false);
+    bool IsVerifiedWebhook = false,
+    bool IsSellerConfirmedDelivery = false)
+{
+    public bool IsSettlementEligible => IsVerifiedWebhook || IsSellerConfirmedDelivery;
+}

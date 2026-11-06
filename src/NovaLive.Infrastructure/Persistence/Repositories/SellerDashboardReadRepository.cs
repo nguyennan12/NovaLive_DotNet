@@ -39,7 +39,9 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
                 .Where(tx => tx.Type == WalletTxType.OrderRefund)
                 .SumAsync(tx => (decimal?)tx.Amount, ct) ?? 0m;
 
-            netWalletRevenue = Math.Max(0m, revenueSum - refundSum);
+            // Refund ledger entries are negative. Add them to revenue so refunds reduce
+            // net sales instead of increasing it.
+            netWalletRevenue = revenueSum + refundSum;
 
             var rawTxs = await db.ShopWalletTransactions.AsNoTracking()
                 .Where(tx => tx.WalletId == wallet.Id)
@@ -77,36 +79,32 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
 
         var totalOrdersCount = await filteredOrdersQuery.CountAsync(ct);
 
-        // Fallback revenue calculation if no wallet transactions yet
-        var paidSubOrders = filteredOrdersQuery
-            .Where(s => s.Status == SubOrderStatus.Delivered || s.Status == SubOrderStatus.Completed);
-
-        var orderRevenue = await paidSubOrders
-            .SumAsync(s => (decimal?)(s.SubTotal - s.ShopDiscountAmount), ct) ?? 0m;
-
-        var totalSalesRevenue = netWalletRevenue > 0m ? netWalletRevenue : orderRevenue;
+        // Revenue cards use actual wallet postings, not order states: a delivered status
+        // alone does not prove that payment/COD was settled.
+        var totalSalesRevenue = netWalletRevenue;
 
         // 3. Pending Orders Count (Confirmed needing warehouse assignment)
         var pendingOrdersCount = await baseOrdersQuery
             .CountAsync(s => s.Status == SubOrderStatus.Confirmed && s.WarehouseAddressId == null, ct);
 
         // 4. Daily Revenue Points
-        var eligibleForDailyRevenue = await filteredOrdersQuery
-            .Where(s => s.Status != SubOrderStatus.Cancelled && s.Status != SubOrderStatus.PendingPayment)
-            .Select(s => new
-            {
-                s.CreatedAt,
-                Revenue = s.SubTotal - s.ShopDiscountAmount
-            })
-            .ToListAsync(ct);
+        var dailyLedger = wallet is null
+            ? new List<DailyLedgerEntry>()
+            : await db.ShopWalletTransactions.AsNoTracking()
+                .Where(tx => tx.WalletId == wallet.Id
+                    && (tx.Type == WalletTxType.OrderRevenue || tx.Type == WalletTxType.OrderRefund)
+                    && (from == null || tx.CreatedAt >= from)
+                    && (to == null || tx.CreatedAt <= to))
+                .Select(tx => new DailyLedgerEntry(tx.Type, tx.Amount, tx.CreatedAt))
+                .ToListAsync(ct);
 
-        var dailyRevenue = eligibleForDailyRevenue
-            .GroupBy(s => s.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd"))
+        var dailyRevenue = dailyLedger
+            .GroupBy(tx => tx.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd"))
             .Select(g => new DailyRevenuePointReadModel(
                 g.Key,
-                g.Sum(x => Math.Max(0m, x.Revenue)),
-                g.Count()))
-            .OrderBy(d => d.Date)
+                g.Sum(tx => tx.Amount),
+                g.Count(tx => tx.Type == WalletTxType.OrderRevenue)))
+            .OrderBy(day => day.Date)
             .ToList();
 
         // 5. Order Statuses Breakdown
@@ -263,4 +261,6 @@ public sealed class SellerDashboardReadRepository(AppDbContext db) : ISellerDash
             actions,
             walletOverview);
     }
+
+    private sealed record DailyLedgerEntry(WalletTxType Type, decimal Amount, DateTimeOffset CreatedAt);
 }

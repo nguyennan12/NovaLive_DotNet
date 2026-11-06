@@ -32,11 +32,11 @@ public sealed class SimulateShipmentDeliveredCommandHandler(
             return ShippingErrors.ShipmentNotFound;
         if (shipment.Provider != ShippingProvider.GHN)
             return ShippingErrors.UnsupportedProvider;
-        if (sub.Status == SubOrderStatus.Delivered && shipment.Status == ShippingStatus.Delivered)
-            return Result.Success();
-        if (sub.Status != SubOrderStatus.Shipping
-            || shipment.Status is ShippingStatus.Delivered or ShippingStatus.Failed
+        if (sub.Status is not (SubOrderStatus.Shipping or SubOrderStatus.Delivered or SubOrderStatus.ReturnRequested)
+            || shipment.Status is ShippingStatus.Failed
                 or ShippingStatus.Returned or ShippingStatus.Cancelled)
+            return ShippingErrors.InvalidDeliverySimulationStatus;
+        if (sub.Status == SubOrderStatus.ReturnRequested && shipment.Status != ShippingStatus.Delivered)
             return ShippingErrors.InvalidDeliverySimulationStatus;
 
         var payload = JsonSerializer.Serialize(new
@@ -47,10 +47,10 @@ public sealed class SimulateShipmentDeliveredCommandHandler(
             status = "delivered"
         });
 
-        // False is intentional: the demo action must never be treated as authenticated
-        // carrier evidence and therefore cannot trigger automatic COD settlement.
+        // This is an explicit seller confirmation, not carrier evidence. It may settle
+        // COD through the same idempotent ledger path as an authenticated GHN webhook.
         return await delivery.ProcessAsync(ShippingProvider.GHN, shipment.TrackingCode,
             ShippingStatus.Delivered, payload, isVerifiedWebhook: false, ct,
-            rejectInvalidTransition: true);
+            rejectInvalidTransition: true, isSellerConfirmedDelivery: true);
     }
 }

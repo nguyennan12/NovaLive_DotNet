@@ -23,15 +23,24 @@ export const useLiveProducts = (liveId) => {
   const liveProducts = sessionData?.live_products ?? []
 
   // Thêm sản phẩm
-  const { mutate: addProduct, isPending: isAdding } = useMutation({
-    mutationFn: (products) => addProductToLiveSessionAPI(liveId, products),
+  const { mutateAsync: addProduct, isPending: isAdding } = useMutation({
+    mutationFn: async (products) => {
+      const items = Array.isArray(products) ? products : [products]
+      const added = []
+      for (const item of items) {
+        added.push(await addProductToLiveSessionAPI(liveId, item))
+      }
+      return added
+    },
     onSuccess: (data) => {
       queryClient.setQueryData(qKey, (old) => ({
         ...old,
-        live_products: data ? [data] : old?.live_products ?? []
+        live_products: [...(old?.live_products ?? []), ...data].filter((product, index, all) =>
+          index === all.findIndex(item => String(item.skuId) === String(product.skuId))
+        )
       }))
       queryClient.invalidateQueries({ queryKey: qKey })
-      toast.success('Đã ghim sản phẩm vào phiên live')
+      toast.success(`Đã thêm ${data.length} sản phẩm vào phiên live`)
     },
     onError: (err) => {
       const msg = err?.response?.data?.message || err?.message || 'Không thể thêm sản phẩm'
@@ -54,10 +63,6 @@ export const useLiveProducts = (liveId) => {
       return { snapshot }
     },
     onSuccess: () => {
-      queryClient.setQueryData(qKey, (old) => ({
-        ...old,
-        live_products: []
-      }))
       queryClient.invalidateQueries({ queryKey: qKey })
       toast.success('Đã gỡ sản phẩm khỏi phiên live')
     },

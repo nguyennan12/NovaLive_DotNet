@@ -11,15 +11,17 @@ import IconButton from '@mui/material/IconButton'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import { useForm } from 'react-hook-form'
-import { useDispatch } from 'react-redux'
+import { useQueryClient } from '@tanstack/react-query'
+import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import FieldErrorAlert from '~/common/components/common/form/FieldErrorAlert'
 import { loginUserAPI } from '~/store/user/userSlice'
+import { clearGuestCart, selectGuestItems, setSelectedIds } from '~/store/cart/cartSlice'
+import { addToCartAPI } from '~/common/apis/services/cartService'
 import AuthHeader from './AuthHeader'
 import { authCardSx, authInputSx, authButtonSx } from '../authStyles'
 import {
-  EMAIL_RULE,
   FIELD_REQUIRED_MESSAGE
 } from '~/common/utils/validators'
 
@@ -30,18 +32,51 @@ function LoginForm() {
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const guestItems = useSelector(selectGuestItems)
 
   const registeredEmail = searchParams.get('registeredEmail')
   const verifiedEmail = searchParams.get('verifiedEmail')
+  const isCheckoutRedirect = searchParams.get('redirect') === '/order'
 
-  const onSubmitLogin = (data) => {
+  const onSubmitLogin = async (data) => {
     const { email, password } = data
     const loginPromise = dispatch(loginUserAPI({ email, password })).unwrap()
-    toast.promise(loginPromise, {
-      pending: 'Logging in...',
-      success: 'Đăng nhập thành công!',
-      error: { render: ({ data: message }) => message || 'Đăng nhập thất bại. Vui lòng thử lại.' }
-    }).then(() => navigate('/')).catch(() => {})
+    try {
+      await toast.promise(loginPromise, {
+        pending: 'Đang đăng nhập...',
+        success: 'Đăng nhập thành công!',
+        error: { render: ({ data: message }) => message || 'Đăng nhập thất bại. Vui lòng thử lại.' }
+      })
+
+      try {
+        const syncedIds = []
+        for (const item of guestItems) {
+          const saved = await addToCartAPI({
+            skuId: item.skuId,
+            quantity: item.quantity,
+            livestreamSessionId: item.livestreamSessionId
+          })
+          if (saved?.cartItemId) syncedIds.push(String(saved.cartItemId))
+        }
+        if (guestItems.length > 0) {
+          dispatch(clearGuestCart())
+          dispatch(setSelectedIds(syncedIds))
+          await queryClient.invalidateQueries({ queryKey: ['cart'] })
+        }
+      } catch (error) {
+        toast.error(error?.response?.data?.detail || 'Đăng nhập thành công nhưng chưa đồng bộ được giỏ hàng. Vui lòng thử lại.')
+        navigate('/cart')
+        return
+      }
+
+      const requestedRedirect = searchParams.get('redirect')
+      const redirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+        ? requestedRedirect : '/'
+      navigate(redirect)
+    } catch {
+      // toast.promise already shows the login error.
+    }
   }
 
   return (
@@ -63,6 +98,11 @@ function LoginForm() {
           {registeredEmail &&
             <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
               An activation code has been sent to <b>{registeredEmail}</b>.
+            </Alert>
+          }
+          {isCheckoutRedirect &&
+            <Alert severity="info" sx={{ mb: 2, borderRadius: '8px' }}>
+              Vui lòng đăng nhập để tiếp tục thanh toán. Sản phẩm trong giỏ vẫn được giữ lại.
             </Alert>
           }
 
@@ -162,7 +202,7 @@ function LoginForm() {
           {/* Footer */}
           <Box sx={{ mt: 2.5, textAlign: 'center', display: 'flex', gap: 0.5, justifyContent: 'center', alignItems: 'center' }}>
             <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.875rem' }}>
-              {"Don't have an account?"}
+              Don&apos;t have an account?
             </Typography>
             <Link to="/register" style={{ textDecoration: 'none' }}>
               <Typography variant="body2" sx={{ color: 'secondary.main', fontWeight: 700, fontSize: '0.875rem', '&:hover': { textDecoration: 'underline' } }}>

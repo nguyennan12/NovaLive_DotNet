@@ -41,7 +41,8 @@ public record LivestreamSessionDetailResponse(
     int PeakViewerCount,
     DateTimeOffset? StartedAt,
     DateTimeOffset? EndedAt,
-    PinnedProductResponse? ActivePinnedProduct);
+    PinnedProductResponse? ActivePinnedProduct,
+    IReadOnlyList<PinnedProductResponse> Products);
 
 public record LivestreamTokenResponse(
     Guid SessionId,

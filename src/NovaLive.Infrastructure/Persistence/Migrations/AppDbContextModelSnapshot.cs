@@ -78,6 +78,10 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cart_id");
 
+                    b.Property<Guid?>("LivestreamSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("livestream_session_id");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
@@ -108,6 +112,9 @@ namespace NovaLive.Infrastructure.Persistence.Migrations
                     b.HasIndex("CartId", "SkuId")
                         .IsUnique()
                         .HasDatabaseName("ix_cart_items_cart_id_sku_id");
+
+                    b.HasIndex("LivestreamSessionId")
+                        .HasDatabaseName("ix_cart_items_livestream_session_id");
 
                     b.ToTable("cart_items", "public");
                 });

@@ -4,7 +4,7 @@ using NovaLive.Contracts.Common;
 using NovaLive.Contracts.V1.Returns;
 using NovaLive.Domain.Rbac;
 namespace NovaLive.Application.UseCases.Returns.Queries.GetSellerReturns;
-public sealed record GetSellerReturnsQuery(string? Status = null, int Page = 1, int Size = 20) : IQuery<PagedResult<OrderReturnResponse>>, IRequirePermission
+public sealed record GetSellerReturnsQuery(string? Status = null, int Page = 1, int Size = 20, Guid? SubOrderId = null) : IQuery<PagedResult<OrderReturnResponse>>, IRequirePermission
 {
     public string RequiredPermission => PermissionCodes.Returns.RespondOwn;
 }

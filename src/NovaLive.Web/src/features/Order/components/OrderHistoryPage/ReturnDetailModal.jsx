@@ -17,7 +17,7 @@ import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRou
 import GavelRoundedIcon from '@mui/icons-material/GavelRounded'
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
-import { formatDate, formatVND } from '~/common/utils/formatters'
+import { formatDate, formatVND, resolveMediaUrl } from '~/common/utils/formatters'
 import { REASON_MAP, RETURN_STATUS_CONFIG } from './ReturnHistoryCard'
 
 export default function ReturnDetailModal({ open, onClose, returnItem }) {
@@ -198,23 +198,16 @@ export default function ReturnDetailModal({ open, onClose, returnItem }) {
                 Hình Ảnh / Video Bằng Chứng
               </Typography>
               <Grid container spacing={1.5}>
-                {returnItem.evidenceUrls.map((url, i) => (
-                  <Grid item xs={4} sm={3} key={i}>
-                    <Box
-                      component="img"
-                      src={url}
-                      alt={`Evidence ${i + 1}`}
-                      sx={{
-                        width: '100%',
-                        height: 90,
-                        borderRadius: 2,
-                        objectFit: 'cover',
-                        border: '1px solid',
-                        borderColor: 'divider'
-                      }}
-                    />
-                  </Grid>
-                ))}
+                {returnItem.evidenceUrls.map((rawUrl, i) => {
+                  const url = resolveMediaUrl(rawUrl)
+                  return (
+                    <Grid item xs={4} sm={3} key={i}>
+                      {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)
+                        ? <Box component="video" src={url} controls sx={{ width: '100%', height: 90, borderRadius: 2, objectFit: 'cover', border: '1px solid', borderColor: 'divider' }} />
+                        : <Box component="img" src={url} alt={`Evidence ${i + 1}`} onError={(event) => { event.currentTarget.style.display = 'none' }} sx={{ width: '100%', height: 90, borderRadius: 2, objectFit: 'cover', border: '1px solid', borderColor: 'divider' }} />}
+                    </Grid>
+                  )
+                })}
               </Grid>
             </Box>
           )}

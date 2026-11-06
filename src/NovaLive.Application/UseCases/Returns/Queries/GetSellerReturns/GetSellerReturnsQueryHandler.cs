@@ -13,7 +13,8 @@ public sealed class GetSellerReturnsQueryHandler(OrderShopAccess shops, ISubOrde
         var shop = await shops.GetAsync(ct);
         if (shop.IsFailure) return ReturnErrors.NotFound;
         var ids = await subs.GetIdsByShopAsync(shop.Value, ct);
-        var page = await returns.GetSellerPagedAsync(ids, query.Status == null ? null : Enum.Parse<ReturnStatus>(query.Status), query.Page, query.Size, ct);
+        if (query.SubOrderId is { } target && !ids.Contains(target)) return ReturnErrors.NotFound;
+        var page = await returns.GetSellerPagedAsync(ids, query.Status == null ? null : Enum.Parse<ReturnStatus>(query.Status), query.Page, query.Size, ct, query.SubOrderId);
         return await reader.PageAsync(page.Items, page.Total, query.Page, query.Size, ct);
     }
 }

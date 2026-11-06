@@ -12,9 +12,10 @@ public sealed class OrderReturnRepository(AppDbContext db) : IOrderReturnReposit
                 .ToListAsync(ct)).SingleOrDefault();
         return await db.OrderReturns.SingleOrDefaultAsync(r => r.Id == id, ct);
     }
-    public async Task<(List<OrderReturn> Items, long Total)> GetSellerPagedAsync(IEnumerable<Guid> subIds, ReturnStatus? status, int page, int size, CancellationToken ct)
+    public async Task<(List<OrderReturn> Items, long Total)> GetSellerPagedAsync(IEnumerable<Guid> subIds, ReturnStatus? status, int page, int size, CancellationToken ct, Guid? onlySubOrderId = null)
     {
         var ids = subIds.Distinct().ToArray();
+        if (onlySubOrderId is { } targetId) ids = ids.Where(id => id == targetId).ToArray();
         var query = db.OrderReturns.AsNoTracking().Where(r => ids.Contains(r.SubOrderId));
         if (status != null) query = query.Where(r => r.Status == status);
         var count = await query.LongCountAsync(ct);

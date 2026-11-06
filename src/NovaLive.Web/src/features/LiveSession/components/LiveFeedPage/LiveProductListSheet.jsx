@@ -7,7 +7,7 @@ import { useCart } from '~/features/Cart/hooks/useCart'
 import { ProductLiveCard } from '../shared/ProductLiveCard'
 
 
-const LiveProductListSheet = ({ liveShop, open, onClose, products = [] }) => {
+const LiveProductListSheet = ({ liveId, open, onClose, products = [] }) => {
   const navigate = useNavigate()
   const { cartCount } = useCart()
   const handleClick = (product) => {
@@ -119,7 +119,7 @@ const LiveProductListSheet = ({ liveShop, open, onClose, products = [] }) => {
               </Typography>
             </Box>
           ) : products.map((p, idx) => (
-            <ProductLiveCard liveShop={liveShop} key={idx} product={p} onClick={handleClick} />
+            <ProductLiveCard liveId={liveId} key={p.skuId || idx} product={p} onClick={handleClick} />
           ))}
         </Box>
       </Box>

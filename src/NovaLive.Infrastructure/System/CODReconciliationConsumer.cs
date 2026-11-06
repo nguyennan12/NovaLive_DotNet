@@ -25,9 +25,9 @@ public sealed class CODReconciliationConsumer(
 
     public Task Consume(ConsumeContext<ShipmentDeliveredEvent> context)
     {
-        if (!context.Message.IsVerifiedWebhook)
+        if (!context.Message.IsSettlementEligible)
         {
-            logger.LogDebug("Skipping COD reconciliation for non-webhook delivery event of SubOrder {SubOrderId}.",
+            logger.LogDebug("Skipping COD reconciliation for unconfirmed delivery event of SubOrder {SubOrderId}.",
                 context.Message.SubOrderId);
             return Task.CompletedTask;
         }

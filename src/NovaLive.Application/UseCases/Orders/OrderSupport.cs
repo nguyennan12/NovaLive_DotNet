@@ -67,7 +67,7 @@ public static class OrderMappings
             s.Id, s.ParentOrderId, s.SubOrderCode, s.ShopId, s.WarehouseAddressId, s.OrderSource.ToString(), parent.Recipient(),
             s.ItemAmount, s.ShippingFee, s.ShopDiscountAmount, s.PlatformDiscountAmount, s.ShippingDiscountAmount,
             s.SubTotal, s.Status.ToString(), s.CancelReason, parent.PaymentStatus.ToString(), payment?.Method.ToString() ?? "Unknown",
-            s.CreatedAt, items.Where(i => i.SubOrderId == s.Id).Select(i => new OrderItemDetailResponse(
+            s.CreatedAt, s.DeliveredAt, items.Where(i => i.SubOrderId == s.Id).Select(i => new OrderItemDetailResponse(
                 i.Id, i.SkuId, i.SkuSnapshotJson, i.Quantity, i.UnitPrice, i.OriginalPrice, i.DiscountAmount, i.LineTotal)).ToArray(),
             history.Where(h => h.SubOrderId == s.Id).OrderBy(h => h.ChangedAt).ThenBy(h => h.FromStatus is null ? 0 : 1)
                 .ThenBy(h => h.Id).Select(h => new OrderTimelineResponse(h.FromStatus, h.ToStatus,

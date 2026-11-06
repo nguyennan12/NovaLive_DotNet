@@ -75,6 +75,8 @@ internal sealed class AuthTestHost : IAsyncDisposable
         services.AddScoped<ISkuRepository, SkuRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ILivestreamSessionRepository, LivestreamSessionRepository>();
+        services.AddScoped<ILivestreamProductRepository, LivestreamProductRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddSingleton<IDateTimeProvider>(Clock);

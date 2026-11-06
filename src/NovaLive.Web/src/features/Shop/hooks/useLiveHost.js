@@ -5,11 +5,18 @@ import { startLiveAPI, endLiveAPI } from '~/common/apis/services/liveService'
 import { formatDuration } from '~/common/utils/formatters'
 
 const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID
+const createMicrophoneTrack = () => AgoraRTC.createMicrophoneAudioTrack({
+  encoderConfig: 'speech_standard',
+  AEC: true,
+  AGC: true,
+  ANS: true
+})
 
 export const useLiveHost = ({ liveId, userId }) => {
   const [status, setStatus] = useState('idle') // idle | starting | live | ending | ended | error
   const [isMicOn, setIsMicOn] = useState(true)
   const [isCamOn, setIsCamOn] = useState(true)
+  const [micError, setMicError] = useState('')
   const [duration, setDuration] = useState(0)
 
   const clientRef = useRef(null)
@@ -66,11 +73,14 @@ export const useLiveHost = ({ liveId, userId }) => {
 
       // Thử lấy Micro
       try {
-        audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+        audioTrack = await createMicrophoneTrack()
+        await audioTrack.setEnabled(true)
         setIsMicOn(true)
+        setMicError('')
       } catch (e) {
         console.warn('Not found device Microphone:', e)
         setIsMicOn(false)
+        setMicError('Không truy cập được micro. Hãy cho phép quyền micro rồi bấm lại.')
       }
 
       // Thử lấy Camera
@@ -134,13 +144,25 @@ export const useLiveHost = ({ liveId, userId }) => {
   }, [liveId, stopAllTracks])
 
   const toggleMic = useCallback(async () => {
-    if (!localAudioTrackRef.current) return
-    const newState = !isMicOn
     try {
+      if (!localAudioTrackRef.current) {
+        if (!clientRef.current) throw new Error('Livestream chưa kết nối')
+        const audioTrack = await createMicrophoneTrack()
+        await audioTrack.setEnabled(true)
+        await clientRef.current.publish(audioTrack)
+        localAudioTrackRef.current = audioTrack
+        setIsMicOn(true)
+        setMicError('')
+        return
+      }
+      const newState = !isMicOn
       await localAudioTrackRef.current.setEnabled(newState)
       setIsMicOn(newState)
+      setMicError('')
     } catch (e) {
       console.error('error changing mic state:', e)
+      setIsMicOn(false)
+      setMicError('Không bật được micro. Kiểm tra quyền micro của trình duyệt và thiết bị đầu vào.')
     }
   }, [isMicOn])
 
@@ -158,6 +180,7 @@ export const useLiveHost = ({ liveId, userId }) => {
   return {
     status,
     isMicOn,
+    micError,
     isCamOn,
     videoContainerRef,
     startLive,

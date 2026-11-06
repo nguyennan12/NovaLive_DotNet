@@ -31,6 +31,7 @@ public sealed class CheckoutTestContext : IDisposable
     public Mock<IShippingProvider> Shipping { get; } = new(MockBehavior.Strict);
     public Mock<ICurrentUser> User { get; } = new(MockBehavior.Strict);
     public Mock<IFlashSaleRepository> FlashSales { get; } = new();
+    public Mock<ILivestreamProductRepository> LivestreamProducts { get; } = new();
     public Mock<IDateTimeProvider> Clock { get; } = new(MockBehavior.Strict);
     public Cart Cart { get; }
     public UserAddress Address { get; }

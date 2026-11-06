@@ -1,27 +1,31 @@
-import { useQuery } from '@tanstack/react-query'
-import authorizedAxiosInstance from '~/common/apis/custom/authorizeAxios'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { getProductReviewsAPI } from '~/common/apis/services/reviewService'
 
 export const useProductReviews = (productId) => {
-  const { data, isLoading } = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ['product_reviews', productId],
-    queryFn: async () => {
-      try {
-        const res = await authorizedAxiosInstance.get(`products/${productId}/reviews`)
-        return res?.data !== undefined ? res.data : res
-      } catch (_e) {
-        return {
-          reviews: [],
-          summary: { avg: 5, total: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } }
-        }
-      }
-    },
+    queryFn: ({ pageParam }) => getProductReviewsAPI(productId, { page: pageParam, size: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     enabled: Boolean(productId),
     staleTime: 60 * 1000
   })
 
+  const pages = query.data?.pages || []
+  const reviews = pages.flatMap(page => page.items || [])
+  const total = pages.at(-1)?.total || 0
+  const avg = reviews.length
+    ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+    : 0
+
   return {
-    reviews: data?.reviews || [],
-    summary: data?.summary || { avg: 5, total: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } },
-    isLoading
+    reviews,
+    summary: { avg, total },
+    isLoading: query.isLoading,
+    isError: query.isError,
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    refetch: query.refetch
   }
 }

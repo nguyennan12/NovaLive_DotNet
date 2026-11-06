@@ -28,8 +28,8 @@ import { MoneyText } from '~/features/Seller/components/shared/MoneyText'
 const PAYOUT_STATUS_FILTERS = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'Pending', label: 'Chờ giải ngân' },
-  { key: 'Approved', label: 'Đã giải ngân' },
-  { key: 'Rejected', label: 'Đã từ chối' }
+  { key: 'Completed', label: 'Đã giải ngân' },
+  { key: 'Failed', label: 'Đã từ chối' }
 ]
 
 export const AdminPayoutsPage = () => {
@@ -44,6 +44,7 @@ export const AdminPayoutsPage = () => {
   // Action dialogs
   const [confirmApprove, setConfirmApprove] = useState(null)
   const [confirmReject, setConfirmReject] = useState(null)
+  const [transferRef, setTransferRef] = useState('')
   const [rejectReason, setRejectReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -76,9 +77,10 @@ export const AdminPayoutsPage = () => {
     if (!confirmApprove) return
     setIsSubmitting(true)
     try {
-      await approvePayoutAPI(confirmApprove.id, { note: 'Xác nhận chuyển khoản thành công' })
+      await approvePayoutAPI(confirmApprove.id, { transferRef: transferRef.trim() })
       toast.success('Đã xác nhận giải ngân thành công!')
       setConfirmApprove(null)
+      setTransferRef('')
       loadPayouts()
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Duyệt giải ngân thất bại')
@@ -214,10 +216,10 @@ export const AdminPayoutsPage = () => {
               render: (row) => (
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {row.shopName || row.shop || 'Cửa hàng'}
+                    {row.shopName || row.shop || (row.shopId ? `Shop ${String(row.shopId).slice(0, 8)}` : 'Cửa hàng')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {row.ownerName || row.owner || ''}
+                    {row.ownerName || row.owner || row.bankHolder || ''}
                   </Typography>
                 </Box>
               )
@@ -274,7 +276,7 @@ export const AdminPayoutsPage = () => {
                       variant="contained"
                       color="secondary"
                       startIcon={<CheckCircleRoundedIcon fontSize="small" />}
-                      onClick={() => setConfirmApprove(row)}
+                      onClick={() => { setConfirmApprove(row); setTransferRef('') }}
                       disabled={isSubmitting}
                       sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
                     >
@@ -305,7 +307,7 @@ export const AdminPayoutsPage = () => {
       {/* Approve Dialog */}
       <Dialog
         open={Boolean(confirmApprove)}
-        onClose={() => setConfirmApprove(null)}
+        onClose={() => { setConfirmApprove(null); setTransferRef('') }}
         maxWidth="xs"
         fullWidth
         slotProps={{ paper: { sx: { borderRadius: 3 } } }}
@@ -319,18 +321,28 @@ export const AdminPayoutsPage = () => {
             <MoneyText value={confirmApprove?.amount || 0} />
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Cho gian hàng: <strong>{confirmApprove?.shopName || confirmApprove?.shop}</strong> ({confirmApprove?.bankName} - {confirmApprove?.bankAccountNumber})
+            Người nhận: <strong>{confirmApprove?.bankHolder || 'Chủ gian hàng'}</strong> · Shop {String(confirmApprove?.shopId || '').slice(0, 8)} · {confirmApprove?.bankName} - {confirmApprove?.bankAccount || confirmApprove?.bankAccountNumber}
           </Typography>
+          <TextField
+            fullWidth
+            required
+            size="small"
+            label="Mã giao dịch chuyển khoản"
+            value={transferRef}
+            onChange={(event) => setTransferRef(event.target.value)}
+            helperText="Chỉ xác nhận sau khi đã chuyển khoản thành công."
+            sx={{ mt: 2 }}
+          />
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setConfirmApprove(null)} color="inherit" sx={{ textTransform: 'none' }}>
+          <Button onClick={() => { setConfirmApprove(null); setTransferRef('') }} color="inherit" sx={{ textTransform: 'none' }}>
             Hủy
           </Button>
           <Button
             variant="contained"
             color="secondary"
             onClick={handleExecuteApprove}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !transferRef.trim()}
             sx={{ textTransform: 'none', borderRadius: 2, fontWeight: 700 }}
           >
             Xác nhận giải ngân

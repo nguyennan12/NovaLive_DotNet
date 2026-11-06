@@ -6,17 +6,17 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  Avatar,
-  CardMedia
+  Avatar
 } from '@mui/material'
+import { useQuery } from '@tanstack/react-query'
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded'
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded'
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import LocalFireDepartmentRoundedIcon from '@mui/icons-material/LocalFireDepartmentRounded'
-import { getUpcomingSessionsAPI } from '~/common/apis/services/liveService'
-import { formatVND } from '~/common/utils/formatters'
+import { getLiveSessionByIdAPI, getUpcomingSessionsAPI } from '~/common/apis/services/liveService'
+import { ProductLiveCard } from '../shared/ProductLiveCard'
 
 export const LiveUpcomingScheduleCard = ({
   activeLiveCount = 0,
@@ -30,13 +30,16 @@ export const LiveUpcomingScheduleCard = ({
   const [snackbarMessage, setSnackbarMessage] = useState('')
 
   const isStreaming = activeLiveCount > 0 && Boolean(currentLive)
-  const [selectedTab, setSelectedTab] = useState(isStreaming ? 'live' : 'schedule')
-
-  useEffect(() => {
-    if (activeTab) {
-      setSelectedTab(activeTab)
-    }
-  }, [activeTab])
+  const selectedTab = activeTab || (isStreaming ? 'live' : 'schedule')
+  const liveId = currentLive?.id || currentLive?._id
+  const { data: liveDetail } = useQuery({
+    queryKey: ['live-session-products', liveId],
+    queryFn: () => getLiveSessionByIdAPI(liveId),
+    enabled: Boolean(liveId),
+    staleTime: 15 * 1000
+  })
+  const liveSession = liveDetail ?? currentLive
+  const liveProducts = liveDetail?.live_products ?? []
 
   useEffect(() => {
     let mounted = true
@@ -60,13 +63,12 @@ export const LiveUpcomingScheduleCard = ({
   const handleToggleReminder = (id, title) => {
     setReminders(prev => {
       const nextState = !prev[id]
-      setSnackbarMessage(nextState ? `Đã đặt nhắc hẹn cho phiên "${title}"` : `Đã hủy nhắc hẹn`)
+      setSnackbarMessage(nextState ? `Đã đặt nhắc hẹn cho phiên “${title}”` : 'Đã hủy nhắc hẹn')
       return { ...prev, [id]: nextState }
     })
   }
 
   const handleTabClick = (tab) => {
-    setSelectedTab(tab)
     if (onTabChange) onTabChange(tab)
   }
 
@@ -187,7 +189,7 @@ export const LiveUpcomingScheduleCard = ({
           {/* Header */}
           <Box>
             <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>
-              {currentLive.title || 'Phiên Livestream trực tiếp'}
+              {liveSession.title || 'Phiên Livestream trực tiếp'}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
@@ -208,7 +210,7 @@ export const LiveUpcomingScheduleCard = ({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#64748b' }}>
                 <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
                 <Typography sx={{ fontSize: '0.78rem', fontWeight: 600 }}>
-                  {currentLive.viewerCount ?? currentLive.live_viewer_count ?? 1} đang xem
+                  {liveSession.viewerCount ?? liveSession.live_viewer_count ?? 0} đang xem
                 </Typography>
               </Box>
             </Box>
@@ -227,14 +229,14 @@ export const LiveUpcomingScheduleCard = ({
             }}
           >
             <Avatar
-              src={currentLive.shop?.shop_logo || currentLive.shopLogoUrl}
+              src={liveSession.shop?.shop_logo || liveSession.shopLogoUrl}
               sx={{ width: 44, height: 44, bgcolor: '#2563eb', fontWeight: 700 }}
             >
-              {(currentLive.shop?.shop_name || currentLive.shopName || 'N').charAt(0)}
+              {(liveSession.shop?.shop_name || liveSession.shopName || 'N').charAt(0)}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography noWrap sx={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
-                {currentLive.shop?.shop_name || currentLive.shopName || 'NovaLive Partner'}
+                {liveSession.shop?.shop_name || liveSession.shopName || 'NovaLive Partner'}
               </Typography>
               <Typography sx={{ fontSize: '0.75rem', color: '#64748b', mt: 0.2 }}>
                 Kênh bán hàng chính thức
@@ -251,56 +253,15 @@ export const LiveUpcomingScheduleCard = ({
               </Typography>
             </Box>
 
-            {currentLive.activePinnedProduct ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 1.5,
-                  p: 1.5,
-                  borderRadius: '16px',
-                  bgcolor: '#eff6ff',
-                  border: '1.5px solid #bfdbfe'
-                }}
-              >
-                {currentLive.activePinnedProduct.thumbnailUrl && (
-                  <CardMedia
-                    component="img"
-                    image={currentLive.activePinnedProduct.thumbnailUrl}
-                    sx={{ width: 68, height: 68, borderRadius: '10px', objectFit: 'cover' }}
+            {liveProducts.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 360, overflowY: 'auto', mx: -1.5 }}>
+                {liveProducts.map(product => (
+                  <ProductLiveCard
+                    key={product.skuId || product.productId || product.spuId}
+                    product={product}
+                    liveId={liveId}
                   />
-                )}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography noWrap sx={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
-                    {currentLive.activePinnedProduct.spuName}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5 }}>
-                    <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#2563eb' }}>
-                      {formatVND(currentLive.activePinnedProduct.effectivePrice)}
-                    </Typography>
-                    {currentLive.activePinnedProduct.originalPrice > currentLive.activePinnedProduct.effectivePrice && (
-                      <Typography sx={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'line-through' }}>
-                        {formatVND(currentLive.activePinnedProduct.originalPrice)}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      mt: 1,
-                      py: 0.6,
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      bgcolor: '#2563eb',
-                      '&:hover': { bgcolor: '#1d4ed8' }
-                    }}
-                  >
-                    Mua ngay trên live
-                  </Button>
-                </Box>
+                ))}
               </Box>
             ) : (
               <Box

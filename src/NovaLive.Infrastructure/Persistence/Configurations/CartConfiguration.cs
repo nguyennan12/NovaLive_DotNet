@@ -25,5 +25,6 @@ public sealed class CartConfiguration :
 
         builder.HasIndex(item => new { item.CartId, item.SkuId }).IsUnique();
         builder.HasIndex(item => new { item.CartId, item.ShopId });
+        builder.HasIndex(item => item.LivestreamSessionId);
     }
 }

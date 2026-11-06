@@ -47,7 +47,8 @@ public static class LivestreamMappings
     public static LivestreamSessionDetailResponse ToDetailResponse(
         this LivestreamSession session,
         Shop? shop,
-        PinnedProductResponse? activePinnedProduct)
+        PinnedProductResponse? activePinnedProduct,
+        IReadOnlyList<PinnedProductResponse> products)
     {
         return new LivestreamSessionDetailResponse(
             session.Id,
@@ -62,7 +63,8 @@ public static class LivestreamMappings
             session.PeakViewerCount,
             session.StartedAt,
             session.EndedAt,
-            activePinnedProduct);
+            activePinnedProduct,
+            products);
     }
 
     public static PinnedProductResponse ToPinnedResponse(

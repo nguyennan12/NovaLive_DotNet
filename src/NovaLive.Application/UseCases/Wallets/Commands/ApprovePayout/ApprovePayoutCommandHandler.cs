@@ -46,7 +46,8 @@ public sealed class ApprovePayoutCommandHandler(
             return completeResult.Error;
         }
 
-        payout.Approve(command.Request.TransferRef ?? string.Empty, adminId, now);
+        var transferRef = command.Request.TransferRef!.Trim();
+        payout.Approve(transferRef, adminId, now);
 
         var tx = ShopWalletTransaction.Create(
             walletId: wallet.Id,
@@ -56,7 +57,7 @@ public sealed class ApprovePayoutCommandHandler(
             balanceAfter: wallet.Balance,
             refType: "SellerPayout",
             refId: payout.Id,
-            description: $"Thanh toán lệnh rút tiền thành công (Mã GD: {command.Request.TransferRef})",
+            description: $"Thanh toán lệnh rút tiền thành công (Mã GD: {transferRef})",
             now: now);
 
         await walletTransactions.AddAsync(tx, ct);

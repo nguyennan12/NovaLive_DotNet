@@ -27,22 +27,23 @@ public sealed class GetLivestreamByIdQueryHandler(
 
         var shop = await shopRepository.GetActiveByIdAsync(session.ShopId, ct);
 
-        PinnedProductResponse? activePinnedProduct = null;
-        var pinned = await productRepository.GetActivePinnedProductAsync(session.Id, ct);
-        if (pinned is not null)
+        var products = new List<PinnedProductResponse>();
+        var sessionProducts = await productRepository.GetBySessionIdAsync(session.Id, ct);
+        foreach (var liveProduct in sessionProducts)
         {
-            var sku = await skuRepository.GetByIdAsync(pinned.SkuId, ct);
+            var sku = await skuRepository.GetByIdAsync(liveProduct.SkuId, ct);
             if (sku is not null)
             {
                 var spu = await spuRepository.GetByIdAsync(sku.SpuId, ct);
                 var inv = await inventoryRepository.GetBySkuIdAndShopAsync(sku.Id, session.ShopId, ct);
                 if (spu is not null)
                 {
-                    activePinnedProduct = pinned.ToPinnedResponse(sku, spu, inv?.AvailableQty ?? 0);
+                    products.Add(liveProduct.ToPinnedResponse(sku, spu, inv?.AvailableQty ?? 0));
                 }
             }
         }
 
-        return session.ToDetailResponse(shop, activePinnedProduct);
+        var activePinnedProduct = products.FirstOrDefault(product => product.IsPinned);
+        return session.ToDetailResponse(shop, activePinnedProduct, products);
     }
 }

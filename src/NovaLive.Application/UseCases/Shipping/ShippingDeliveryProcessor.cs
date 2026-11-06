@@ -25,7 +25,7 @@ public sealed class ShippingDeliveryProcessor(
 
     public async Task<Result> ProcessAsync(ShippingProvider provider, string trackingCode,
         ShippingStatus status, string? rawPayload, bool isVerifiedWebhook, CancellationToken ct,
-        bool rejectInvalidTransition = false)
+        bool rejectInvalidTransition = false, bool isSellerConfirmedDelivery = false)
     {
         var normalizedTrackingCode = trackingCode.Trim();
         var shipment = await shipments.GetByTrackingForUpdateAsync(provider, normalizedTrackingCode, ct);
@@ -36,6 +36,7 @@ public sealed class ShippingDeliveryProcessor(
         var now = clock.UtcNow;
         var shipmentUpdated = shipment.UpdateStatusFromWebhook(status, rawPayload, now);
         var isVerifiedDeliveredWebhook = status == ShippingStatus.Delivered && isVerifiedWebhook;
+        var isSellerConfirmedDelivered = status == ShippingStatus.Delivered && isSellerConfirmedDelivery;
         if (isVerifiedDeliveredWebhook && !shipmentUpdated && shipment.Status != ShippingStatus.Delivered)
         {
             logger.LogWarning(
@@ -43,7 +44,7 @@ public sealed class ShippingDeliveryProcessor(
                 provider, normalizedTrackingCode, shipment.Status);
             return Result.Success();
         }
-        if (!shipmentUpdated && !isVerifiedDeliveredWebhook)
+        if (!shipmentUpdated && !isVerifiedDeliveredWebhook && !isSellerConfirmedDelivered)
             return rejectInvalidTransition && shipment.Status != status
                 ? ShippingErrors.InvalidDeliverySimulationStatus
                 : Result.Success();
@@ -59,15 +60,15 @@ public sealed class ShippingDeliveryProcessor(
                     SubOrderStatus.Delivered, null, OrderRole.System,
                     isVerifiedWebhook ? "Shipment delivered" : "Demo delivery confirmed by seller", now), ct);
 
-            // Only an authenticated carrier webhook is allowed to settle COD. The demo
-            // action updates shipment/order state but deliberately emits an unverified event.
-            var hasVerifiedDeliverySignal = isVerifiedDeliveredWebhook && !newlyDelivered
-                && await outbox.HasVerifiedShipmentDeliveredEventAsync(shipment.Id, ct);
-            if (newlyDelivered || (isVerifiedDeliveredWebhook && !hasVerifiedDeliverySignal))
+            // A COD settlement signal must come from an authenticated carrier webhook or
+            // an explicit seller confirmation. Ordinary polling state updates are not enough.
+            var hasSettlementEligibleDeliverySignal = (isVerifiedDeliveredWebhook || isSellerConfirmedDelivered) && !newlyDelivered
+                && await outbox.HasCodSettlementEligibleShipmentDeliveredEventAsync(shipment.Id, ct);
+            if (newlyDelivered || ((isVerifiedDeliveredWebhook || isSellerConfirmedDelivered) && !hasSettlementEligibleDeliverySignal))
                 await outbox.AddAsync(new OutboxMessage(nameof(ShipmentDeliveredEvent), JsonSerializer.Serialize(
                     new ShipmentDeliveredEvent(shipment.Id, sub.Id, sub.ParentOrderId, sub.ShopId,
                         shipment.Provider.ToString(), shipment.TrackingCode!, sub.DeliveredAt!.Value,
-                        isVerifiedWebhook), Json), now), ct);
+                        isVerifiedWebhook, isSellerConfirmedDelivery), Json), now), ct);
         }
         else if (status is ShippingStatus.Failed or ShippingStatus.Returned or ShippingStatus.Cancelled)
             logger.LogWarning("Carrier reported {Status} for {Provider}/{TrackingCode}; SubOrder {SubOrderId} remains {SubOrderStatus}",

@@ -142,7 +142,7 @@ export const getLiveSessionByIdAPI = async (liveId) => {
   const normalized = normalizeLiveSession(raw)
   return {
     ...normalized,
-    live_products: raw?.activePinnedProduct ? [raw.activePinnedProduct] : []
+    live_products: raw?.products ?? (raw?.activePinnedProduct ? [raw.activePinnedProduct] : [])
   }
 }
 

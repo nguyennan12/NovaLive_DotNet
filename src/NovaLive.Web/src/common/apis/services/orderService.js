@@ -73,7 +73,12 @@ export const normalizeOrder = (o) => {
           id: it.id,
           skuId: it.skuId,
           quantity: it.quantity,
-          price: it.unitPrice ?? it.originalPrice ?? 0,
+          price: it.quantity > 0 ? (it.lineTotal / it.quantity) : (it.unitPrice ?? it.originalPrice ?? 0),
+          subOrderId: sub.id,
+          subOrderCode: sub.code || sub.subOrderCode,
+          subOrderStatus: sub.status,
+          deliveredAt: sub.deliveredAt,
+          shopId: sub.shopId,
           spuName: snapshot.SpuName || snapshot.spuName || snapshot.name || 'Sản phẩm',
           thumbnailUrl: snapshot.ThumbnailUrl || snapshot.thumbnailUrl || snapshot.thumb || '',
           shopName: sub.shopName || 'Nova Flagship Store'

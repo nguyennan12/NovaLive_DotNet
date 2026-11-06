@@ -63,8 +63,8 @@ export const getCartAPI = async () => {
   }
 }
 
-export const addToCartAPI = async ({ skuId, quantity = 1 }) => {
-  return await authorizedAxiosInstance.post('cart/items', { skuId, quantity })
+export const addToCartAPI = async ({ skuId, quantity = 1, livestreamSessionId = null }) => {
+  return await authorizedAxiosInstance.post('cart/items', { skuId, quantity, livestreamSessionId })
 }
 
 export const updateCartItemAPI = async ({ cartItemId, quantity }) => {
