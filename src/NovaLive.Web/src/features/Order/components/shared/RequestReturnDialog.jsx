@@ -21,6 +21,7 @@ import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded'
 import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRounded'
+import OrderThumbnail from './OrderThumbnail'
 import { toast } from 'react-toastify'
 import { formatVND, resolveMediaUrl } from '~/common/utils/formatters'
 import { uploadSingleImageAPI } from '~/common/apis/services/uploadService'
@@ -286,13 +287,7 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
                     onChange={() => pId ? handleToggleItem(pId, price, maxQty) : toast.error('Thiếu mã món hàng trong đơn. Vui lòng tải lại đơn hàng.')}
                     sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#0095ff' } }}
                   />
-                  <Box
-                    component="img"
-                    src={thumb}
-                    alt={name}
-                    sx={{ width: 50, height: 50, borderRadius: '8px', objectFit: 'cover', bgcolor: '#f1f5f9' }}
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
+                  <OrderThumbnail src={thumb} alt={name} width={50} height={50} sx={{ borderRadius: '8px' }} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {name}

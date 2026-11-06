@@ -3,6 +3,7 @@ import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRou
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
 import { formatDate, formatVND } from '~/common/utils/formatters'
 import { glassSx } from '~/theme'
+import OrderThumbnail from '../shared/OrderThumbnail'
 
 export const RETURN_STATUS_CONFIG = {
   Pending: {
@@ -118,38 +119,7 @@ export default function ReturnHistoryCard({ item, onViewDetail }) {
 
       {/* Product items */}
       <Box sx={{ p: 2, display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-        {thumbnail ? (
-          <Box
-            component="img"
-            src={thumbnail}
-            alt={firstItem?.spuName || 'Sản phẩm hoàn'}
-            sx={{
-              width: 68,
-              height: 68,
-              borderRadius: 2,
-              objectFit: 'cover',
-              border: '1px solid',
-              borderColor: 'divider',
-              flexShrink: 0
-            }}
-          />
-        ) : (
-          <Box sx={{
-            width: 68,
-            height: 68,
-            borderRadius: 2,
-            bgcolor: 'rgba(0,149,255,0.06)',
-            border: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'secondary.main',
-            flexShrink: 0
-          }}>
-            <AssignmentReturnRoundedIcon sx={{ fontSize: 32, opacity: 0.7 }} />
-          </Box>
-        )}
+        <OrderThumbnail src={thumbnail} alt={firstItem?.spuName || 'Sản phẩm hoàn'} width={68} height={68} />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{

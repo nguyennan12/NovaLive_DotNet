@@ -12,6 +12,7 @@ import PaymentQrModal from '../shared/PaymentQrModal'
 import RequestReturnDialog from '../shared/RequestReturnDialog'
 import ReviewOrderDialog from '~/features/Review/components/ReviewOrderDialog'
 import { glassSx } from '~/theme'
+import OrderThumbnail from '../shared/OrderThumbnail'
 
 function StatusChip({ status }) {
   const cfg = STATUS_CONFIG[status] || {}
@@ -108,18 +109,7 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
         <Box sx={{ px: 2, py: 1.5 }}>
           {firstProduct ? (
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              <Box
-                component="img"
-                src={firstProduct.productId?.spu_thumb}
-                alt={firstProduct.productId?.spu_name}
-                sx={{
-                  width: 64, height: 64, borderRadius: 1.5,
-                  objectFit: 'cover', flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider',
-                  bgcolor: 'rgba(0,0,0,0.03)'
-                }}
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
+              <OrderThumbnail src={firstProduct.productId?.spu_thumb} alt={firstProduct.productId?.spu_name} width={64} height={64} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{
                   fontSize: '0.85rem', fontWeight: 600,

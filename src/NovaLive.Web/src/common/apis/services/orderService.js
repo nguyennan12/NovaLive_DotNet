@@ -73,7 +73,8 @@ export const normalizeOrder = (o) => {
           id: it.id,
           skuId: it.skuId,
           quantity: it.quantity,
-          price: it.quantity > 0 ? (it.lineTotal / it.quantity) : (it.unitPrice ?? it.originalPrice ?? 0),
+          price: it.unitPrice ?? it.price ?? it.originalPrice ?? (it.quantity > 0 ? it.lineTotal / it.quantity : 0),
+          lineTotal: it.lineTotal,
           subOrderId: sub.id,
           subOrderCode: sub.code || sub.subOrderCode,
           subOrderStatus: sub.status,
@@ -95,10 +96,12 @@ export const normalizeOrder = (o) => {
     orderCode: code,
     order_status: status,
     order_checkout: {
-      finalCheckout: total,
-      finalTotal: total,
-      totalPrice: total,
-      ...o.order_checkout
+      ...o.order_checkout,
+      finalCheckout: o.grandTotal ?? o.order_checkout?.finalCheckout ?? o.order_checkout?.finalTotal ?? total,
+      finalTotal: o.grandTotal ?? o.order_checkout?.finalTotal ?? o.order_checkout?.finalCheckout ?? total,
+      totalPrice: o.totalItemAmount ?? o.order_checkout?.totalPrice ?? total,
+      feeShip: o.totalShippingFee ?? o.order_checkout?.feeShip ?? o.order_checkout?.shippingFee ?? 0,
+      totalDiscount: o.totalDiscountAmount ?? o.order_checkout?.totalDiscount ?? 0
     },
     order_payment: {
       paymentStatus: (o.paymentStatus || o.order_payment?.paymentStatus || 'pending').toLowerCase(),
@@ -114,7 +117,8 @@ export const normalizeOrder = (o) => {
           shop_name: p.shopName || o.shopName || p.productId?.spu_shopId?.shop_name || 'Nova Flagship Store'
         }
       },
-      price: p.price ?? 0,
+      price: p.price ?? p.unitPrice ?? p.originalPrice ?? 0,
+      lineTotal: p.lineTotal,
       quantity: p.quantity ?? 1
     }))
   }

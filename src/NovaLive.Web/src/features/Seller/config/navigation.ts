@@ -1,10 +1,10 @@
 import GridViewRounded from '@mui/icons-material/GridViewRounded'
 import ShoppingBagOutlined from '@mui/icons-material/ShoppingBagOutlined'
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
+import WarehouseOutlined from '@mui/icons-material/WarehouseOutlined'
+import LocalOfferOutlined from '@mui/icons-material/LocalOfferOutlined'
 import PeopleAltOutlined from '@mui/icons-material/PeopleAltOutlined'
 import LiveTvOutlined from '@mui/icons-material/LiveTvOutlined'
-import BarChartRounded from '@mui/icons-material/BarChartRounded'
-import CampaignOutlined from '@mui/icons-material/CampaignOutlined'
 import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined'
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined'
 import NotificationsNoneRounded from '@mui/icons-material/NotificationsNoneRounded'
@@ -30,7 +30,8 @@ export const sellerNavigation: SellerNavSection[] = [
     items: [
       { path: '', label: 'Dashboard', icon: GridViewRounded, aliases: ['dashboard'] },
       { path: 'orders', label: 'Orders', icon: ShoppingBagOutlined, aliases: ['returns'] },
-      { path: 'products', label: 'Products', icon: Inventory2Outlined, aliases: ['inventory'] },
+      { path: 'products', label: 'Products', icon: Inventory2Outlined },
+      { path: 'inventory', label: 'Inventory', icon: WarehouseOutlined },
       { path: 'customers', label: 'Customers', icon: PeopleAltOutlined }
     ]
   },
@@ -38,8 +39,7 @@ export const sellerNavigation: SellerNavSection[] = [
     label: 'TOOLS',
     items: [
       { path: 'live', label: 'Live', icon: LiveTvOutlined },
-      { path: 'analytics', label: 'Analytics', icon: BarChartRounded },
-      { path: 'marketing', label: 'Marketing', icon: CampaignOutlined, aliases: ['discounts', 'flash-sales'] },
+      { path: 'discounts', label: 'Discounts', icon: LocalOfferOutlined },
       { path: 'wallet', label: 'Finance', icon: AccountBalanceOutlined, aliases: ['finance'] },
       { path: 'shipping', label: 'Shipping & Fulfillment', icon: LocalShippingOutlined }
     ]
