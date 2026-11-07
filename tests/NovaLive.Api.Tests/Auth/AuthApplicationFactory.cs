@@ -15,6 +15,8 @@ using Moq;
 using NovaLive.Application.Abstractions.Auth;
 using NovaLive.Application.Abstractions.Persistence;
 using NovaLive.Application.Abstractions.Services;
+using NovaLive.Application.Abstractions.ThirdParty;
+using NovaLive.Contracts.V1.Payments;
 using NovaLive.Domain.Common;
 using NovaLive.Infrastructure.Persistence;
 using NovaLive.Infrastructure.Persistence.Seeding;
@@ -94,10 +96,39 @@ internal sealed class AuthApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton(CreateCache());
             services.RemoveAll<IIdempotencyService>();
             services.AddSingleton(Mock.Of<IIdempotencyService>());
+            services.RemoveAll<IVietQrPaymentAdapter>();
+            services.AddSingleton(CreateVietQrAdapter());
             services.RemoveAll<IMigrationService>();
             services.AddScoped<IMigrationService>(provider => new SqliteInitialization(provider.GetRequiredService<AppDbContext>(),
                 provider.GetServices<IDataSeeder>(), this));
         });
+    }
+
+    private static IVietQrPaymentAdapter CreateVietQrAdapter()
+    {
+        var adapter = new Mock<IVietQrPaymentAdapter>();
+        adapter.SetupGet(item => item.GatewayName).Returns("VietQR");
+        adapter.Setup(item => item.GenerateDynamicQrAsync(
+                It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string orderCode, decimal amount, string? description, CancellationToken _) =>
+                new VietQrResponse(
+                    $"VIETQR-{orderCode}",
+                    "data:image/png;base64,dGVzdA==",
+                    "NOVALIVE TEST",
+                    "0000123456789",
+                    "970422",
+                    amount,
+                    description ?? orderCode,
+                    "dGVzdA=="));
+        adapter.Setup(item => item.CreatePaymentIntentAsync(It.IsAny<PaymentIntentRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PaymentIntentRequest request, CancellationToken _) =>
+                new PaymentIntentResult(request.PaymentId.ToString("N"), null, $"VIETQR-{request.PaymentId:N}"));
+        adapter.Setup(item => item.VerifyWebhookSignature(It.IsAny<string>(), It.IsAny<string?>())).Returns(true);
+        adapter.Setup(item => item.ExtractOrderCode(It.IsAny<string>()))
+            .Returns((string content) => content);
+        adapter.Setup(item => item.IsExpectedReceivingAccount(It.IsAny<string?>())).Returns(true);
+        adapter.Setup(item => item.IsExpectedOrderId(It.IsAny<string>(), It.IsAny<string?>())).Returns(true);
+        return adapter.Object;
     }
 
     private ICacheService CreateCache()

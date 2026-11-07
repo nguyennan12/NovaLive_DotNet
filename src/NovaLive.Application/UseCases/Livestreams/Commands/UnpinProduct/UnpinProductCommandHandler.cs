@@ -45,7 +45,7 @@ public sealed class UnpinProductCommandHandler(
         if (command.SkuId.HasValue)
         {
             productToUnpin = await productRepository.GetBySessionAndSkuAsync(session.Id, command.SkuId.Value, ct);
-            if (productToUnpin is null || !productToUnpin.IsPinned)
+            if (productToUnpin is null)
             {
                 return LivestreamErrors.ProductNotPinned;
             }
@@ -59,8 +59,7 @@ public sealed class UnpinProductCommandHandler(
             }
         }
 
-        productToUnpin.Unpin();
-        productRepository.Update(productToUnpin);
+        productRepository.Delete(productToUnpin);
 
         afterCommit.Add(async token => await notificationService.BroadcastProductUnpinnedAsync(session.Id, productToUnpin.SkuId, token));
 

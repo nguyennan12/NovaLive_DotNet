@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { verifyUserAPI } from '~/common/apis/services/userService'
 import { resendMailAPI } from '~/common/apis/services/userService'
+import { getApiErrorMessage } from '~/common/utils/formatters'
 
 const OTP_LENGTH = 6
 const RESEND_COOLDOWN = 60
@@ -77,11 +78,19 @@ function VerifyEmailForm() {
     try {
       await toast.promise(
         verifyUserAPI({ userId, email: registeredEmail, otpCode: code }),
-        { pending: 'Verifying your code...' }
+        {
+          pending: 'Verifying your code...',
+          success: 'Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay.',
+          error: {
+            render({ data: err }) {
+              return getApiErrorMessage(err, 'Xác thực thất bại. Vui lòng kiểm tra lại mã OTP.')
+            }
+          }
+        }
       )
       navigate(`/login?verifiedEmail=${encodeURIComponent(registeredEmail)}`)
     } catch {
-      // error handled by API Interceptor
+      // error handled by toast.promise
     } finally {
       setLoading(false)
     }
@@ -95,8 +104,16 @@ function VerifyEmailForm() {
 
     toast.promise(
       resendMailAPI({ email: registeredEmail }),
-      { pending: 'Sending a new code...', success: 'New code sent to your email!' }
-    )
+      {
+        pending: 'Sending a new code...',
+        success: 'Mã OTP mới đã được gửi!',
+        error: {
+          render({ data: err }) {
+            return getApiErrorMessage(err, 'Không thể gửi lại mã OTP. Vui lòng thử lại sau.')
+          }
+        }
+      }
+    ).catch(() => {})
   }
 
   const gradientBg = 'linear-gradient(90deg, #3465c8, #69aedc, #8acdde)'

@@ -2,14 +2,17 @@ import styled from '@emotion/styled'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import { Avatar, Box, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { uploadAvatarAPI } from '~/common/apis/services/uploadService'
 import { updateMyProfileAPI } from '~/common/apis/services/userService'
 import { useUpload } from '~/common/hooks/useUpload'
-import { selectCurrentUser } from '~/store/user/userSlice'
+import { resolveMediaUrl } from '~/common/utils/formatters'
+import { useShop } from '~/features/Shop/hooks/useShop'
+import { selectCurrentUser, setCurrentUser } from '~/store/user/userSlice'
 import { glassSx } from '~/theme'
 import ProfileActionButton from '../../shared/renderActionButton'
+
 const Banner = styled(Box)({
   height: 160,
   background: 'linear-gradient(135deg, #0095ff 0%, #14c3eb 40%, #8b5cf6 100%)',
@@ -38,27 +41,49 @@ function UserHeaderSkeleton() {
 
 const UserProfileHeader = ({ profile, isLoading }) => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const currentUser = useSelector(selectCurrentUser)
+  const { shop } = useShop()
   const queryClient = useQueryClient()
+
+  const shopStatus = shop?.shop_status?.toLowerCase()
+  const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
+  const isShop = roles.some(role => String(role).toLowerCase() === 'seller')
+  const isPendingApproval = shopStatus === 'pending'
 
   const uploadAvatar = useUpload({
     api: async (file) => {
       const uploaded = await uploadAvatarAPI(file)
-      await updateMyProfileAPI({
-        fullName: profile?.user_name || '',
-        phone: profile?.user_phone || null,
-        birthday: profile?.user_birthday || null,
-        gender: profile?.user_gender || null,
-        avatarUrl: uploaded?.url
+      const updatedUrl = uploaded?.url || uploaded?.Url || (typeof uploaded === 'string' ? uploaded : null)
+      const updatedProfile = await updateMyProfileAPI({
+        fullName: profile?.user_name || currentUser?.user_name || '',
+        phone: profile?.user_phone || currentUser?.user_phone || null,
+        birthday: profile?.user_birthday || currentUser?.user_birthday || null,
+        gender: profile?.user_gender || currentUser?.user_gender || null,
+        avatarUrl: updatedUrl
       })
+
+      if (currentUser && updatedUrl) {
+        dispatch(setCurrentUser({
+          ...currentUser,
+          user_avatar: updatedUrl,
+          avatarUrl: updatedUrl
+        }))
+      }
+
+      return updatedProfile
     },
-    afterUpload: () => queryClient.refetchQueries({ queryKey: ['my_profile', profile?._id] }),
+    afterUpload: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_profile'] })
+    },
     pendingMsg: 'Đang tải lên ảnh đại diện...',
-    successMsg: 'Uploaded avatar!',
-    errorMsg: 'Upload avatar failed!'
+    successMsg: 'Cập nhật ảnh đại diện thành công!',
+    errorMsg: 'Cập nhật ảnh đại diện thất bại!'
   })
 
   if (isLoading) return <UserHeaderSkeleton />
+
+  const avatarSrc = resolveMediaUrl(profile?.user_avatar || currentUser?.user_avatar || '')
 
   return (
     <Box sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', ...glassSx }}>
@@ -66,7 +91,7 @@ const UserProfileHeader = ({ profile, isLoading }) => {
       <Box sx={{ px: 3, pb: 3, position: 'relative' }}>
         <Box sx={{ position: 'relative', display: 'inline-block', mt: '-48px', mb: 1 }}>
           <Avatar
-            src={profile?.user_avatar || ''}
+            src={avatarSrc}
             sx={{
               width: 96, height: 96,
               border: '4px solid #fff',
@@ -77,6 +102,7 @@ const UserProfileHeader = ({ profile, isLoading }) => {
           >
             {profile?.user_name?.[0]?.toUpperCase()}
           </Avatar>
+          <input {...uploadAvatar.fileInputProps} />
           <Tooltip title="Đổi ảnh đại diện">
             <IconButton
               size="small"
@@ -89,7 +115,6 @@ const UserProfileHeader = ({ profile, isLoading }) => {
               }}
               onClick={uploadAvatar.openFileDialog}
             >
-              <input {...uploadAvatar.fileInputProps} />
               <CameraAltIcon sx={{ fontSize: 13 }} />
             </IconButton>
           </Tooltip>
@@ -105,7 +130,12 @@ const UserProfileHeader = ({ profile, isLoading }) => {
             </Typography>
           </Box>
           <Stack sx={{ gap: 1, flexDirection: 'row', alignItems: 'flex-start', pt: { xs: 0, sm: 0.5 } }}>
-            <ProfileActionButton currentUser={currentUser} isShop={false} navigate={navigate} />
+            <ProfileActionButton
+              currentUser={currentUser}
+              isShop={isShop}
+              isPendingApproval={isPendingApproval}
+              navigate={navigate}
+            />
           </Stack>
         </Stack>
       </Box>

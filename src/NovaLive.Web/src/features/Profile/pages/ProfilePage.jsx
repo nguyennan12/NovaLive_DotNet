@@ -13,7 +13,9 @@ import { useProfileMutation } from '../hooks/useProfileMutation'
 
 function ProfilePage() {
   const currentUser = useSelector(selectCurrentUser)
-  const isShop = !!(currentUser?.shopId || currentUser?.user_shop)
+  const roles = Array.isArray(currentUser?.roles) ? currentUser.roles : [currentUser?.role].filter(Boolean)
+  const hasSellerRole = roles.some(role => String(role).toLowerCase() === 'seller')
+  const isShop = hasSellerRole
 
   const { profile, isLoading } = useProfile()
   const { updateProfile, isUpdating, changePassword, isChangingPassword } = useProfileMutation()

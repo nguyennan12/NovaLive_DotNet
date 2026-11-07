@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getActiveSessionsAPI } from '~/common/apis/services/liveService'
+
 export const useLiveFeed = () => {
   const [lives, setLives] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -9,32 +10,54 @@ export const useLiveFeed = () => {
   const nextCursorRef = useRef(null)
   const hasMoreRef = useRef(true)
 
-  useEffect(() => {
-    const fetchInitial = async () => {
-      try {
-        const res = await getActiveSessionsAPI({ limit: 5 })
-        setLives(res.lives)
-        nextCursorRef.current = res.nextCursor
-        hasMoreRef.current = res.hasMore
-      } catch {
-        // console.error(err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchInitial = useCallback(async (isPolling = false) => {
+    try {
+      const res = await getActiveSessionsAPI({ limit: 5 })
+      const fetched = res.lives || []
+      setLives(prev => {
+        if (isPolling) {
+          // If we had no lives and now we have, or list length changed:
+          if (prev.length === 0 && fetched.length > 0) return fetched
+          return prev
+        }
+        return fetched
+      })
+      nextCursorRef.current = res.nextCursor
+      hasMoreRef.current = res.hasMore
+    } catch {
+      // Handle error
+    } finally {
+      if (!isPolling) setLoading(false)
     }
-    fetchInitial()
   }, [])
+
+  useEffect(() => {
+    fetchInitial(false)
+  }, [fetchInitial])
+
+  // Poll for new live sessions when list is empty
+  useEffect(() => {
+    let timer = null
+    if (lives.length === 0) {
+      timer = setInterval(() => {
+        fetchInitial(true)
+      }, 3000)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [lives.length, fetchInitial])
 
   const fetchMore = useCallback(async () => {
     if (loadingMore || !hasMoreRef.current) return
     setLoadingMore(true)
     try {
       const res = await getActiveSessionsAPI({ limit: 5, cursor: nextCursorRef.current })
-      setLives(prev => [...prev, ...res.lives])
+      setLives(prev => [...prev, ...(res.lives || [])])
       nextCursorRef.current = res.nextCursor
       hasMoreRef.current = res.hasMore
     } catch {
-      //conso
+      // Handle error
     } finally {
       setLoadingMore(false)
     }
@@ -50,6 +73,13 @@ export const useLiveFeed = () => {
   const goPrev = () => {
     if (currentIndex <= 0) return
     setCurrentIndex(prev => prev - 1)
+  }
+
+  const selectLiveById = (id) => {
+    const idx = lives.findIndex(l => (l.id || l._id) === id)
+    if (idx !== -1) {
+      setCurrentIndex(idx)
+    }
   }
 
   const touchStartY = useRef(null)
@@ -79,5 +109,16 @@ export const useLiveFeed = () => {
     }, 500)
   }, [currentIndex, lives.length])
 
-  return { lives, currentIndex, goNext, goPrev, loadingMore, handleTouchEnd, handleTouchStart, handleWheel, loading }
+  return {
+    lives,
+    currentIndex,
+    goNext,
+    goPrev,
+    selectLiveById,
+    loadingMore,
+    handleTouchEnd,
+    handleTouchStart,
+    handleWheel,
+    loading
+  }
 }

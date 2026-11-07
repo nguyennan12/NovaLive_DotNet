@@ -53,7 +53,7 @@ const StockOutForm = ({ skus }) => {
     await adjustStock({
       skuId,
       qtyChange: -Math.abs(Number(data.stock)),
-      changeType: data.reason === 'damaged' ? 'Damage' : 'Adjustment',
+      changeType: 'ManualAdjust',
       note: data.note || `Xuất kho: ${data.reason || 'Lý do khác'}`
     })
     reset()
@@ -73,7 +73,7 @@ const StockOutForm = ({ skus }) => {
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit, onError)}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
         >
           {/* Product select */}
           <Controller
@@ -85,11 +85,6 @@ const StockOutForm = ({ skus }) => {
                 {...field}
                 options={skus}
                 getOptionLabel={(o) => `${o.spu_name} — ${o.sku_id}`}
-                onInputChange={(_, value, reason) => {
-                  if (reason === 'input' || reason === 'clear') {
-                    setParams(prev => ({ ...prev, keyword: value, page: 1 }))
-                  }
-                }}
                 value={value ?? null}
                 onChange={(_, data) => onChange(data)}
                 renderInput={(params) => (
@@ -225,8 +220,6 @@ const StockOutForm = ({ skus }) => {
               <TextField
                 label='Note'
                 size='small'
-                multiline
-                rows={2}
                 {...field}
                 placeholder='e.g. Order #8821, transfer to warehouse B...'
                 sx={fieldSx}

@@ -17,7 +17,7 @@ const LiveHost = ({ liveId, liveProducts = [], onOpenProducts }) => {
   const [confirmEnd, setConfirmEnd] = useState(false)
 
   const {
-    status, isMicOn,
+    status, isMicOn, micError,
     isCamOn, duration,
     videoContainerRef,
     startLive, endLive,
@@ -44,7 +44,7 @@ const LiveHost = ({ liveId, liveProducts = [], onOpenProducts }) => {
         <>
           <LiveHeader duration={duration} />
           <LiveControls
-            toggleMic={toggleMic} isMicOn={isMicOn}
+            toggleMic={toggleMic} isMicOn={isMicOn} micError={micError}
             setConfirmEnd={setConfirmEnd}
             toggleCam={toggleCam} isCamOn={isCamOn}
           />

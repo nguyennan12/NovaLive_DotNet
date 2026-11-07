@@ -9,6 +9,7 @@ using NovaLive.Application.UseCases.Shops.Commands.UpdateShopInfo;
 using NovaLive.Application.Common.Messaging;
 using NovaLive.Application.Common.Behaviors;
 using NovaLive.Application.UseCases.Shops.Queries.GetMyShop;
+using NovaLive.Application.UseCases.Shops.Queries.GetFollowedShops;
 using NovaLive.Application.UseCases.Shops.Queries.GetSellerShop;
 using NovaLive.Application.UseCases.Shops.Queries.GetShopAddresses;
 using NovaLive.Contracts.V1.Shops;
@@ -107,11 +108,12 @@ public sealed class ShopValidationTests
         var requests = typeof(RegisterShopCommand).Assembly.GetTypes().Where(t =>
             t.Namespace?.StartsWith("NovaLive.Application.UseCases.Shops.") == true && !t.IsAbstract &&
             t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(MediatR.IRequest<>))).ToList();
-        requests.Should().HaveCount(14);
+        requests.Should().HaveCount(15);
         foreach (var request in requests)
         {
             var validatorType = typeof(IValidator<>).MakeGenericType(request);
-            if (request == typeof(GetMyShopQuery) || request == typeof(GetShopAddressesQuery) || request == typeof(GetSellerShopQuery))
+            if (request == typeof(GetMyShopQuery) || request == typeof(GetShopAddressesQuery)
+                || request == typeof(GetSellerShopQuery) || request == typeof(GetFollowedShopsQuery))
                 services.Should().NotContain(s => s.ServiceType == validatorType);
             else
             {

@@ -21,7 +21,6 @@ import {
   Alert,
   CircularProgress,
   IconButton,
-  Divider,
   Grid
 } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -29,7 +28,6 @@ import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRou
 import GavelRoundedIcon from '@mui/icons-material/GavelRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
-import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import { useNavigate } from 'react-router-dom'
 import { formatDate, formatVND } from '~/common/utils/formatters'
@@ -37,12 +35,12 @@ import { getMyReturnsAPI } from '~/common/apis/services/returnService'
 
 const RETURN_STATUS_CONFIG = {
   Pending: { label: 'Chờ Shop xử lý', color: '#f59e0b', bgcolor: '#fef3c7', border: '#fde68a' },
-  SellerApproved: { label: 'Shop đã duyệt (Gửi hàng)', color: '#0095ff', bgcolor: '#eff6ff', border: '#bfdbfe' },
+  SellerApproved: { label: 'Shop đã duyệt gửi hàng', color: '#0095ff', bgcolor: '#eff6ff', border: '#bfdbfe' },
   SellerRejected: { label: 'Shop từ chối', color: '#dc2626', bgcolor: '#fef2f2', border: '#fecaca' },
   AdminDispute: { label: 'Đang phân xử bởi Admin', color: '#8b5cf6', bgcolor: '#f5f3ff', border: '#ddd6fe' },
   Completed: { label: 'Hoàn tiền thành công', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
-  BuyerWins: { label: 'Buyer thắng (Đang hoàn tiền)', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
-  SellerWins: { label: 'Seller thắng (Từ chối hoàn)', color: '#64748b', bgcolor: '#f1f5f9', border: '#e2e8f0' }
+  BuyerWins: { label: 'Buyer thắng đang hoàn tiền', color: '#16a34a', bgcolor: '#f0fdf4', border: '#bbf7d0' },
+  SellerWins: { label: 'Seller thắng từ chối hoàn', color: '#64748b', bgcolor: '#f1f5f9', border: '#e2e8f0' }
 }
 
 const REASON_MAP = {
@@ -58,6 +56,7 @@ export default function BuyerReturnsPage() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [returns, setReturns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [selectedReturn, setSelectedReturn] = useState(null)
 
   const fetchReturns = async () => {
@@ -66,71 +65,11 @@ export default function BuyerReturnsPage() {
       const res = await getMyReturnsAPI()
       const items = res?.items || res || []
       setReturns(Array.isArray(items) ? items : [])
+      setLoadError('')
     } catch (err) {
-      console.warn('API getMyReturns error, loading sample data for preview:', err)
-      // Dữ liệu mẫu minh họa tiến trình xử lý
-      setReturns([
-        {
-          id: 'ret-101',
-          subOrderId: 'sub-8812',
-          subOrderCode: 'NL-20261023-8812',
-          shopName: 'Mỹ Phẩm Cao Cấp Glow & Care',
-          reason: 'Defective',
-          status: 'SellerApproved',
-          requestedRefundAmount: 480000,
-          approvedRefundAmount: 480000,
-          createdAt: new Date(Date.now() - 36 * 3600 * 1000).toISOString(),
-          items: [
-            {
-              orderItemId: 'item-1',
-              spuName: 'Serum Dưỡng Ẩm Phục Hồi Da B5 Glow Serum 50ml',
-              skuCode: 'GLOW-B5-50',
-              quantity: 1,
-              refundPrice: 480000
-            }
-          ],
-          evidenceUrls: [
-            'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80'
-          ],
-          returnAddress: {
-            warehouseName: 'Kho Tổng GlowCare HCM',
-            contactName: 'Trần Thị Mai',
-            contactPhone: '0987654321',
-            detailAddress: '142 Hai Bà Trưng',
-            wardName: 'Phường Đa Kao',
-            districtName: 'Quận 1',
-            provinceName: 'TP. Hồ Chí Minh'
-          },
-          sellerResponse: 'Shop đồng ý nhận lại sản phẩm để đổi mới hoặc hoàn tiền. Quý khách vui lòng gửi hàng về địa chỉ kho trên.'
-        },
-        {
-          id: 'ret-102',
-          subOrderId: 'sub-8813',
-          subOrderCode: 'NL-20261022-8813',
-          shopName: 'TechLab Gaming Gears',
-          reason: 'DamagedInShipping',
-          status: 'AdminDispute',
-          requestedRefundAmount: 1250000,
-          approvedRefundAmount: null,
-          createdAt: new Date(Date.now() - 60 * 3600 * 1000).toISOString(),
-          items: [
-            {
-              orderItemId: 'item-2',
-              spuName: 'Bàn phím cơ không dây RGB 87 phím Red Switch',
-              skuCode: 'KEY-RGB-RED-87',
-              quantity: 1,
-              refundPrice: 1250000
-            }
-          ],
-          evidenceUrls: [
-            'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&auto=format&fit=crop&q=80'
-          ],
-          sellerResponse: 'Hộp sản phẩm xuất kho có niêm phong nguyên vẹn. Shop từ chối giải quyết.',
-          sellerEvidenceUrls: [
-            'https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&auto=format&fit=crop&q=80'
-          ]
-        }
-      ])
+      console.error('Unable to load buyer return requests:', err)
+      setReturns([])
+      setLoadError(err.response?.data?.message || 'Không tải được yêu cầu trả hàng. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
@@ -202,6 +141,12 @@ export default function BuyerReturnsPage() {
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
+          </Box>
+        ) : loadError ? (
+          <Box sx={{ p: 3 }}>
+            <Alert severity="error" action={<Button color="inherit" size="small" onClick={fetchReturns}>Thử lại</Button>}>
+              {loadError}
+            </Alert>
           </Box>
         ) : filteredReturns.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>

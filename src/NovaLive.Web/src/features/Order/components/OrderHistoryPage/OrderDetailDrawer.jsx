@@ -22,6 +22,7 @@ import PaymentQrModal from '../shared/PaymentQrModal'
 import OrderStatusTimeline from './OrderStatusTimeline'
 import { SectionBox } from '../shared/SectionOrder'
 import { SectionTitle } from '../shared/SectionOrder'
+import OrderThumbnail from '../shared/OrderThumbnail'
 
 
 // ─── Product ──────────────────────────────────────────────────────
@@ -31,21 +32,12 @@ function ProductRow({ product }) {
   if (!productId) return null
   const name = productId.spu_name || 'Sản phẩm'
   const thumb = productId.spu_thumb
-  const price = productId.spu_price || 0
+  const price = product.price ?? product.unitPrice ?? productId.spu_price ?? 0
+  const lineTotal = product.lineTotal ?? price * quantity
 
   return (
     <Box sx={{ display: 'flex', gap: 1.5, py: 1, ...glassSx }}>
-      <Box
-        component="img"
-        src={thumb}
-        alt={name}
-        sx={{
-          width: 56, height: 56, borderRadius: 1.5,
-          objectFit: 'cover', flexShrink: 0,
-          border: '1px solid', borderColor: 'divider'
-        }}
-        onError={(e) => { e.target.style.display = 'none' }}
-      />
+      <OrderThumbnail src={thumb} alt={name} width={56} height={56} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{
           fontSize: '0.83rem', fontWeight: 600, color: 'primary.contrastText',
@@ -57,7 +49,7 @@ function ProductRow({ product }) {
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
           <Typography sx={{ fontSize: '0.73rem', color: 'rgba(45,45,45,0.5)' }}>x{quantity}</Typography>
           <Typography sx={{ fontSize: '0.83rem', fontWeight: 700, color: 'secondary.main' }}>
-            {formatVND(price * quantity)}
+            {formatVND(lineTotal)}
           </Typography>
         </Box>
       </Box>
@@ -164,10 +156,10 @@ function OrderDetailContent({ orderId, onRequestClose, onOrderUpdated }) {
     : [order_shipping.street, order_shipping.state, order_shipping.city, order_shipping.country]
       .filter(Boolean).join(', ')
 
-  const totalDiscount = order_checkout.totalDiscount || 0
-  const feeShip = order_checkout.feeShip || 0
-  const totalPrice = order_checkout.totalPrice || 0
-  const finalCheckout = order_checkout.finalCheckout || 0
+  const totalDiscount = order_checkout.totalDiscount ?? 0
+  const feeShip = order_checkout.feeShip ?? 0
+  const totalPrice = order_checkout.totalPrice ?? 0
+  const finalCheckout = order_checkout.finalCheckout ?? 0
 
   return (
     <Box>

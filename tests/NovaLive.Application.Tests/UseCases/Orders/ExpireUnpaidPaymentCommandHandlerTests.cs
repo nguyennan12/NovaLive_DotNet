@@ -129,6 +129,24 @@ public sealed class ExpireUnpaidPaymentCommandHandlerTests
     }
 
     [Fact]
+    public async Task LegacyPaymentWithoutReservationLedger_ExpiresWithoutChangingInventory()
+    {
+        var c = await InventorySaleTestContext.CreateAsync(false);
+        c.Checkout.Ledger.RemoveAll(h => h.ChangeType == InventoryChangeType.ReserveAdd);
+        foreach (var stock in c.Checkout.Draft.Stocks.Values)
+            stock.TryRelease(stock.ReservedQty, Now(c)).IsSuccess.Should().BeTrue();
+
+        (await Handler(c).Handle(new(c.Payment.Id), default)).IsSuccess.Should().BeTrue();
+
+        c.Payment.Status.Should().Be(PaymentStatus.Expired);
+        c.Orders.Parent.PaymentStatus.Should().Be(ParentOrderPaymentStatus.Cancelled);
+        c.Checkout.SubList.Should().OnlyContain(s => s.Status == SubOrderStatus.Cancelled);
+        c.ChangedSkus.Should().BeEmpty();
+        c.Checkout.Ledger.Should().NotContain(h => h.ChangeType == InventoryChangeType.ReserveRelease);
+        c.Checkout.Messages.Should().ContainSingle(m => m.EventType == "OrderCancelledEvent");
+    }
+
+    [Fact]
     public void Validator_RequiresPaymentId()
     {
         var validator = new ExpireUnpaidPaymentCommandValidator();

@@ -7,18 +7,26 @@ export const useUpload = ({ api, afterUpload, pendingMsg, successMsg, errorMsg }
   const openFileDialog = () => inputRef.current?.click()
 
   const onFileChange = async (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files?.[0]
     if (!file) return
     await toast.promise(
-      api(file).then(() => {
-        afterUpload && afterUpload()
+      api(file).then((result) => {
+        afterUpload && afterUpload(result)
+        return result
       }),
       {
-        pending: pendingMsg || 'Đang upload...',
+        pending: pendingMsg || 'Đang tải lên...',
         success: successMsg || 'Tải lên thành công!',
         error: {
           render({ data }) {
-            return data?.message || errorMsg || 'Tải lên thất bại!'
+            return (
+              data?.response?.data?.detail ||
+              data?.response?.data?.title ||
+              data?.response?.data?.message ||
+              data?.message ||
+              errorMsg ||
+              'Tải lên thất bại!'
+            )
           }
         }
       }
@@ -32,7 +40,7 @@ export const useUpload = ({ api, afterUpload, pendingMsg, successMsg, errorMsg }
     fileInputProps: {
       ref: inputRef,
       type: 'file',
-      accept: '.png,.jpg,.jpeg',
+      accept: '.png,.jpg,.jpeg,.webp',
       style: { display: 'none' },
       onChange: onFileChange
     }

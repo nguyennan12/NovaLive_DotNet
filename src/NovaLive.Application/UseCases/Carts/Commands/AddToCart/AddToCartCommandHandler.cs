@@ -5,9 +5,11 @@ using NovaLive.Application.Common.Messaging;
 using NovaLive.Domain.Common;
 using NovaLive.Contracts.V1.Carts;
 using NovaLive.Domain.Carts;
+using NovaLive.Application.UseCases.Livestreams;
 namespace NovaLive.Application.UseCases.Carts.Commands.AddToCart;
 public sealed class AddToCartCommandHandler(ICartRepository carts, ISkuRepository skus,
     ISpuRepository spus, IShopRepository shops, IInventoryRepository inventories,
+    ILivestreamSessionRepository livestreams, ILivestreamProductRepository livestreamProducts,
     ICurrentUser currentUser, IDateTimeProvider clock) : ICommandHandler<AddToCartCommand, CartItemDto>
 {
     public async Task<Result<CartItemDto>> Handle(AddToCartCommand command, CancellationToken ct)
@@ -24,6 +26,14 @@ public sealed class AddToCartCommandHandler(ICartRepository carts, ISkuRepositor
         var shop = await shops.GetActiveByIdAsync(sku.ShopId, ct);
         if (shop is null || shop.DeletedAt is not null || shop.Status != ShopStatus.Active)
             return CartErrors.ShopUnavailable;
+
+        if (command.Request.LivestreamSessionId is { } sessionId)
+        {
+            var session = await livestreams.GetByIdAsync(sessionId, ct);
+            var liveProduct = await livestreamProducts.GetBySessionAndSkuAsync(sessionId, sku.Id, ct);
+            if (session is null || session.Status != LivestreamStatus.Live || session.ShopId != sku.ShopId || liveProduct is null)
+                return LivestreamErrors.ProductNotPinned;
+        }
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
@@ -43,7 +53,8 @@ public sealed class AddToCartCommandHandler(ICartRepository carts, ISkuRepositor
                 cart = new Cart(userId, now);
                 await carts.AddAsync(cart, ct);
             }
-            var result = cart.AddItem(items, sku.Id, sku.ShopId, command.Request.Quantity, sku.SellPrice, now);
+            var result = cart.AddItem(items, sku.Id, sku.ShopId, command.Request.Quantity, sku.SellPrice, now,
+                command.Request.LivestreamSessionId);
             if (result.IsFailure) return result.Error;
             var item = result.Value!;
             if (existing is null) await carts.AddItemAsync(item, ct);

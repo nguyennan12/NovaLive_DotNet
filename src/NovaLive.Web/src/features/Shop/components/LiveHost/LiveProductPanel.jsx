@@ -92,7 +92,7 @@ const LiveProductPanel = ({ liveProducts = [], onAddProduct, onRemoveProduct, is
         ) : (
           liveProducts.map((product) => (
             <LiveProductItem
-              key={product.productId?.toString()}
+              key={(product.skuId || product.productId || product.id)?.toString()}
               product={product}
               onRemove={onRemoveProduct}
             />

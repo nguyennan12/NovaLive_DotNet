@@ -6,5 +6,6 @@ namespace NovaLive.Application.UseCases.Payments.Commands.HandleVietQrWebhook;
 public sealed record HandleVietQrWebhookCommand(
     VietQrWebhookRequest Request,
     string RawBody,
-    string? Signature = null)
+    string? Signature = null,
+    bool IsAuthenticatedCallback = false)
     : ICommand<VietQrWebhookResponse>, ITransactionalCommand;

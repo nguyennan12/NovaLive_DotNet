@@ -3,13 +3,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using System.Text.Json;
 using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.ThirdParty;
+using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
 using NovaLive.Domain.Pricing;
 using NovaLive.Domain.Shipping;
 using NovaLive.Domain.Shops;
+using NovaLive.Domain.System;
 using NovaLive.Domain.Users;
 using NovaLive.Infrastructure.Persistence.Repositories;
 using NovaLive.Infrastructure.Shipping;
@@ -19,6 +22,39 @@ namespace NovaLive.Infrastructure.Tests.Shipping;
 
 public sealed class ShippingDeliveryPersistenceTests
 {
+    [PostgresFact]
+    public async Task SettlementSignalLookup_QueriesJsonbPropertiesWithoutTextOperatorFailure()
+    {
+        await using var host = new AuthTestHost();
+        await host.InitializeAsync(s => s.AddScoped<IOutboxRepository, OutboxRepository>());
+        var shipmentId = Guid.NewGuid();
+        var message = new ShipmentDeliveredEvent(
+            shipmentId,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "GHN",
+            "TRACK-JSONB",
+            host.Clock.UtcNow,
+            IsSellerConfirmedDelivery: true);
+
+        await host.WithDb(async db =>
+        {
+            db.OutboxMessages.Add(new OutboxMessage(
+                nameof(ShipmentDeliveredEvent),
+                JsonSerializer.Serialize(message, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                host.Clock.UtcNow));
+            await db.SaveChangesAsync();
+        });
+
+        using var scope = host.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IOutboxRepository>();
+        (await repository.HasCodSettlementEligibleShipmentDeliveredEventAsync(shipmentId, default))
+            .Should().BeTrue();
+        (await repository.HasCodSettlementEligibleShipmentDeliveredEventAsync(Guid.NewGuid(), default))
+            .Should().BeFalse();
+    }
+
     [Fact]
     public async Task RealRepositoryAndPolling_OnlyDeliverStaleInTransitShippingSubOrders()
     {

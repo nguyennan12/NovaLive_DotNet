@@ -211,3 +211,5 @@ export const DiscountPage = () => {
     </Box>
   )
 }
+
+export default DiscountPage

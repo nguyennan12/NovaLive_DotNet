@@ -15,10 +15,16 @@ public sealed record SellerDashboardReadModel(
     IReadOnlyList<TopSellingSkuReadModel> TopSkus,
     IReadOnlyList<LivestreamPerformanceSummaryReadModel> RecentLives,
     SellerActionSummaryReadModel Actions,
-    WalletOverviewReadModel? WalletOverview);
+    WalletOverviewReadModel? WalletOverview,
+    IReadOnlyList<MonthlyRevenuePointReadModel>? MonthlyRevenue = null);
 
 public sealed record DailyRevenuePointReadModel(
     string Date,
+    decimal Revenue,
+    int OrdersCount);
+
+public sealed record MonthlyRevenuePointReadModel(
+    string Month,
     decimal Revenue,
     int OrdersCount);
 

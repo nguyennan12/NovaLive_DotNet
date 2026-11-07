@@ -11,6 +11,14 @@ public sealed class GetAdminDashboardQueryHandler(IAdminDashboardReadRepository 
     public async Task<Result<AdminDashboardResponse>> Handle(GetAdminDashboardQuery query, CancellationToken ct)
     {
         var data = await dashboardReadRepository.GetAsync(query.From, query.To, ct);
+        var dailyRevenue = data.DailyRevenue?
+            .Select(d => new DailyRevenuePointDto(d.Date, d.Revenue, d.OrdersCount))
+            .ToList() ?? [];
+
+        var monthlyRevenue = data.MonthlyRevenue?
+            .Select(m => new MonthlyRevenuePointDto(m.Month, m.Revenue, m.OrdersCount))
+            .ToList() ?? [];
+
         var response = new AdminDashboardResponse(
             data.TotalGmv,
             data.TotalOrdersCount,
@@ -26,7 +34,9 @@ public sealed class GetAdminDashboardQueryHandler(IAdminDashboardReadRepository 
                 payout.Amount,
                 payout.BankName,
                 payout.BankAccount,
-                payout.ScheduledAt.UtcDateTime)).ToArray());
+                payout.ScheduledAt.UtcDateTime)).ToArray(),
+            dailyRevenue,
+            monthlyRevenue);
 
         return response;
     }

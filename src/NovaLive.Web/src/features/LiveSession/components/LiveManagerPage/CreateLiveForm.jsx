@@ -1,4 +1,4 @@
-import { Box, Button, TextField } from '@mui/material'
+import { Box, Button, TextField, Typography } from '@mui/material'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
@@ -28,7 +28,7 @@ const CreateLiveForm = () => {
       }
       await toast.promise(
         scheduleSession.mutateAsync({ title: data.title, scheduledAt: scheduledAt.toISOString() }),
-        { pending: 'Đang lên lịch live...', success: 'Đã lên lịch phiên live.', error: 'Không thể lên lịch phiên live.' }
+        { pending: 'Đang lên lịch live...', success: 'Đã lên lịch phiên live thành công.', error: 'Không thể lên lịch phiên live.' }
       )
       reset(DEFAULT_VALUES)
       return
@@ -36,7 +36,7 @@ const CreateLiveForm = () => {
 
     const session = await toast.promise(
       createSession.mutateAsync({ title: data.title }),
-      { pending: 'Đang tạo phòng live...', success: 'Đã tạo phòng live.', error: 'Không thể tạo phòng live.' }
+      { pending: 'Đang tạo phòng live...', success: 'Đã tạo phòng live thành công.', error: 'Không thể tạo phòng live.' }
     )
     if (!session?.id) {
       toast.error('API tạo live không trả về mã phiên.')
@@ -54,40 +54,60 @@ const CreateLiveForm = () => {
       <Box
         component='form'
         onSubmit={handleSubmit(onSubmit)}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2.2 }}
       >
-        <Controller
-          name='title'
-          control={control}
-          rules={{ required: 'Title is required', minLength: { value: 3, message: 'Minimum 3 characters' } }}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              label='Tên phiên live *'
-              fullWidth
-              size='small'
-              error={!!errors.title}
-              helperText={errors.title?.message}
-            />
-          )}
-        />
+        <Box>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', mb: 0.6 }}>
+            Tên phiên live *
+          </Typography>
+          <Controller
+            name='title'
+            control={control}
+            rules={{ required: 'Vui lòng nhập tên phiên live', minLength: { value: 3, message: 'Tối thiểu 3 ký tự' } }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                placeholder='Nhập tên phiên livestream (VD: Xả kho siêu sale...)'
+                fullWidth
+                size='small'
+                error={!!errors.title}
+                helperText={errors.title?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    bgcolor: '#f8fafc'
+                  }
+                }}
+              />
+            )}
+          />
+        </Box>
 
-        <Controller
-          name='scheduledAt'
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              type='datetime-local'
-              label='Lên lịch (để trống để bắt đầu ngay)'
-              fullWidth
-              size='small'
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: toLocalDateTime(new Date()) }}
-              helperText='Thời gian được tính theo múi giờ thiết bị.'
-            />
-          )}
-        />
+        <Box>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', mb: 0.6 }}>
+            Lên lịch phát sóng (để trống để bắt đầu ngay)
+          </Typography>
+          <Controller
+            name='scheduledAt'
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type='datetime-local'
+                fullWidth
+                size='small'
+                inputProps={{ min: toLocalDateTime(new Date()) }}
+                helperText='Thời gian được tính theo múi giờ thiết bị của bạn.'
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    bgcolor: '#f8fafc'
+                  }
+                }}
+              />
+            )}
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', mt: 0.5 }}>
           <Button
@@ -96,11 +116,17 @@ const CreateLiveForm = () => {
             disableElevation
             disabled={createSession.isPending || scheduleSession.isPending}
             sx={{
-              background: 'linear-gradient(90deg, #74a2ffff, #69aedc, #8acdde)',
-              borderRadius: '8px',
+              bgcolor: '#2563eb',
+              borderRadius: '10px',
               fontWeight: 600,
               px: 3,
-              color: '#fff'
+              py: 1,
+              textTransform: 'none',
+              color: '#ffffff',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+              '&:hover': {
+                bgcolor: '#1d4ed8'
+              }
             }}
           >
             {scheduleSession.isPending ? 'Đang lên lịch…' : 'Tạo phiên live'}

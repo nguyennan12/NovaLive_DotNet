@@ -57,7 +57,7 @@ public sealed class GetNotificationsQueryHandler(
             item.IsRead,
             item.RefId.HasValue && item.RefType == "SubOrder"
                 ? $"/seller/orders/{item.RefId.Value}"
-                : "/seller/notifications",
+                : (item.RefType == "ParentOrder" ? "/orders" : null),
             item.CreatedAt)).ToList();
 
         return PagedResult<NotificationResponse>.Create(response, page, size, total);

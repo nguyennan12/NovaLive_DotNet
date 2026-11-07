@@ -52,10 +52,10 @@ public static class OrderMappings
         if (children.Count == 0) return "pending";
         if (children.All(s => s.Status == SubOrderStatus.Cancelled)) return "cancelled";
         if (children.Any(s => s.Status == SubOrderStatus.PendingPayment)) return "pending";
-        if (children.Any(s => s.Status is SubOrderStatus.Confirmed or SubOrderStatus.Processing)) return "processing";
+        if (children.Any(s => s.Status is SubOrderStatus.Confirmed or SubOrderStatus.Processing)) return "confirmed";
         if (children.Any(s => s.Status == SubOrderStatus.Shipping)) return "shipped";
         if (children.All(s => s.Status is SubOrderStatus.Delivered or SubOrderStatus.Completed or SubOrderStatus.Cancelled)) return "delivered";
-        return "processing";
+        return "confirmed";
     }
     public static SubOrderListItemResponse ToListItem(this SubOrder s) =>
         new(s.Id, s.ParentOrderId, s.SubOrderCode, s.ShopId, s.SubTotal, s.Status.ToString(), s.CreatedAt);
@@ -67,7 +67,7 @@ public static class OrderMappings
             s.Id, s.ParentOrderId, s.SubOrderCode, s.ShopId, s.WarehouseAddressId, s.OrderSource.ToString(), parent.Recipient(),
             s.ItemAmount, s.ShippingFee, s.ShopDiscountAmount, s.PlatformDiscountAmount, s.ShippingDiscountAmount,
             s.SubTotal, s.Status.ToString(), s.CancelReason, parent.PaymentStatus.ToString(), payment?.Method.ToString() ?? "Unknown",
-            s.CreatedAt, items.Where(i => i.SubOrderId == s.Id).Select(i => new OrderItemDetailResponse(
+            s.CreatedAt, s.DeliveredAt, items.Where(i => i.SubOrderId == s.Id).Select(i => new OrderItemDetailResponse(
                 i.Id, i.SkuId, i.SkuSnapshotJson, i.Quantity, i.UnitPrice, i.OriginalPrice, i.DiscountAmount, i.LineTotal)).ToArray(),
             history.Where(h => h.SubOrderId == s.Id).OrderBy(h => h.ChangedAt).ThenBy(h => h.FromStatus is null ? 0 : 1)
                 .ThenBy(h => h.Id).Select(h => new OrderTimelineResponse(h.FromStatus, h.ToStatus,

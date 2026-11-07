@@ -77,7 +77,8 @@ public sealed class PostgresCartConcurrencyTests
                 return saved;
             });
             var handler = new AddToCartCommandHandler(forward.Object, new SkuRepository(db), new SpuRepository(db),
-                new ShopRepository(db), new InventoryRepository(db), host.CurrentUser.Object, host.Clock);
+                new ShopRepository(db), new InventoryRepository(db), new LivestreamSessionRepository(db),
+                new LivestreamProductRepository(db), host.CurrentUser.Object, host.Clock);
             return await scope.ServiceProvider.GetRequiredService<ITransactionManager>()
                 .ExecuteAsync(() => handler.Handle(new(new(sku.Id, 2)), default), false, default);
         }

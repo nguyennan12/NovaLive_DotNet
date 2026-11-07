@@ -13,6 +13,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { registerUserAPI } from '~/common/apis/services/userService'
+import { getApiErrorMessage } from '~/common/utils/formatters'
 import FieldErrorAlert from '~/common/components/common/form/FieldErrorAlert'
 import AuthHeader from './AuthHeader'
 import { authCardSx, authInputSx, authButtonSx } from '../authStyles'
@@ -34,12 +35,23 @@ function RegisterForm() {
 
   const onSubmitRegister = (data) => {
     const { fullName, phone, email, password } = data
-    toast.promise(registerUserAPI({ email, phone, fullName, password }),
-      { pending: 'Registration is in progress...' }
+    toast.promise(
+      registerUserAPI({ email, phone, fullName, password }),
+      {
+        pending: 'Registration is in progress...',
+        success: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra mã OTP để kích hoạt.',
+        error: {
+          render({ data: err }) {
+            return getApiErrorMessage(err, 'Đăng ký thất bại. Vui lòng thử lại.')
+          }
+        }
+      }
     ).then((response) => {
       const emailTarget = response?.email || response?.user?.user_email || email
       const userId = response?.userId || response?.id || ''
       navigate(`/verify?registeredEmail=${encodeURIComponent(emailTarget)}&userId=${encodeURIComponent(userId)}`)
+    }).catch(() => {
+      // Error handled by toast.promise
     })
   }
 

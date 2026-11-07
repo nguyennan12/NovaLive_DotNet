@@ -23,4 +23,5 @@ public record FlashSaleItemResponse(
     int ReservedQty,
     int PerUserLimit,
     string Status,
-    string? RejectionReason = null);
+    string? RejectionReason = null,
+    int TotalSoldCount = 0);

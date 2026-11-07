@@ -25,8 +25,15 @@ export const getInfoShopAPI = async (shopId) => {
 }
 
 export const getShopByUserAPI = async () => {
-  const response = await authorizedAxiosInstance.get('shops/me')
-  return normalizeShop(response?.data !== undefined ? response.data : response)
+  try {
+    const response = await authorizedAxiosInstance.get('shops/me')
+    return normalizeShop(response?.data !== undefined ? response.data : response)
+  } catch (error) {
+    if (error?.response?.status === 404) {
+      return null
+    }
+    throw error
+  }
 }
 
 export const registerShopAPI = async (data) => {
@@ -76,4 +83,19 @@ export const followShopAPI = async (shopId) => {
 export const unfollowShopAPI = async (shopId) => {
   const response = await authorizedAxiosInstance.delete(`shops/${shopId}/follow`)
   return response?.data !== undefined ? response.data : response
+}
+
+export const getFollowedShopsAPI = async () => {
+  const response = await authorizedAxiosInstance.get('shops/followed')
+  const raw = response?.data !== undefined ? response.data : response
+  const items = Array.isArray(raw) ? raw : (raw?.items || [])
+  return items.map(shop => ({
+    id: shop.id,
+    shopName: shop.shopName,
+    slug: shop.slug,
+    logoUrl: shop.logoUrl,
+    description: shop.description,
+    isLive: Boolean(shop.isLive),
+    activeLiveId: shop.activeLiveId
+  }))
 }

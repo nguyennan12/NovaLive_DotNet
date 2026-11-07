@@ -11,7 +11,9 @@ export const buildQueryParamsProducts = (filters) => {
 
     const validCategories = categories.filter(c => c && c !== 'all')
     if (validCategories.length > 0) {
-        params.category = validCategories.map(formatStringToSlug)
+        const catSlug = formatStringToSlug(validCategories[0])
+        params.category = catSlug
+        params.categorySlug = catSlug
     }
 
     if (filters.keyword && filters.keyword.trim()) { params.keyword = filters.keyword.trim() }
@@ -62,6 +64,7 @@ export const buildFlattenedSkus = (skus) => {
             })
         } else {
             list.push({
+                sku_id: spu._id,
                 spu_id: spu._id,
                 spu_name: spu.spu_name,
                 spu_code: spu.spu_code,

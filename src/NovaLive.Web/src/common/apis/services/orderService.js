@@ -45,15 +45,17 @@ export const normalizeOrder = (o) => {
     ? null
     : subStatuses.every((value) => value === 'cancelled')
       ? 'cancelled'
-      : subStatuses.includes('pendingpayment')
+      : subStatuses.some((value) => ['pendingpayment', 'pending'].includes(value))
         ? 'pending'
-        : subStatuses.some((value) => ['confirmed', 'processing'].includes(value))
-          ? 'processing'
-          : subStatuses.includes('shipping')
-            ? 'shipped'
-            : subStatuses.every((value) => ['delivered', 'completed', 'cancelled'].includes(value))
-              ? 'delivered'
-              : 'processing'
+        : subStatuses.some((value) => value === 'confirmed')
+          ? 'confirmed'
+          : subStatuses.includes('processing')
+            ? 'confirmed'
+            : subStatuses.includes('shipping')
+              ? 'shipped'
+              : subStatuses.every((value) => ['delivered', 'completed', 'cancelled'].includes(value))
+                ? 'delivered'
+                : 'confirmed'
   const status = String(o.status || o.order_status || detailStatus || o.paymentStatus || 'pending').toLowerCase()
 
   let rawItems = o.items || o.order_products || []
@@ -71,7 +73,13 @@ export const normalizeOrder = (o) => {
           id: it.id,
           skuId: it.skuId,
           quantity: it.quantity,
-          price: it.unitPrice ?? it.originalPrice ?? 0,
+          price: it.unitPrice ?? it.price ?? it.originalPrice ?? (it.quantity > 0 ? it.lineTotal / it.quantity : 0),
+          lineTotal: it.lineTotal,
+          subOrderId: sub.id,
+          subOrderCode: sub.code || sub.subOrderCode,
+          subOrderStatus: sub.status,
+          deliveredAt: sub.deliveredAt,
+          shopId: sub.shopId,
           spuName: snapshot.SpuName || snapshot.spuName || snapshot.name || 'Sản phẩm',
           thumbnailUrl: snapshot.ThumbnailUrl || snapshot.thumbnailUrl || snapshot.thumb || '',
           shopName: sub.shopName || 'Nova Flagship Store'
@@ -88,10 +96,12 @@ export const normalizeOrder = (o) => {
     orderCode: code,
     order_status: status,
     order_checkout: {
-      finalCheckout: total,
-      finalTotal: total,
-      totalPrice: total,
-      ...o.order_checkout
+      ...o.order_checkout,
+      finalCheckout: o.grandTotal ?? o.order_checkout?.finalCheckout ?? o.order_checkout?.finalTotal ?? total,
+      finalTotal: o.grandTotal ?? o.order_checkout?.finalTotal ?? o.order_checkout?.finalCheckout ?? total,
+      totalPrice: o.totalItemAmount ?? o.order_checkout?.totalPrice ?? total,
+      feeShip: o.totalShippingFee ?? o.order_checkout?.feeShip ?? o.order_checkout?.shippingFee ?? 0,
+      totalDiscount: o.totalDiscountAmount ?? o.order_checkout?.totalDiscount ?? 0
     },
     order_payment: {
       paymentStatus: (o.paymentStatus || o.order_payment?.paymentStatus || 'pending').toLowerCase(),
@@ -107,7 +117,8 @@ export const normalizeOrder = (o) => {
           shop_name: p.shopName || o.shopName || p.productId?.spu_shopId?.shop_name || 'Nova Flagship Store'
         }
       },
-      price: p.price ?? 0,
+      price: p.price ?? p.unitPrice ?? p.originalPrice ?? 0,
+      lineTotal: p.lineTotal,
       quantity: p.quantity ?? 1
     }))
   }
@@ -117,7 +128,7 @@ export const getMyOrdersAPI = async (filters = {}) => {
   const params = new URLSearchParams()
   if (filters.status && filters.status !== 'all') params.append('status', filters.status)
   if (filters.page) params.append('page', filters.page)
-  if (filters.size || filters.limit) params.append('size', filters.size || filters.limit)
+  if (filters.size || filters.limit) params.append('size', Math.min(Number(filters.size || filters.limit), 100))
   if (filters.from) params.append('from', filters.from)
   if (filters.to) params.append('to', filters.to)
 
@@ -163,19 +174,13 @@ export const createMomoPaymentAPI = async ({ orderId, orderInfo = 'Thanh toan do
   })
 }
 
-export const getPaymentStatusAPI = async (orderId) => {
-  try {
-    const res = await authorizedAxiosInstance.get(`orders/${orderId}`)
-    const order = res?.data !== undefined ? res.data : res
-    const isPaid = String(order?.paymentStatus || '').toLowerCase() === 'paid'
-    return {
-      status: order?.paymentStatus || (isPaid ? 'Paid' : 'Pending'),
-      isPaid,
-      order
-    }
-  } catch (_e) {
-    return { status: 'Pending', isPaid: false }
-  }
+export const initiatePaymentAPI = async ({ parentOrderId, paymentMethod }, signal) => {
+  return await authorizedAxiosInstance.post('payments/initiate', { parentOrderId, paymentMethod }, { signal })
+}
+
+export const getPaymentStatusAPI = async (paymentId, signal) => {
+  const payment = await authorizedAxiosInstance.get(`payments/${paymentId}/status`, { signal })
+  return { ...payment, isPaid: payment?.status === 'Success' }
 }
 
 // ─── Backward compatibility aliases ──────────────────────────────────────────

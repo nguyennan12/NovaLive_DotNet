@@ -93,6 +93,35 @@ public sealed class ShopRepository(AppDbContext db) : IShopRepository
     public async Task RemoveFollowerAsync(Guid shopId, Guid userId, CancellationToken ct = default) =>
         await db.ShopFollowers.Where(f => f.ShopId == shopId && f.UserId == userId).ExecuteDeleteAsync(ct);
 
+    public async Task<List<Shop>> GetFollowedShopsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var shopIds = await db.ShopFollowers
+            .AsNoTracking()
+            .Where(f => f.UserId == userId)
+            .OrderByDescending(f => f.CreatedAt)
+            .Select(f => f.ShopId)
+            .Take(20)
+            .ToListAsync(ct);
+
+        if (shopIds.Count == 0) return [];
+
+        return await db.Shops
+            .AsNoTracking()
+            .Where(s => shopIds.Contains(s.Id) && s.Status == ShopStatus.Active && s.DeletedAt == null)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Shop>> GetSuggestedShopsAsync(int limit = 10, CancellationToken ct = default)
+    {
+        return await db.Shops
+            .AsNoTracking()
+            .Where(s => s.Status == ShopStatus.Active && s.DeletedAt == null)
+            .OrderByDescending(s => s.RatingAvg)
+            .ThenByDescending(s => s.RatingCount)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+
     public async Task LockOwnerAsync(Guid ownerId, CancellationToken ct = default)
     {
         if (db.Database.IsNpgsql())

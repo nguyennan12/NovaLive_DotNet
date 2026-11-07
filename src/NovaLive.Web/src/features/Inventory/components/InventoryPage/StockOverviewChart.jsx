@@ -50,8 +50,8 @@ const StockOverviewChart = () => {
   const [period, setPeriod] = useState('today')
   const { data = [] } = useStockOverviewChart(period)
   const totals = useMemo(() => {
-    const totalIn = data.reduce((s, d) => s + d.in, 0)
-    const totalOut = data.reduce((s, d) => s + d.out, 0)
+    const totalIn = data.reduce((s, d) => s + Number(d.in || 0), 0)
+    const totalOut = data.reduce((s, d) => s + Number(d.out || 0), 0)
     return { totalIn, totalOut, net: totalIn - totalOut }
   }, [data])
 

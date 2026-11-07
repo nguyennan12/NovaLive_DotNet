@@ -1,29 +1,32 @@
 import ShoppingBagRoundedIcon from '@mui/icons-material/ShoppingBagRounded'
 import { Box, IconButton } from '@mui/material'
 import { useState } from 'react'
-import { useSelector } from 'react-redux'
-import { selectCurrentUser } from '~/store/user/userSlice'
+import { useQuery } from '@tanstack/react-query'
+import { getLiveSessionByIdAPI } from '~/common/apis/services/liveService'
 import { useLiveSocket } from '../../hooks/useLiveSocket'
 import LiveComments from './LiveComments'
 import LiveHeaderInfo from './LiveHeaderInfo'
 import LiveProductListSheet from './LiveProductListSheet'
 
 const LiveOverlay = ({ live }) => {
-  const currentUser = useSelector(selectCurrentUser)
   const [listOpen, setListOpen] = useState(false)
+  const liveId = live?.id || live?._id
+  const { data: detail } = useQuery({
+    queryKey: ['live-session-products', liveId],
+    queryFn: () => getLiveSessionByIdAPI(liveId),
+    enabled: !!liveId,
+    staleTime: 15 * 1000
+  })
+  const initialProducts = detail?.live_products ?? live?.live_products ?? []
 
-  const { viewers, likes, comments, pinnedProduct, sendLike, sendComment, commentError } = useLiveSocket({
-    liveCode: live?.live_code,
-    userId: currentUser?._id,
-    userName: currentUser?.user_name ?? currentUser?.user_email ?? 'Khách',
-    avatar: currentUser?.user_avatar,
-    liveProducts: live?.live_products ?? [],
+  const { viewers, likes, comments, products, sendLike, sendComment, commentError } = useLiveSocket({
+    liveCode: liveId,
+    liveProducts: initialProducts,
     initialViewers: live?.live_metrics?.viewer_count ?? 0,
     initialLikes: live?.live_metrics?.total_likes ?? 0
   })
 
-  const liveProducts = live?.live_products ?? []
-  const liveShop = live?.live_shopId
+  const liveProducts = products
   return (
     <>
       <Box sx={{
@@ -52,12 +55,6 @@ const LiveOverlay = ({ live }) => {
           </IconButton>
         )}
 
-        {/* Pinned product — above comment area */}
-        {/* <PinnedProductCard
-          product={pinnedProduct}
-          onClick={() => pinnedProduct && (onSelectProduct ? onSelectProduct(pinnedProduct) : setListOpen(true))}
-        /> */}
-
         {/* Bottom: comments + like/share */}
         <LiveComments
           comments={comments}
@@ -70,10 +67,10 @@ const LiveOverlay = ({ live }) => {
 
       {/* Product list bottom sheet — outside overlay (not affected by pointer-events: none) */}
       <LiveProductListSheet
+        liveId={liveId}
         open={listOpen}
         onClose={() => setListOpen(false)}
         products={liveProducts}
-        liveShop={liveShop}
       />
     </>
   )

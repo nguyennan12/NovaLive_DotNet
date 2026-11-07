@@ -1,31 +1,6 @@
-import StarRoundedIcon from '@mui/icons-material/StarRounded'
-import { Box, Divider, LinearProgress, Rating, Typography } from '@mui/material'
+import { Box, Divider, Rating, Typography } from '@mui/material'
 
-const StarBar = ({ star, count, total }) => {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, flexShrink: 0, width: 28 }}>
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#555' }}>{star}</Typography>
-        <StarRoundedIcon sx={{ fontSize: 11, color: '#f59e0b' }} />
-      </Box>
-      <LinearProgress
-        variant="determinate"
-        value={pct}
-        sx={{
-          flex: 1, height: 6, borderRadius: 3,
-          bgcolor: '#f0f0f0',
-          '& .MuiLinearProgress-bar': { bgcolor: '#f59e0b', borderRadius: 3 }
-        }}
-      />
-      <Typography sx={{ fontSize: '0.7rem', color: '#aaa', flexShrink: 0, width: 24, textAlign: 'right' }}>
-        {count}
-      </Typography>
-    </Box>
-  )
-}
-
-const ReviewRatingSummary = ({ avg = 0, total = 0, distribution = {} }) => {
+const ReviewRatingSummary = ({ avg = 0, total = 0 }) => {
   return (
     <Box sx={{
       display: 'flex', gap: { xs: 2, sm: 4 }, alignItems: 'center',
@@ -41,12 +16,9 @@ const ReviewRatingSummary = ({ avg = 0, total = 0, distribution = {} }) => {
       </Box>
 
       <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, borderColor: '#eee' }} />
-
-      <Box sx={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', gap: 0.6 }}>
-        {[5, 4, 3, 2, 1].map(star => (
-          <StarBar key={star} star={star} count={distribution[star] ?? 0} total={total} />
-        ))}
-      </Box>
+      <Typography sx={{ flex: 1, fontSize: '0.85rem', color: '#777', textAlign: { xs: 'center', sm: 'left' } }}>
+        Điểm trung bình trên {total} lượt đánh giá
+      </Typography>
     </Box>
   )
 }

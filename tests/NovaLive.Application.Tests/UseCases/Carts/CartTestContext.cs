@@ -25,6 +25,8 @@ public sealed class CartTestContext
     public Mock<ISpuRepository> Spus { get; } = new();
     public Mock<IShopRepository> Shops { get; } = new();
     public Mock<IInventoryRepository> Inventories { get; } = new();
+    public Mock<ILivestreamSessionRepository> Livestreams { get; } = new();
+    public Mock<ILivestreamProductRepository> LivestreamProducts { get; } = new();
     public Mock<ICurrentUser> User { get; } = new();
     public Mock<IDateTimeProvider> Clock { get; } = new();
     public Cart? Cart { get; set; }
@@ -67,7 +69,7 @@ public sealed class CartTestContext
         if (!Items.Contains(item)) Items.Add(item);
         return item;
     }
-    public AddToCartCommandHandler AddHandler() => new(Carts.Object, Skus.Object, Spus.Object, Shops.Object, Inventories.Object, User.Object, Clock.Object);
+    public AddToCartCommandHandler AddHandler() => new(Carts.Object, Skus.Object, Spus.Object, Shops.Object, Inventories.Object, Livestreams.Object, LivestreamProducts.Object, User.Object, Clock.Object);
     public UpdateCartItemCommandHandler UpdateHandler() => new(Carts.Object, Skus.Object, Inventories.Object, User.Object, Clock.Object);
     public RemoveCartItemCommandHandler RemoveHandler() => new(Carts.Object, User.Object, Clock.Object);
     public RemoveSelectedCartItemsCommandHandler RemoveSelectedHandler() => new(Carts.Object, User.Object, Clock.Object);

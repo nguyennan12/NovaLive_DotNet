@@ -120,7 +120,8 @@ public sealed class CheckoutPersistenceTests
             var handler = new CheckoutCommandHandler(builder, sp.GetRequiredService<ITransactionManager>(), sp.GetRequiredService<ICartRepository>(),
                 sp.GetRequiredService<IInventoryRepository>(), sp.GetRequiredService<IParentOrderRepository>(), sp.GetRequiredService<ISubOrderRepository>(),
                 sp.GetRequiredService<IOrderItemRepository>(), sp.GetRequiredService<IOrderStatusHistoryRepository>(), sp.GetRequiredService<IPaymentRepository>(),
-                sp.GetRequiredService<IDiscountRepository>(), sp.GetRequiredService<IOutboxRepository>(), user.Object, host.Clock, sp.GetRequiredService<IFlashSaleRepository>());
+                sp.GetRequiredService<IDiscountRepository>(), sp.GetRequiredService<IOutboxRepository>(),
+                sp.GetRequiredService<ILivestreamProductRepository>(), user.Object, host.Clock, sp.GetRequiredService<IFlashSaleRepository>());
             return await handler.Handle(new(request with { PlatformProductVoucherCode = null }, buyer.ToString()), default);
         }
         var results = await Task.WhenAll(Checkout(buyer1, request1), Checkout(buyer2, request2));

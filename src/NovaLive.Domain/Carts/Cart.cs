@@ -20,17 +20,18 @@ public sealed class Cart : Entity
     public Guid? UpdatedBy { get; private set; }
 
     public Result<CartItem> AddItem(IReadOnlyCollection<CartItem> items, Guid skuId, Guid shopId,
-        int quantity, decimal unitPrice, DateTimeOffset now)
+        int quantity, decimal unitPrice, DateTimeOffset now, Guid? livestreamSessionId = null)
     {
         if (quantity <= 0) return CartDomainErrors.InvalidQuantity;
         if (unitPrice < 0) return CartDomainErrors.InvalidPrice;
         var item = items.SingleOrDefault(i => i.CartId == Id && i.SkuId == skuId);
         if (item is null)
-            item = new CartItem(Guid.NewGuid(), Id, skuId, shopId, quantity, unitPrice, now);
+            item = new CartItem(Guid.NewGuid(), Id, skuId, shopId, quantity, unitPrice, now, livestreamSessionId);
         else
         {
             var result = item.IncreaseQuantity(quantity, now);
             if (result.IsFailure) return result.Error;
+            if (livestreamSessionId.HasValue) item.SetLivestreamSource(livestreamSessionId);
         }
         Touch(now);
         return item;

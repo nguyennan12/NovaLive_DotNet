@@ -10,9 +10,11 @@ public static class StorageBuckets
 
     public const string Livestreams = "livestreams";
 
-    public static readonly string[] All = [Products, KycDocs, Reviews, Livestreams];
+    public const string Returns = "returns";
 
-    public static readonly string[] Public = [Products, Reviews, Livestreams];
+    public static readonly string[] All = [Products, KycDocs, Reviews, Livestreams, Returns];
+
+    public static readonly string[] Public = [Products, Reviews, Livestreams, Returns];
 
     public static readonly string[] Private = [KycDocs];
 

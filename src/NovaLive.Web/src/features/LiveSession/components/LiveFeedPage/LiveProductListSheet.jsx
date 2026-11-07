@@ -7,11 +7,12 @@ import { useCart } from '~/features/Cart/hooks/useCart'
 import { ProductLiveCard } from '../shared/ProductLiveCard'
 
 
-const LiveProductListSheet = ({ liveShop, open, onClose, products = [] }) => {
+const LiveProductListSheet = ({ liveId, open, onClose, products = [] }) => {
   const navigate = useNavigate()
   const { cartCount } = useCart()
   const handleClick = (product) => {
-    navigate(`/product/${product.code}`)
+    const productId = product.spuId || product.spu_id || product.productId || product.product_id || product.id || product.code
+    if (productId) navigate(`/product/${productId}`)
   }
 
   return (
@@ -118,7 +119,7 @@ const LiveProductListSheet = ({ liveShop, open, onClose, products = [] }) => {
               </Typography>
             </Box>
           ) : products.map((p, idx) => (
-            <ProductLiveCard liveShop={liveShop} key={idx} product={p} onClick={handleClick} />
+            <ProductLiveCard liveId={liveId} key={p.skuId || idx} product={p} onClick={handleClick} />
           ))}
         </Box>
       </Box>

@@ -73,6 +73,23 @@ public sealed class ExpireUnpaidPaymentCommandHandler(
             var released = await inventories.ReleaseReservedAsync(sku, children[subId].ShopId, quantity, now, ct);
             if (released.IsFailure)
             {
+                // Older demo/legacy orders could have a Pending payment without ever writing the
+                // parent-level ReserveAdd ledger used by checkout. There is nothing safe to
+                // release in that case; retrying the same payment on every worker tick only keeps
+                // the order stuck forever. Complete the expiry without changing inventory.
+                //
+                // If checkout did record a hold, keep failing the transaction: that is a genuine
+                // stock inconsistency which must not be hidden or "repaired" from aggregate stock.
+                var hadReservation = await inventoryHistories.ExistsByReferenceAsync(
+                    "Order", parent.Id, sku, InventoryChangeType.ReserveAdd, ct);
+                if (!hadReservation)
+                {
+                    logger.LogWarning(
+                        "Expiring legacy Payment {PaymentId} without inventory release because Order {OrderId}, SKU {SkuId} has no ReserveAdd ledger",
+                        payment.Id, parent.Id, sku);
+                    continue;
+                }
+
                 logger.LogError("Timeout inventory mismatch for Payment {PaymentId}, SubOrder {SubOrderId}, SKU {SkuId}, Quantity {Quantity}",
                     payment.Id, subId, sku, quantity);
                 return InventoryErrors.ReservationMismatch;

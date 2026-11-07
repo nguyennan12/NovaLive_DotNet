@@ -1,3 +1,17 @@
+export const resolveMediaUrl = (url) => {
+  if (!url || typeof url !== 'string') return ''
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url
+  if (url.includes('cdn.novalive.vn') && typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return url
+        .replace('https://cdn.novalive.vn', `http://${host}:9000`)
+        .replace('http://cdn.novalive.vn', `http://${host}:9000`)
+    }
+  }
+  return url
+}
+
 export const formatDuration = (seconds) => {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -81,4 +95,34 @@ export const formatCompactVND = (amount) => {
   if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`
   if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`
   return formatVND(amount)
+}
+
+
+export const getApiErrorMessage = (error, defaultMessage = 'Đã có lỗi xảy ra. Vui lòng thử lại.') => {
+  if (!error) return defaultMessage
+  if (typeof error === 'string') return error
+
+  const data = error.response?.data
+  if (typeof data === 'string') return data
+
+  const errSource = data?.validationErrors || data?.errors
+  if (errSource) {
+    if (Array.isArray(errSource) && errSource.length > 0) {
+      return typeof errSource[0] === 'string' ? errSource[0] : (errSource[0]?.message || defaultMessage)
+    }
+    if (typeof errSource === 'object') {
+      const firstKey = Object.keys(errSource)[0]
+      if (firstKey) {
+        const val = errSource[firstKey]
+        return Array.isArray(val) ? val[0] : String(val)
+      }
+    }
+  }
+
+  if (data?.detail) return data.detail
+  if (data?.message && data.message !== 'A validation problem occurred.') return data.message
+  if (data?.title && data.title !== 'One or more validation errors occurred.') return data.title
+  if (error.message) return error.message
+
+  return defaultMessage
 }

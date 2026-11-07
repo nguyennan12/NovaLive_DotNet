@@ -30,13 +30,17 @@ public sealed class ShippingFulfillmentValidatorTests
         new GetOrderTrackingQueryValidator().Validate(new GetOrderTrackingQuery(Guid.Empty)).IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void Create_AcceptsGhn() =>
+        new CreateShipmentOrderCommandValidator().Validate(new CreateShipmentOrderCommand(new(Guid.NewGuid(), "GHN", "2", Guid.NewGuid())))
+            .IsValid.Should().BeTrue();
+
     [Theory]
-    [InlineData("GHN")]
     [InlineData("GHTK")]
     [InlineData("ViettelPost")]
-    public void Create_AcceptsSupportedProvider(string provider) =>
+    public void Create_RejectsProvidersOtherThanGhn(string provider) =>
         new CreateShipmentOrderCommandValidator().Validate(new CreateShipmentOrderCommand(new(Guid.NewGuid(), provider, "2", Guid.NewGuid())))
-            .IsValid.Should().BeTrue();
+            .IsValid.Should().BeFalse();
 
     [Fact]
     public void UseCases_DeclareSeededPermissions()

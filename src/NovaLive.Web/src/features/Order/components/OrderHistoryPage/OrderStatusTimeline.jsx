@@ -28,7 +28,7 @@ function OrderStatusTimeline({ order }) {
     )
   }
 
-  const statusOrder = ['pending', 'processing', 'confirmed', 'shipped', 'delivered']
+  const statusOrder = ['pending', 'confirmed', 'shipped', 'delivered']
   const currentIdx = statusOrder.indexOf(order_status)
 
   return (

@@ -23,7 +23,19 @@ public interface IMomoPaymentAdapter : IPaymentGatewayAdapter
 
 public interface IVietQrPaymentAdapter : IPaymentGatewayAdapter
 {
-    VietQrResponse GenerateDynamicQr(string orderCode, decimal amount, string? description = null);
+    Task<VietQrResponse> GenerateDynamicQrAsync(string orderCode, decimal amount, string? description = null,
+        CancellationToken cancellationToken = default);
+
+    Task<VietQrTestCallbackResponse> TriggerTestCallbackAsync(VietQrResponse qr,
+        CancellationToken cancellationToken = default);
+
+    bool TryIssueCallbackToken(string username, string password, out VietQrTokenResponse? response);
+
+    bool VerifyCallbackToken(string token);
+
+    bool IsExpectedReceivingAccount(string? bankAccount);
+
+    bool IsExpectedOrderId(string orderCode, string? providerOrderId);
 
     bool VerifyWebhookSignature(string rawPayload, string? signature);
 

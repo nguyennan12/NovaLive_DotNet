@@ -7,8 +7,13 @@ import { useCartMutations } from '~/features/Cart/hooks/useCartMutations'
 import { setSelectedIds } from '~/store/cart/cartSlice'
 import { glassSx } from '~/theme'
 
-export const ProductLiveCard = ({ liveShop, product, onClick }) => {
-  const firstSku = product.skus?.[0]
+export const ProductLiveCard = ({ product, onClick, liveId }) => {
+  const firstSku = product.skus?.[0] || {
+    skuId: product.skuId,
+    sku_name: product.skuCode,
+    live_price: product.effectivePrice ?? product.flashPrice ?? product.sellPrice,
+    original_price: product.originalPrice
+  }
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -20,11 +25,21 @@ export const ProductLiveCard = ({ liveShop, product, onClick }) => {
 
   const handleBuyNow = async () => {
     try {
+      const skuId = firstSku?.skuId || firstSku?.id || product.skuId
+      if (!skuId) throw new Error('Không tìm thấy SKU của sản phẩm live')
       const payload = {
-        skuId: firstSku.skuId,
-        productId: product.productId,
-        shopId: liveShop._id,
-        quantity: 1
+        skuId,
+        livestreamSessionId: liveId,
+        quantity: 1,
+        guestProduct: {
+          spuId: product.spuId || product.productId,
+          name: product.name || product.spuName,
+          skuName: firstSku?.sku_name ? { 'Phân loại': firstSku.sku_name } : null,
+          image: product.thumb || product.thumbnailUrl,
+          price: displayPrice,
+          availableStock: product.availableQty,
+          shopName: 'Sản phẩm livestream'
+        }
       }
 
       const cartItem = await addToCartAsync(payload)
@@ -37,7 +52,7 @@ export const ProductLiveCard = ({ liveShop, product, onClick }) => {
 
   return (
     <Box
-      onClick={() => onClick(product)}
+      onClick={() => onClick?.(product)}
       sx={{
         bgcolor: '#fafafa',
         borderRadius: '14px',
@@ -56,7 +71,7 @@ export const ProductLiveCard = ({ liveShop, product, onClick }) => {
       <Box sx={{ width: 88, flexShrink: 0, overflow: 'hidden', minHeight: 88, position: 'relative' }}>
         <Box
           component="img"
-          src={product.thumb}
+          src={product.thumb || product.thumbnailUrl}
           alt={product.name}
           sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -85,7 +100,7 @@ export const ProductLiveCard = ({ liveShop, product, onClick }) => {
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             overflow: 'hidden', lineHeight: 1.4
           }}>
-            {product.name}
+            {product.name || product.spuName}
           </Typography>
 
           {firstSku?.sku_name && (

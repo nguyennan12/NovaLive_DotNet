@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NovaLive.Api.Controllers.Common;
 using NovaLive.Application.UseCases.Shipping.Commands.CreateShipmentOrder;
+using NovaLive.Application.UseCases.Shipping.Commands.SimulateShipmentDelivered;
 using NovaLive.Application.UseCases.Shipping.Queries.GetOrderTracking;
 using NovaLive.Application.UseCases.Shipping.Queries.GetShippingLabel;
 using NovaLive.Contracts.V1.Shipping;
@@ -28,4 +29,9 @@ public sealed class SellerShippingController(ISender sender) : ApiControllerBase
     [HttpGet("{subOrderId:guid}/tracking")]
     public async Task<IActionResult> GetTracking(Guid subOrderId, CancellationToken ct) =>
         Respond(await Sender.Send(new GetOrderTrackingQuery(subOrderId, IsSeller: true), ct));
+
+    [HttpPost("{subOrderId:guid}/simulate-delivered")]
+    public async Task<IActionResult> SimulateDelivered(Guid subOrderId, CancellationToken ct) =>
+        Respond(await Sender.Send(new SimulateShipmentDeliveredCommand(subOrderId), ct),
+            message: "Đã giả lập GHN giao hàng thành công.");
 }

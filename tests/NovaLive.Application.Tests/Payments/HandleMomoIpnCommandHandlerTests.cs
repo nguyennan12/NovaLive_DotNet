@@ -47,6 +47,43 @@ public class HandleMomoIpnCommandHandlerTests
             NullLogger<HandleMomoIpnCommandHandler>.Instance, _flashSales.Object);
     }
 
+
+    [Fact]
+    public async Task GuidCallback_LocksParentBeforePayment_ToMatchExpiryWorker()
+    {
+        var order = ParentOrder.Create(Guid.NewGuid(), "ORD-COD-LOCK", "{}", 100000, 0, 0, 100000, null, _now);
+        var payment = Payment.Create(order.Id, PaymentMethod.COD, 100000, _now);
+        var request = new MomoIpnRequest { OrderId = order.Id.ToString() };
+        _momoAdapterMock.Setup(m => m.VerifySignature(request)).Returns(true);
+        var sequence = new MockSequence();
+        var parents = new Mock<IParentOrderRepository>(MockBehavior.Strict);
+        var payments = new Mock<IPaymentRepository>(MockBehavior.Strict);
+        payments.Setup(p => p.GetByTransactionRefAsync("0", It.IsAny<CancellationToken>())).ReturnsAsync((Payment?)null);
+        parents.InSequence(sequence).Setup(p => p.GetForUpdateAsync(order.Id, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        payments.InSequence(sequence).Setup(p => p.GetForUpdateAsync(order.Id, It.IsAny<CancellationToken>())).ReturnsAsync(payment);
+        var handler = new HandleMomoIpnCommandHandler(_momoAdapterMock.Object, payments.Object, parents.Object,
+            _subOrderRepositoryMock.Object, _shopWalletRepositoryMock.Object, _outboxRepositoryMock.Object,
+            _clockMock.Object, NullLogger<HandleMomoIpnCommandHandler>.Instance, _flashSales.Object);
+        (await handler.Handle(new(request), default)).Error.Code.Should().Be("Payment.InvalidMethod");
+    }
+
+    [Fact]
+    public async Task OnlineWebhook_CannotSettleCodPayment()
+    {
+        var order = ParentOrder.Create(Guid.NewGuid(), "ORD-COD", "{}", 100000, 0, 0, 100000, null, _now);
+        var payment = Payment.Create(order.Id, PaymentMethod.COD, 100000, _now);
+        var request = new MomoIpnRequest { OrderId = order.OrderCode, Amount = 100000, TransId = 123, ResultCode = 0 };
+        _momoAdapterMock.Setup(m => m.VerifySignature(request)).Returns(true);
+        _parentOrderRepositoryMock.Setup(p => p.GetByOrderCodeForUpdateAsync(order.OrderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(order);
+        _paymentRepositoryMock.Setup(p => p.GetForUpdateAsync(order.Id, It.IsAny<CancellationToken>())).ReturnsAsync(payment);
+        var result = await _handler.Handle(new HandleMomoIpnCommand(request), default);
+        result.Error.Code.Should().Be("Payment.InvalidMethod");
+        payment.Status.Should().Be(PaymentStatus.Pending);
+        order.PaymentStatus.Should().Be(ParentOrderPaymentStatus.Pending);
+        _outboxRepositoryMock.Verify(o => o.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_WhenValidSuccessIpn_UpdatesPaymentParentOrderSubOrderCreditsWalletAndOutbox()
     {

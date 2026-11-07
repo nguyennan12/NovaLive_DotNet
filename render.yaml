@@ -54,12 +54,12 @@ services:
         value: None
       - key: Ghn__ApiToken
         sync: false
+      - key: Ghn__BaseUrl
+        value: https://online-gateway.ghn.vn
       - key: Ghn__ShopId
         value: "199979"
       - key: Ghn__WebhookSecret
         sync: false
-      - key: Email__Provider
-        value: Logging
       - key: Email__LogOtp
         value: "false"
       - key: Cors__AllowedOrigins__0

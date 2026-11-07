@@ -23,14 +23,28 @@ export const useLiveProducts = (liveId) => {
   const liveProducts = sessionData?.live_products ?? []
 
   // Thêm sản phẩm
-  const { mutate: addProduct, isPending: isAdding } = useMutation({
-    mutationFn: (products) => addProductToLiveSessionAPI(liveId, products),
-    onSuccess: (data) => {
-      queryClient.setQueryData(qKey, data)
-      toast.success('Đã thêm sản phẩm vào phiên live')
+  const { mutateAsync: addProduct, isPending: isAdding } = useMutation({
+    mutationFn: async (products) => {
+      const items = Array.isArray(products) ? products : [products]
+      const added = []
+      for (const item of items) {
+        added.push(await addProductToLiveSessionAPI(liveId, item))
+      }
+      return added
     },
-    onError: () => {
-      toast.error('Không thể thêm sản phẩm')
+    onSuccess: (data) => {
+      queryClient.setQueryData(qKey, (old) => ({
+        ...old,
+        live_products: [...(old?.live_products ?? []), ...data].filter((product, index, all) =>
+          index === all.findIndex(item => String(item.skuId) === String(product.skuId))
+        )
+      }))
+      queryClient.invalidateQueries({ queryKey: qKey })
+      toast.success(`Đã thêm ${data.length} sản phẩm vào phiên live`)
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.message || err?.message || 'Không thể thêm sản phẩm'
+      toast.error(msg)
     }
   })
 
@@ -43,18 +57,18 @@ export const useLiveProducts = (liveId) => {
       queryClient.setQueryData(qKey, (old) => ({
         ...old,
         live_products: (old?.live_products ?? []).filter(
-          (p) => p.productId?.toString() !== productId?.toString()
+          (p) => (p.skuId?.toString() !== productId?.toString()) && (p.productId?.toString() !== productId?.toString())
         )
       }))
       return { snapshot }
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(qKey, data)
-      toast.success('Đã xoá sản phẩm khỏi phiên live')
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qKey })
+      toast.success('Đã gỡ sản phẩm khỏi phiên live')
     },
     onError: (_err, _productId, context) => {
       if (context?.snapshot) queryClient.setQueryData(qKey, context.snapshot)
-      toast.error('Không thể xoá sản phẩm')
+      toast.error('Không thể gỡ sản phẩm')
     }
   })
 

@@ -3,6 +3,9 @@ using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.Abstractions.ThirdParty;
 using NovaLive.Application.Tests.UseCases.Orders;
 using NovaLive.Application.UseCases.Shipping.Commands.CreateShipmentOrder;
+using NovaLive.Application.UseCases.Shipping.Commands.SimulateShipmentDelivered;
+using NovaLive.Application.UseCases.Shipping;
+using Microsoft.Extensions.Logging.Abstractions;
 using NovaLive.Application.UseCases.Shipping.Queries.GetOrderTracking;
 using NovaLive.Application.UseCases.Shipping.Queries.GetShippingLabel;
 using NovaLive.Contracts.V1.Shipping;
@@ -29,6 +32,11 @@ public sealed class ShippingFulfillmentTestContext
         Orders.Access, Orders.Shop.Object, Resolver.Object);
     public GetOrderTrackingQueryHandler TrackingHandler => new(Orders.Checkout.Parents.Object, Orders.Checkout.Subs.Object,
         Shipments.Object, Orders.Seller.Object, Orders.Shop.Object, Orders.Access, Resolver.Object);
+    public ShippingDeliveryProcessor DeliveryProcessor => new(Shipments.Object, Orders.Checkout.Subs.Object,
+        Orders.Checkout.Histories.Object, Orders.Checkout.Outbox.Object, Orders.Checkout.Draft.Clock.Object,
+        NullLogger<ShippingDeliveryProcessor>.Instance);
+    public SimulateShipmentDeliveredCommandHandler SimulateHandler => new(Orders.Checkout.Subs.Object,
+        Shipments.Object, Orders.Seller.Object, Orders.Access, DeliveryProcessor);
     public Task<Result<ShippingOrderResponse>> Create() => CreateHandler.Handle(new(Request), default);
 
     public static async Task<ShippingFulfillmentTestContext> Build(bool cod = true, int shops = 1)
@@ -46,8 +54,13 @@ public sealed class ShippingFulfillmentTestContext
             .ReturnsAsync(new ShippingTrackingResult("delivering", [new("delivering", c.Orders.Checkout.Draft.Now)]));
         c.Shipments.Setup(s => s.FindBySubOrderIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) => c.Saved.SingleOrDefault(s => s.SubOrderId == id));
+        c.Orders.Checkout.Subs.Setup(s => s.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => c.Orders.Checkout.SubList.SingleOrDefault(s => s.Id == id));
         c.Shipments.Setup(s => s.GetBySubOrderIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IEnumerable<Guid> ids, CancellationToken _) => c.Saved.Where(s => ids.Contains(s.SubOrderId)).ToList());
+        c.Shipments.Setup(s => s.GetByTrackingForUpdateAsync(It.IsAny<ShippingProvider>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ShippingProvider provider, string tracking, CancellationToken _) =>
+                c.Saved.SingleOrDefault(s => s.Provider == provider && s.TrackingCode == tracking));
         c.Shipments.Setup(s => s.AddAsync(It.IsAny<ShippingOrder>(), It.IsAny<CancellationToken>()))
             .Callback((ShippingOrder s, CancellationToken _) => c.Saved.Add(s)).Returns(Task.CompletedTask);
         return c;

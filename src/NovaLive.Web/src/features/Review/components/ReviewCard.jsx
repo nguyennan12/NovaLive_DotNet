@@ -1,8 +1,5 @@
-import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded'
-import ThumbUpOutlinedIcon from '@mui/icons-material/ThumbUpOutlined'
-import ThumbUpRoundedIcon from '@mui/icons-material/ThumbUpRounded'
-import { Avatar, Box, IconButton, Menu, MenuItem, Rating, Typography } from '@mui/material'
-import { useState } from 'react'
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
+import { Avatar, Box, Rating, Typography } from '@mui/material'
 import { formatDate } from '~/common/utils/formatters'
 
 const AVATAR_COLORS = ['#3485f7', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
@@ -19,64 +16,28 @@ const timeAgo = (isoStr) => {
   return formatDate(isoStr)
 }
 
-const ReviewMenu = () => {
-  const [anchor, setAnchor] = useState(null)
-  return (
-    <>
-      <IconButton
-        size="small"
-        onClick={(e) => setAnchor(e.currentTarget)}
-        sx={{ color: '#bbb', '&:hover': { color: '#555' } }}
-      >
-        <MoreHorizRoundedIcon sx={{ fontSize: 18 }} />
-      </IconButton>
-      <Menu
-        anchorEl={anchor}
-        open={Boolean(anchor)}
-        onClose={() => setAnchor(null)}
-        slotProps={{ paper: { elevation: 2, sx: { borderRadius: '10px', minWidth: 160 } } }}
-      >
-        <MenuItem onClick={() => setAnchor(null)} sx={{ fontSize: '0.82rem' }}>
-          Sao chép liên kết
-        </MenuItem>
-        <MenuItem onClick={() => setAnchor(null)} sx={{ fontSize: '0.82rem', color: 'error.main' }}>
-          Báo cáo
-        </MenuItem>
-      </Menu>
-    </>
-  )
-}
-
 const ReviewCard = ({ review }) => {
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(review.likes ?? 0)
-
-  const toggleLike = () => {
-    setLiked(p => {
-      setLikeCount(c => p ? c - 1 : c + 1)
-      return !p
-    })
-  }
+  const buyerName = review.buyerName || 'Người mua'
 
   return (
     <Box sx={{ py: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
         <Avatar
-          src={review.user?.avatar}
+          src={review.buyerAvatarUrl || undefined}
           sx={{
             width: 38, height: 38, flexShrink: 0,
-            bgcolor: avatarColor(review.user?.name),
+            bgcolor: avatarColor(buyerName),
             fontSize: '0.9rem', fontWeight: 800
           }}
         >
-          {review.user?.name?.charAt(0)}
+          {buyerName.charAt(0)}
         </Avatar>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: 'primary.contrastText' }}>
-                {review.user?.name}
+                {buyerName}
               </Typography>
               <Rating
                 value={review.rating}
@@ -84,34 +45,28 @@ const ReviewCard = ({ review }) => {
                 sx={{ color: '#f59e0b', '& .MuiRating-icon': { fontSize: 13 } }}
               />
             </Box>
-            <ReviewMenu />
           </Box>
 
           <Typography sx={{ fontSize: '0.72rem', color: '#bbb', mt: 0.3, mb: 1 }}>
-            {timeAgo(review.createdAt)}
+            {timeAgo(review.createdAt)} · <VerifiedRoundedIcon sx={{ fontSize: 12, verticalAlign: 'middle', color: '#16a34a' }} /> Đã mua hàng
           </Typography>
+
+          {review.title && <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: '#333', mb: 0.5 }}>{review.title}</Typography>}
 
           <Typography sx={{ fontSize: '0.84rem', color: '#444', lineHeight: 1.6 }}>
-            {review.content}
+            {review.content || 'Người mua không để lại nhận xét.'}
           </Typography>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.25 }}>
-            <IconButton
-              size="small"
-              onClick={toggleLike}
-              sx={{ p: 0.5, color: liked ? 'secondary.main' : '#bbb', transition: 'color 0.18s' }}
-            >
-              {liked
-                ? <ThumbUpRoundedIcon sx={{ fontSize: 15 }} />
-                : <ThumbUpOutlinedIcon sx={{ fontSize: 15 }} />
-              }
-            </IconButton>
-            {likeCount > 0 && (
-              <Typography sx={{ fontSize: '0.72rem', color: liked ? 'secondary.main' : '#bbb', fontWeight: 600, transition: 'color 0.18s' }}>
-                {likeCount}
-              </Typography>
-            )}
-          </Box>
+          {!!review.mediaUrls?.length && (
+            <Box sx={{ display: 'flex', gap: 1, mt: 1.25, flexWrap: 'wrap' }}>
+              {review.mediaUrls.map((url) => <Box key={url} component="img" src={url} alt="Ảnh đánh giá" sx={{ width: 76, height: 76, objectFit: 'cover', borderRadius: 1.5 }} />)}
+            </Box>
+          )}
+          {review.sellerReply && (
+            <Box sx={{ mt: 1.5, p: 1.25, bgcolor: 'rgba(52,133,247,0.06)', borderRadius: 1.5 }}>
+              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'secondary.main', mb: 0.35 }}>Phản hồi từ shop</Typography>
+              <Typography sx={{ fontSize: '0.8rem', color: '#555', lineHeight: 1.5 }}>{review.sellerReply}</Typography>
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>

@@ -16,8 +16,16 @@ export const WaterDropBackground = styled(Box)({
     top: 0, left: 0, width: '100%', height: '100%',
     backgroundImage: 'url(https://res.cloudinary.com/nguyennan12/image/upload/v1777444709/Livestream-ecommerce/Shops/69e364dfdf24f31846f15580/Products/rigceoxnr4fnqcs1bkpd.png)',
     backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
     opacity: 0.6,
-    zIndex: 0
+    zIndex: 0,
+    '@media (max-width: 768px)': {
+      // Fit the image to the narrow viewport so cover does not crop its sides.
+      backgroundSize: '100% auto',
+      backgroundPosition: 'center top',
+      backgroundRepeat: 'repeat-y'
+    }
   },
   '& > *': { position: 'relative', zIndex: 1 }
 })

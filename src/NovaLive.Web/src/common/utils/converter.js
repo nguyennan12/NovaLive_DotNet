@@ -1,11 +1,8 @@
-
-
 export const toDateInputValue = (value) => {
   if (!value) return ''
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
 }
-
 
 export const toQueryString = (params = {}) => {
   const searchParams = new URLSearchParams()
@@ -28,7 +25,6 @@ export const toQueryString = (params = {}) => {
 
   return searchParams.toString()
 }
-
 
 export const toDefaultValuesDiscount = (discount = {}) => ({
   discount_name: discount.discount_name ?? discount.name ?? '',
@@ -61,14 +57,14 @@ export const toApiPayloadDiscount = (data) => ({
   name: data.discount_name.trim(),
   discountType: data.discount_type === 'fixed_amount' ? 'FixedCart' : 'PercentCart',
   discountValue: Number(data.discount_value),
-  minOrderAmount: Number(data.discount_min_value),
+  minOrderAmount: Number(data.discount_min_value || 0),
   maxDiscountAmount: data.discount_type === 'fixed_amount' ? null : Number(data.discount_max_value),
   maxUses: data.discount_max_uses ? Number(data.discount_max_uses) : null,
   perUserLimit: Number(data.discount_max_uses_per_user ?? 1),
   appliesTo: data.discount_applies_to === 'specific' ? 'SpecificSpus' : 'AllProducts',
   targetIds: data.discount_applies_to === 'specific' && Array.isArray(data.discount_product_ids) ? data.discount_product_ids : null,
-  validFrom: data.discount_start_date ? new Date(`${data.discount_start_date}T00:00:00.000Z`).toISOString() : null,
-  validTo: data.discount_end_date ? new Date(`${data.discount_end_date}T23:59:59.999Z`).toISOString() : null,
+  validFrom: data.discount_start_date ? new Date(`${data.discount_start_date}T00:00:00.000Z`).toISOString() : new Date().toISOString(),
+  validTo: data.discount_end_date ? new Date(`${data.discount_end_date}T23:59:59.999Z`).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString(),
   isPublic: Boolean(data.discount_is_public)
 })
 
@@ -91,5 +87,3 @@ export const toArrayProducts = (data) => {
   if (data && Array.isArray(data.products)) return data.products
   return []
 }
-
-

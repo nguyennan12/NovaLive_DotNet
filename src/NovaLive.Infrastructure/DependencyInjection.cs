@@ -153,6 +153,7 @@ public static class DependencyInjection
             .Validate(o => o.BatchSize > 0, "OrderTimeout:BatchSize must be positive.")
             .ValidateOnStart();
         services.AddHostedService<TimeoutOrderRollbackWorker>();
+        services.AddHostedService<RatingCalculationWorker>();
         services.AddHostedService<NovaLive.Infrastructure.Shipping.ShippingStatusPollingWorker>();
 
         // Messaging
@@ -232,8 +233,9 @@ public static class DependencyInjection
                 if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var publicUri)
                     && publicUri.Scheme is "http" or "https")
                 {
-                    options.Endpoint = publicUri.Authority;
-                    options.UseSsl = publicUri.Scheme == Uri.UriSchemeHttps;
+                    // The public URL is only for links returned to browsers. The S3
+                    // client must keep using Minio:Endpoint (normally Render's private
+                    // host) so uploads do not go through the public reverse proxy.
                     options.CdnBaseUrl = publicUri.GetLeftPart(UriPartial.Authority);
                 }
 
@@ -343,6 +345,9 @@ public static class DependencyInjection
             var bankBin = configuration["VIETQR_BANK_BIN"];
             if (!string.IsNullOrWhiteSpace(bankBin)) options.BankBin = bankBin;
 
+            var bankCode = configuration["VIETQR_BANK_CODE"];
+            if (!string.IsNullOrWhiteSpace(bankCode)) options.BankCode = bankCode.Trim();
+
             var accountNumber = configuration["VIETQR_ACCOUNT_NUMBER"];
             if (!string.IsNullOrWhiteSpace(accountNumber)) options.AccountNumber = accountNumber;
 
@@ -360,10 +365,19 @@ public static class DependencyInjection
 
             var baseUrl = configuration["VIETQR_BASE_URL"] ?? configuration["VIETQR_API_BASE_URL"];
             if (!string.IsNullOrWhiteSpace(baseUrl)) options.BaseUrl = baseUrl.Trim();
+
+            var callbackUsername = configuration["VIETQR_CALLBACK_USERNAME"];
+            if (!string.IsNullOrWhiteSpace(callbackUsername)) options.CallbackUsername = callbackUsername.Trim();
+
+            var callbackPassword = configuration["VIETQR_CALLBACK_PASSWORD"];
+            if (!string.IsNullOrWhiteSpace(callbackPassword)) options.CallbackPassword = callbackPassword;
+
+            var callbackJwtSecret = configuration["VIETQR_CALLBACK_JWT_SECRET"];
+            if (!string.IsNullOrWhiteSpace(callbackJwtSecret)) options.CallbackJwtSecret = callbackJwtSecret;
         });
 
-        services.AddSingleton<IVietQrPaymentAdapter, VietQrPaymentAdapter>();
-        services.AddSingleton<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
+        services.AddHttpClient<IVietQrPaymentAdapter, VietQrPaymentAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter>(sp => sp.GetRequiredService<IVietQrPaymentAdapter>());
 
         return services;
     }

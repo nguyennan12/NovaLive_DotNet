@@ -1,4 +1,5 @@
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded'
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import ShoppingBasketRoundedIcon from '@mui/icons-material/ShoppingBasketRounded'
 import { Box, Skeleton, Typography } from '@mui/material'
 import React from 'react'
@@ -11,9 +12,11 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
   const isFlashSale = showFlashBadge && product.is_flash_sale
   const thumb = product.spu_thumb || product.thumbnailUrl || ''
   const name = product.spu_name || product.name || ''
-  const code = product.spu_code || product.id || product.slug || ''
+  const code = product.id || product._id || product.spu_id || product.spu_code || product.slug || ''
   const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
   const sold = product.total_sold ?? product.soldCount ?? 0
+  const flashSold = product.flashsale_sold ?? product.soldQty ?? 0
+  const flashStock = product.flashsale_stock ?? product.quantity ?? 0
 
   return (
     <Box
@@ -29,13 +32,14 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
         '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 8px 24px rgba(52,133,247,0.15)' }
       }}
     >
-      <Box sx={{ position: 'relative', height: { xs: 155, sm: 195, md: 215 }, overflow: 'hidden' }}>
-        <Box
-          component="img"
-          src={thumb}
-          alt={name}
-          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
+      <Box sx={{ position: 'relative', height: { xs: 155, sm: 195, md: 215 }, overflow: 'hidden', bgcolor: '#eef0f3' }}>
+        {thumb ? (
+          <Box component="img" src={thumb} onError={(event) => { event.currentTarget.style.display = 'none' }} alt={name} sx={{ width: '100%', height: '100%', objectFit: 'cover', bgcolor: '#eef0f3' }} />
+        ) : (
+          <Box sx={{ width: '100%', height: '100%', bgcolor: '#eef0f3', color: '#9aa1aa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageOutlinedIcon sx={{ fontSize: 42 }} />
+          </Box>
+        )}
         {isFlashSale && (
           <Box sx={{
             position: 'absolute', top: 10, right: -1,
@@ -72,12 +76,56 @@ const PortraitCard = React.forwardRef(({ product, showFlashBadge = false }, ref)
             </Typography>
           )}
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
-          <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
-          <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
-            {formatSold(sold)} lượt mua
-          </Typography>
-        </Box>
+        {isFlashSale ? (
+          <Box sx={{ mt: 0.75 }}>
+            <Box sx={{
+              position: 'relative',
+              height: 15,
+              borderRadius: 8,
+              bgcolor: 'rgba(232, 71, 42, 0.12)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: 0.5
+            }}>
+              <Box sx={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: `${Math.min(100, Math.max(12, Math.round((flashSold / Math.max(1, flashStock)) * 100)))}%`,
+                background: 'linear-gradient(90deg, #ff6a00 0%, #ee0979 100%)',
+                borderRadius: 8
+              }} />
+              <Typography sx={{
+                position: 'relative',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                color: '#fff',
+                lineHeight: 1,
+                zIndex: 1,
+                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                whiteSpace: 'nowrap'
+              }}>
+                {flashSold >= flashStock ? 'ĐÃ BÁN HẾT' : `Đã bán ${flashSold}`}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
+              <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
+              <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
+                {formatSold(sold)} lượt mua
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.4 }}>
+            <ShoppingBasketRoundedIcon sx={{ fontSize: 11, color: '#aaa' }} />
+            <Typography sx={{ fontSize: '0.65rem', color: '#aaa', fontWeight: 500 }}>
+              {formatSold(sold)} lượt mua
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Box >
   )
@@ -87,9 +135,11 @@ const LandscapeCard = ({ product }) => {
   const navigate = useNavigate()
   const thumb = product.spu_thumb || product.thumbnailUrl || ''
   const name = product.spu_name || product.name || ''
-  const code = product.spu_code || product.id || product.slug || ''
+  const code = product.id || product._id || product.spu_id || product.spu_code || product.slug || ''
   const price = product.spu_price ?? product.minPrice ?? product.price ?? 0
   const sold = product.total_sold ?? product.soldCount ?? 0
+  const flashSold = product.flashsale_sold ?? product.soldQty ?? 0
+  const flashStock = product.flashsale_stock ?? product.quantity ?? 0
 
   return (
     <Box
@@ -105,13 +155,14 @@ const LandscapeCard = ({ product }) => {
         '&:hover': { transform: 'translateX(3px)', boxShadow: '0 4px 16px rgba(52,133,247,0.15)' }
       }}
     >
-      <Box sx={{ width: { xs: 90, sm: 120, md: 135 }, flexShrink: 0, overflow: 'hidden', minHeight: { xs: 90, sm: 115 } }}>
-        <Box
-          component="img"
-          src={thumb}
-          alt={name}
-          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
+      <Box sx={{ width: { xs: 90, sm: 120, md: 135 }, flexShrink: 0, overflow: 'hidden', minHeight: { xs: 90, sm: 115 }, bgcolor: '#eef0f3' }}>
+        {thumb ? (
+          <Box component="img" src={thumb} onError={(event) => { event.currentTarget.style.display = 'none' }} alt={name} sx={{ width: '100%', height: '100%', objectFit: 'cover', bgcolor: '#eef0f3' }} />
+        ) : (
+          <Box sx={{ width: '100%', height: '100%', bgcolor: '#eef0f3', color: '#9aa1aa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageOutlinedIcon sx={{ fontSize: 32 }} />
+          </Box>
+        )}
       </Box>
       <Box sx={{ flex: 1, p: { xs: 1.25, sm: 1.75 }, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden' }}>
         <Typography sx={{

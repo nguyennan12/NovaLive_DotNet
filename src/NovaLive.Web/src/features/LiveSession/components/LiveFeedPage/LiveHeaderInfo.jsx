@@ -1,7 +1,8 @@
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { Avatar, Box, Button, Chip, Typography } from '@mui/material'
 const LiveHeaderInfo = ({ live, viewers }) => {
-  const shop = live?.live_shopId
+  const shop = live?.shop || live?.live_shopId
+  const viewerCount = Number(viewers)
 
   return (
     <Box sx={{
@@ -55,7 +56,7 @@ const LiveHeaderInfo = ({ live, viewers }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 1, flexShrink: 0 }}>
         <Chip
           icon={<VisibilityIcon sx={{ fontSize: '13px !important', color: 'rgba(255,255,255,0.9) !important' }} />}
-          label={viewers ?? 0}
+          label={Number.isFinite(viewerCount) ? viewerCount : 0}
           size="small"
           sx={{
             bgcolor: 'rgba(0,0,0,0.48)', color: 'white',

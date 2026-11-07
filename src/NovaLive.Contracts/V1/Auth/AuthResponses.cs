@@ -6,7 +6,9 @@ public record UserInfoResponse(
 
 public record AuthResponse(
     DateTime ExpiresAt,
-    UserSummaryDto User);
+    UserSummaryDto User,
+    string? AccessToken = null,
+    string? RefreshToken = null);
 
 public record RegisterUserResponse(
     Guid UserId,

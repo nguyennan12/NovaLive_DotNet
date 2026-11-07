@@ -54,6 +54,7 @@ public sealed class CreateShipmentOrderCommandHandlerTests
     {
         var c = await ShippingFulfillmentTestContext.Build(cod: false);
         c.Sub.ConfirmPayment(c.Orders.Checkout.Draft.Now);
+        c.Orders.Checkout.PaymentList.Single().MarkSuccess("ONLINE-PAID", c.Orders.Checkout.Draft.Now);
         (await c.Create()).IsSuccess.Should().BeTrue();
         c.Saved.Single().CodAmount.Should().Be(0);
     }

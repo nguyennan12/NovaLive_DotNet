@@ -1,7 +1,6 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import { Box, IconButton, Tooltip, Typography } from '@mui/material'
-import { formatVND } from '~/common/utils/formatters'
-import { getStockStatus } from '~/common/utils/formatters'
+import { formatVND, getStockStatus, resolveMediaUrl } from '~/common/utils/formatters'
 import { useNavigate } from 'react-router-dom'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft'
@@ -24,7 +23,8 @@ const ProductCard = ({ product }) => {
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [failedImage, setFailedImage] = useState(null)
-  const imageFailed = failedImage === product.spu_thumb
+  const thumbnailUrl = resolveMediaUrl(product.spu_thumb)
+  const imageFailed = failedImage === thumbnailUrl
   const stock = product.spu_quantity == null ? null : stockConfig[getStockStatus(product.spu_quantity)]
   const queryClient = useQueryClient()
 
@@ -64,12 +64,12 @@ const ProductCard = ({ product }) => {
             overflow: 'hidden'
           }}
         >
-          {product.spu_thumb && !imageFailed
+          {thumbnailUrl && !imageFailed
             ? <Box
                 component="img"
-                src={product.spu_thumb}
+                src={thumbnailUrl}
                 alt={product.spu_name}
-                onError={() => setFailedImage(product.spu_thumb)}
+                onError={() => setFailedImage(thumbnailUrl)}
                 sx={{
                   width: '100%',
                   height: '100%',

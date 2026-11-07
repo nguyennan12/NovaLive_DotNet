@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -14,34 +14,54 @@ import {
   IconButton,
   Alert,
   CircularProgress,
-  Chip,
-  Divider
+  Chip
 } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded'
 import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRounded'
+import OrderThumbnail from './OrderThumbnail'
 import { toast } from 'react-toastify'
-import { formatVND } from '~/common/utils/formatters'
+import { formatVND, resolveMediaUrl } from '~/common/utils/formatters'
 import { uploadSingleImageAPI } from '~/common/apis/services/uploadService'
 import { requestReturnAPI, RETURN_REASONS } from '~/common/apis/services/returnService'
 import { getRemainingReturnDays, RETURN_WINDOW_DAYS } from '../../constants/orderStatus'
 
+const EMPTY_PRODUCTS = []
+
 export default function RequestReturnDialog({ open, onClose, order, onSuccess }) {
   const [reason, setReason] = useState('Defective')
   const [selectedItems, setSelectedItems] = useState({})
+  const [selectedSubOrderId, setSelectedSubOrderId] = useState('')
   const [reasonDetails, setReasonDetails] = useState('')
   const [evidenceUrls, setEvidenceUrls] = useState([])
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  if (!order) return null
-
-  const products = order.order_products || []
-  const subOrderId = order.subOrderId || order._id
-  const deliveredAt = order.deliveredAt || order.updatedAt || order.createdAt
+  const products = order?.order_products || EMPTY_PRODUCTS
+  const eligibleSubOrders = useMemo(() => {
+    const fromResponse = (order?.subOrders || [])
+      .filter(sub => String(sub.status || '').toLowerCase() === 'delivered')
+      .map(sub => ({ id: sub.id, code: sub.code || sub.subOrderCode, shopName: sub.shopName, deliveredAt: sub.deliveredAt }))
+      .filter(sub => sub.id)
+    if (fromResponse.length) return fromResponse
+    const itemGroups = new Map()
+    products.forEach(item => {
+      if (item.subOrderId) itemGroups.set(item.subOrderId, {
+        id: item.subOrderId, code: item.subOrderCode, shopName: item.productId?.spu_shopId?.shop_name,
+        deliveredAt: item.deliveredAt, status: item.subOrderStatus
+      })
+    })
+    return [...itemGroups.values()].filter(sub => String(sub.status || '').toLowerCase() === 'delivered')
+  }, [order, products])
+  const activeSubOrder = eligibleSubOrders.find(sub => sub.id === selectedSubOrderId) || eligibleSubOrders[0]
+  const subOrderId = activeSubOrder?.id
+  const returnProducts = products.filter(item => item.subOrderId === subOrderId)
+  const deliveredAt = activeSubOrder?.deliveredAt || returnProducts.find(item => item.deliveredAt)?.deliveredAt
   const remainingDays = getRemainingReturnDays(deliveredAt)
+
+  if (!order) return null
 
   const handleToggleItem = (productId, itemPrice, maxQty) => {
     setSelectedItems(prev => {
@@ -74,8 +94,23 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
   }
 
   const handleFileUpload = async (event) => {
-    const files = Array.from(event.target.files || [])
-    if (!files.length) return
+    const selectedFiles = Array.from(event.target.files || [])
+    const supportedFiles = selectedFiles.filter(file => {
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      const isVideo = extension === 'mp4'
+      const supported = ['jpg', 'jpeg', 'png', 'webp', 'mp4'].includes(extension)
+      const withinSizeLimit = file.size <= (isVideo ? 100 : 10) * 1024 * 1024
+      if (!supported || !withinSizeLimit) {
+        toast.error(`${file.name}: chỉ nhận JPG, PNG, WEBP (tối đa 10MB) hoặc MP4 (tối đa 100MB).`)
+        return false
+      }
+      return true
+    })
+    const files = supportedFiles
+    if (!files.length) {
+      event.target.value = ''
+      return
+    }
 
     setUploading(true)
     try {
@@ -88,11 +123,7 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
       }
       toast.success(`Đã tải lên ${files.length} tệp bằng chứng!`)
     } catch (err) {
-      // Fallback: nếu MinIO/backend upload local chưa chạy, tạo object URL hoặc thông báo
-      console.warn('Upload API error, applying local preview preview:', err)
-      const mockUrls = files.map(f => URL.createObjectURL(f))
-      setEvidenceUrls(prev => [...prev, ...mockUrls])
-      toast.info('Đã thêm bằng chứng ảnh/video!')
+      toast.error(err.response?.data?.message || 'Tải bằng chứng lên thất bại. Vui lòng thử lại.')
     } finally {
       setUploading(false)
       event.target.value = ''
@@ -110,6 +141,10 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
   const handleSubmit = async () => {
     if (selectedCount === 0) {
       toast.error('Vui lòng chọn ít nhất một sản phẩm cần hoàn trả!')
+      return
+    }
+    if (!subOrderId || returnProducts.length === 0) {
+      toast.error('Không tìm thấy đơn hàng của shop cần trả. Vui lòng tải lại đơn hàng.')
       return
     }
     if (evidenceUrls.length === 0) {
@@ -204,19 +239,37 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
           <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1e293b' }}>
             2. Chọn sản phẩm cần hoàn trả *
           </Typography>
+          {eligibleSubOrders.length > 1 && (
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Đơn hàng của shop cần trả"
+              value={subOrderId || ''}
+              onChange={event => { setSelectedSubOrderId(event.target.value); setSelectedItems({}) }}
+              sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+            >
+              {eligibleSubOrders.map(sub => (
+                <MenuItem key={sub.id} value={sub.id}>{sub.shopName || 'Shop'}{sub.code ? ` · ${sub.code}` : ''}</MenuItem>
+              ))}
+            </TextField>
+          )}
+          {eligibleSubOrders.length === 0 && (
+            <Alert severity="error" sx={{ mb: 1.5 }}>Không tìm thấy đơn con đã giao hợp lệ để gửi yêu cầu trả hàng. Hãy tải lại chi tiết đơn.</Alert>
+          )}
           <Stack spacing={1.5}>
-            {products.map((p) => {
-              const pId = p.productId?._id || p._id || p.productId
+            {returnProducts.map((p) => {
+              const pId = p.id || p.orderItemId
               const name = p.productId?.spu_name || p.name || 'Sản phẩm'
               const thumb = p.productId?.spu_thumb || p.thumb
-              const price = p.productId?.spu_price || p.price || 0
+              const price = p.price || 0
               const maxQty = p.quantity || 1
               const isSelected = Boolean(selectedItems[pId])
               const currentQty = selectedItems[pId]?.quantity || 1
 
               return (
                 <Box
-                  key={pId}
+                  key={pId || `${p.skuId}-${name}`}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -231,16 +284,10 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
                 >
                   <Checkbox
                     checked={isSelected}
-                    onChange={() => handleToggleItem(pId, price, maxQty)}
+                    onChange={() => pId ? handleToggleItem(pId, price, maxQty) : toast.error('Thiếu mã món hàng trong đơn. Vui lòng tải lại đơn hàng.')}
                     sx={{ p: 0.5, color: '#94a3b8', '&.Mui-checked': { color: '#0095ff' } }}
                   />
-                  <Box
-                    component="img"
-                    src={thumb}
-                    alt={name}
-                    sx={{ width: 50, height: 50, borderRadius: '8px', objectFit: 'cover', bgcolor: '#f1f5f9' }}
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
+                  <OrderThumbnail src={thumb} alt={name} width={50} height={50} sx={{ borderRadius: '8px' }} />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {name}
@@ -296,40 +343,41 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            {evidenceUrls.map((url, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  position: 'relative',
-                  width: 72,
-                  height: 72,
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid #cbd5e1'
-                }}
-              >
+            {evidenceUrls.map((rawUrl, idx) => {
+              const url = resolveMediaUrl(rawUrl)
+              return (
                 <Box
-                  component="img"
-                  src={url}
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={() => handleRemoveEvidence(idx)}
+                  key={idx}
                   sx={{
-                    position: 'absolute',
-                    top: 2,
-                    right: 2,
-                    bgcolor: 'rgba(0,0,0,0.6)',
-                    color: '#fff',
-                    p: 0.3,
-                    '&:hover': { bgcolor: 'rgba(220,38,38,0.8)' }
+                    position: 'relative',
+                    width: 72,
+                    height: 72,
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid #cbd5e1'
                   }}
                 >
-                  <DeleteOutlineRoundedIcon sx={{ fontSize: 14 }} />
-                </IconButton>
-              </Box>
-            ))}
+                  {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)
+                    ? <Box component="video" src={url} controls sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Box component="img" src={url} onError={(event) => { event.currentTarget.style.display = 'none' }} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveEvidence(idx)}
+                    sx={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      bgcolor: 'rgba(0,0,0,0.6)',
+                      color: '#fff',
+                      p: 0.3,
+                      '&:hover': { bgcolor: 'rgba(220,38,38,0.8)' }
+                    }}
+                  >
+                    <DeleteOutlineRoundedIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
+              )
+            })}
 
             <Button
               component="label"
@@ -350,7 +398,7 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
             >
               {uploading ? <CircularProgress size={20} /> : <CloudUploadRoundedIcon sx={{ fontSize: 22 }} />}
               <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, mt: 0.5 }}>Tải lên</Typography>
-              <input type="file" multiple accept="image/*,video/*" hidden onChange={handleFileUpload} />
+              <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,.mp4" hidden onChange={handleFileUpload} />
             </Button>
           </Box>
         </Box>
@@ -375,7 +423,7 @@ export default function RequestReturnDialog({ open, onClose, order, onSuccess })
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={submitting || selectedCount === 0 || evidenceUrls.length === 0}
+          disabled={submitting || uploading || !subOrderId || selectedCount === 0 || evidenceUrls.length === 0}
           sx={{
             textTransform: 'none',
             fontWeight: 700,

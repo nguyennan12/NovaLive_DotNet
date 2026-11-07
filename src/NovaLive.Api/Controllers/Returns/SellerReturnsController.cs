@@ -13,8 +13,8 @@ namespace NovaLive.Api.Controllers.Returns;
 public sealed class SellerReturnsController(ISender sender) : ApiControllerBase(sender)
 {
     [HttpGet]
-    public async Task<IActionResult> GetSellerReturns([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int size = 20, CancellationToken ct = default) =>
-        Respond(await Sender.Send(new GetSellerReturnsQuery(status, page, size), ct));
+    public async Task<IActionResult> GetSellerReturns([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int size = 20, [FromQuery] Guid? subOrderId = null, CancellationToken ct = default) =>
+        Respond(await Sender.Send(new GetSellerReturnsQuery(status, page, size, subOrderId), ct));
     [HttpPut("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, [FromBody] SellerReturnResponseRequest request, CancellationToken ct) =>
         Respond(await Sender.Send(new ApproveReturnCommand(id, request), ct));

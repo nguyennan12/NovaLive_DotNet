@@ -9,7 +9,9 @@ public record AdminDashboardResponse(
     decimal? TotalPlatformFeeRevenue,
     decimal ReturnRatePercent,
     decimal DisputeRatePercent,
-    IReadOnlyList<PendingSellerPayoutDto> PendingPayouts);
+    IReadOnlyList<PendingSellerPayoutDto> PendingPayouts,
+    IReadOnlyList<DailyRevenuePointDto>? DailyRevenue = null,
+    IReadOnlyList<MonthlyRevenuePointDto>? MonthlyRevenue = null);
 
 public record PendingSellerPayoutDto(
     Guid Id,
@@ -29,7 +31,8 @@ public record SellerDashboardResponse(
     IReadOnlyList<TopSellingSkuDto> TopSkus,
     IReadOnlyList<LivestreamPerformanceSummaryDto> RecentLives,
     SellerActionSummaryDto Actions,
-    WalletOverviewDto? WalletOverview = null);
+    WalletOverviewDto? WalletOverview = null,
+    IReadOnlyList<MonthlyRevenuePointDto>? MonthlyRevenue = null);
 
 public record SellerDashboardAnalyticsDto(
     decimal TotalSalesRevenue,
@@ -40,6 +43,11 @@ public record SellerDashboardAnalyticsDto(
 
 public record DailyRevenuePointDto(
     string Date,
+    decimal Revenue,
+    int OrdersCount);
+
+public record MonthlyRevenuePointDto(
+    string Month,
     decimal Revenue,
     int OrdersCount);
 

@@ -51,3 +51,12 @@ public record ShopAddressResponse(
     int? ProvinceId = null,
     int? DistrictId = null,
     string? WardCode = null);
+
+public record FollowedShopResponse(
+    Guid Id,
+    string ShopName,
+    string Slug,
+    string? LogoUrl,
+    string? Description,
+    bool IsLive,
+    Guid? ActiveLiveId);

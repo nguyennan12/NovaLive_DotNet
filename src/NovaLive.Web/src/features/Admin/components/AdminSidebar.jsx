@@ -1,304 +1,220 @@
-import { useState } from 'react'
-import {
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Chip,
-  IconButton,
-  Divider,
-  Tooltip,
-  useTheme,
-  useMediaQuery
-} from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Box, Chip, IconButton, ListItemButton, ListItemIcon, ListItemText, Tooltip, Typography } from '@mui/material'
+import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded'
+import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded'
+import PlayArrow from '@mui/icons-material/PlayArrow'
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
-import LiveTvRoundedIcon from '@mui/icons-material/LiveTvRounded'
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded'
 import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded'
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded'
-import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded'
+import DiscountRoundedIcon from '@mui/icons-material/DiscountRounded'
 import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded'
-import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded'
-import GavelRoundedIcon from '@mui/icons-material/GavelRounded'
-import KeyboardDoubleArrowLeftRoundedIcon from '@mui/icons-material/KeyboardDoubleArrowLeftRounded'
-import KeyboardDoubleArrowRightRoundedIcon from '@mui/icons-material/KeyboardDoubleArrowRightRounded'
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded'
+import { Link, useLocation } from 'react-router-dom'
 import { gradientText } from '~/theme'
 
-const ADMIN_NAV_GROUPS = [
+const ADMIN_NAVIGATION = [
   {
-    title: 'Giám sát & Điều hành',
+    label: 'Điều hành & Giám sát',
     items: [
-      { key: 'dashboard', label: 'Tổng quan sàn', icon: DashboardRoundedIcon, path: '/admin/dashboard' },
-      { key: 'livestreams', label: 'Giám sát Live', icon: LiveTvRoundedIcon, path: '/admin/livestreams', badge: '18 Live', badgeColor: 'error' },
-      { key: 'disputes', label: 'Phân xử Tranh chấp', icon: GavelRoundedIcon, path: '/admin/disputes', badge: '2 vụ việc', badgeColor: 'error' },
-      { key: 'reports', label: 'Khiếu nại & Tố cáo', icon: ReportProblemRoundedIcon, path: '/admin/reports', badge: '4 mới', badgeColor: 'warning' }
+      { path: 'dashboard', label: 'Tổng quan sàn', icon: DashboardRoundedIcon, exact: true }
     ]
   },
   {
-    title: 'Quản trị Đối tác & Hàng hóa',
+    label: 'Quản trị đối tác',
     items: [
-      { key: 'shops', label: 'Duyệt Shop (KYC)', icon: StorefrontRoundedIcon, path: '/admin/shops', badge: '3 chờ duyệt', badgeColor: 'info' },
-      { key: 'users', label: 'Người dùng & RBAC', icon: PeopleAltRoundedIcon, path: '/admin/users' },
-      { key: 'categories', label: 'Cây danh mục', icon: CategoryRoundedIcon, path: '/admin/categories' },
-      { key: 'flash-sales', label: 'Flash Sale toàn sàn', icon: LocalOfferRoundedIcon, path: '/admin/flash-sales' }
+      { path: 'shops', label: 'Duyệt hồ sơ Shop', icon: StorefrontRoundedIcon },
+      { path: 'payouts', label: 'Duyệt giải ngân ví', icon: AccountBalanceWalletRoundedIcon }
     ]
   },
   {
-    title: 'Tài chính & Đánh giá',
+    label: 'Hàng hóa & Khuyến mãi',
     items: [
-      { key: 'payouts', label: 'Duyệt Payout (Ví)', icon: AccountBalanceWalletRoundedIcon, path: '/admin/payouts', badge: '2 lệnh', badgeColor: 'success' },
-      { key: 'reviews', label: 'Kiểm duyệt đánh giá', icon: RateReviewRoundedIcon, path: '/admin/reviews' }
+      { path: 'categories', label: 'Cây danh mục', icon: CategoryRoundedIcon },
+      { path: 'flash-sales', label: 'Flash Sale sàn', icon: LocalOfferRoundedIcon },
+      { path: 'discounts', label: 'Mã giảm giá sàn', icon: DiscountRoundedIcon }
+    ]
+  },
+  {
+    label: 'Kiểm duyệt',
+    items: [
+      { path: 'reviews', label: 'Kiểm duyệt đánh giá', icon: RateReviewRoundedIcon }
     ]
   }
 ]
 
-export const AdminSidebar = ({ collapsed, setCollapsed }) => {
+export const AdminSidebar = ({ collapsed, onCollapse, onNavigate }) => {
   const location = useLocation()
-  const navigate = useNavigate()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   return (
     <Box
-      component="aside"
+      component="nav"
+      aria-label="Menu quản trị sàn"
       sx={{
-        width: collapsed ? 72 : 260,
-        minWidth: collapsed ? 72 : 260,
+        width: collapsed ? 68 : 250,
         height: '100%',
         bgcolor: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 3,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
-        zIndex: 10
+        transition: 'width 0.2s',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.03)'
       }}
     >
       {/* Brand Header */}
       <Box
         sx={{
-          p: collapsed ? 1.5 : 2.5,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          borderBottom: '1px solid #f1f5f9',
-          minHeight: 68
+          justifyContent: 'space-between',
+          p: collapsed ? 1 : 2,
+          minHeight: 64,
+          borderBottom: 1,
+          borderColor: 'divider'
         }}
       >
-        <Box
-          onClick={() => navigate('/admin/dashboard')}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            cursor: 'pointer'
-          }}
-        >
+        {!collapsed && (
           <Box
-            sx={{
-              width: 38,
-              height: 38,
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #3465c8 0%, #1e40af 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-              flexShrink: 0
-            }}
+            component={Link}
+            to="/admin/dashboard"
+            sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: 0.75 }}
           >
-            <PlayArrowIcon sx={{ fontSize: '1.4rem' }} />
+            <PlayArrow color="secondary" />
+            <Typography sx={{ ...gradientText, fontWeight: 800, fontSize: '1.1rem' }}>
+              NovaLive
+            </Typography>
+            <Chip
+              label="ADMIN"
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                bgcolor: 'rgba(0, 149, 255, 0.1)',
+                color: '#0080db',
+                borderRadius: '6px'
+              }}
+            />
           </Box>
-          {!collapsed && (
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: '1.15rem',
-                  lineHeight: 1.1,
-                  ...gradientText
-                }}
-              >
-                NovaLive
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#64748b',
-                  fontWeight: 700,
-                  fontSize: '0.7rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em'
-                }}
-              >
-                Admin Platform
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
-        {!isMobile && !collapsed && (
-          <IconButton
-            size="small"
-            onClick={() => setCollapsed(!collapsed)}
-            sx={{
-              color: '#94a3b8',
-              bgcolor: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              '&:hover': { bgcolor: '#f1f5f9', color: '#334155' }
-            }}
-          >
-            <KeyboardDoubleArrowLeftRoundedIcon fontSize="small" />
-          </IconButton>
         )}
+        <IconButton
+          onClick={onCollapse}
+          size="small"
+          aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+        >
+          {collapsed ? <ChevronRightRounded /> : <ChevronLeftRounded />}
+        </IconButton>
       </Box>
 
-      {/* Navigation Groups */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          py: 2,
-          px: collapsed ? 1 : 1.5,
-          '&::-webkit-scrollbar': { width: 4 },
-          '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: 2 }
-        }}
-      >
-        {ADMIN_NAV_GROUPS.map((group, groupIdx) => (
-          <Box key={groupIdx} sx={{ mb: 2 }}>
+      {/* Nav List */}
+      <Box sx={{ overflowY: 'auto', flex: 1, py: 1.5, px: 1 }}>
+        {ADMIN_NAVIGATION.map((section) => (
+          <Box key={section.label} sx={{ mb: 1.5 }}>
             {!collapsed && (
               <Typography
-                variant="caption"
                 sx={{
-                  px: 1.5,
-                  mb: 0.8,
-                  display: 'block',
-                  color: '#94a3b8',
-                  fontWeight: 700,
+                  px: 1,
+                  py: 0.75,
+                  color: 'text.secondary',
                   fontSize: '0.7rem',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
+                  letterSpacing: '0.08em',
+                  fontWeight: 700
                 }}
               >
-                {group.title}
+                {section.label}
               </Typography>
             )}
-            <List disablePadding>
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const isActive = location.pathname === item.path
-                return (
-                  <ListItem key={item.key} disablePadding sx={{ mb: 0.5 }}>
-                    <Tooltip title={collapsed ? item.label : ''} placement="right" arrow>
-                      <ListItemButton
-                        onClick={() => navigate(item.path)}
-                        sx={{
-                          borderRadius: '10px',
-                          py: 1,
-                          px: collapsed ? 1.5 : 1.5,
-                          justifyContent: collapsed ? 'center' : 'flex-start',
-                          bgcolor: isActive ? 'rgba(52, 101, 200, 0.08)' : 'transparent',
-                          color: isActive ? '#1e40af' : '#475569',
-                          fontWeight: isActive ? 700 : 500,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            bgcolor: isActive ? 'rgba(52, 101, 200, 0.12)' : '#f8fafc',
-                            color: '#1e40af'
+            {section.items.map((item) => {
+              const itemPath = `/admin/${item.path}`
+              const active = item.exact
+                ? location.pathname === '/admin' || location.pathname === '/admin/' || location.pathname === '/admin/dashboard'
+                : location.pathname === itemPath || location.pathname.startsWith(`${itemPath}/`)
+              const Icon = item.icon
+
+              return (
+                <Tooltip key={item.path} title={collapsed ? item.label : ''} placement="right">
+                  <ListItemButton
+                    component={Link}
+                    to={itemPath}
+                    onClick={onNavigate}
+                    selected={active}
+                    aria-current={active ? 'page' : undefined}
+                    sx={{
+                      borderRadius: 2,
+                      mb: 0.5,
+                      px: collapsed ? 1.5 : 1.5,
+                      minHeight: 40,
+                      color: active ? '#ffffff' : 'text.primary',
+                      '&.Mui-selected': {
+                        bgcolor: 'secondary.main',
+                        color: 'secondary.contrastText',
+                        '&:hover': { bgcolor: 'secondary.dark' }
+                      },
+                      '&:hover': {
+                        bgcolor: active ? 'secondary.dark' : 'rgba(0, 149, 255, 0.08)'
+                      }
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: collapsed ? 24 : 32,
+                        color: active ? 'inherit' : 'text.secondary'
+                      }}
+                    >
+                      <Icon fontSize="small" />
+                    </ListItemIcon>
+                    {!collapsed && (
+                      <ListItemText
+                        primary={item.label}
+                        slotProps={{
+                          primary: {
+                            sx: {
+                              fontSize: '0.84rem',
+                              fontWeight: active ? 700 : 500,
+                              color: 'inherit'
+                            }
                           }
                         }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            minWidth: collapsed ? 'auto' : 36,
-                            color: isActive ? '#2563eb' : '#64748b',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <Icon sx={{ fontSize: '1.25rem' }} />
-                        </ListItemIcon>
-                        {!collapsed && (
-                          <>
-                            <ListItemText
-                              primary={item.label}
-                              primaryTypographyProps={{
-                                fontSize: '0.875rem',
-                                fontWeight: isActive ? 700 : 500
-                              }}
-                            />
-                            {item.badge && (
-                              <Chip
-                                label={item.badge}
-                                size="small"
-                                color={item.badgeColor || 'default'}
-                                sx={{
-                                  height: 20,
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  borderRadius: '6px'
-                                }}
-                              />
-                            )}
-                          </>
-                        )}
-                      </ListItemButton>
-                    </Tooltip>
-                  </ListItem>
-                )
-              })}
-            </List>
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              )
+            })}
           </Box>
         ))}
-      </Box>
 
-      {/* Bottom Switcher / Collapse Toggle */}
-      <Divider sx={{ borderColor: '#f1f5f9' }} />
-      <Box sx={{ p: 1.5 }}>
-        <Tooltip title={collapsed ? 'Trở về trang chủ' : ''} placement="right">
-          <ListItemButton
-            onClick={() => navigate('/')}
-            sx={{
-              borderRadius: '10px',
-              py: 1,
-              px: 1.5,
-              color: '#64748b',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              '&:hover': { bgcolor: '#f8fafc', color: '#0f172a' }
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: collapsed ? 'auto' : 36, color: 'inherit' }}>
-              <HomeRoundedIcon fontSize="small" />
-            </ListItemIcon>
-            {!collapsed && (
-              <ListItemText
-                primary="Về trang mua sắm"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
-              />
-            )}
-          </ListItemButton>
-        </Tooltip>
-
-        {collapsed && !isMobile && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => setCollapsed(false)}
-              sx={{ color: '#94a3b8', bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}
+        {/* Back to Home Link */}
+        <Box sx={{ pt: 1, borderTop: 1, borderColor: 'divider', mt: 1 }}>
+          <Tooltip title={collapsed ? 'Về trang mua sắm' : ''} placement="right">
+            <ListItemButton
+              component={Link}
+              to="/"
+              onClick={onNavigate}
+              sx={{
+                borderRadius: 2,
+                px: collapsed ? 1.5 : 1.5,
+                minHeight: 40,
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+              }}
             >
-              <KeyboardDoubleArrowRightRoundedIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
+              <ListItemIcon sx={{ minWidth: collapsed ? 24 : 32, color: 'text.secondary' }}>
+                <HomeRoundedIcon fontSize="small" />
+              </ListItemIcon>
+              {!collapsed && (
+                <ListItemText
+                  primary="Về trang mua sắm"
+                  slotProps={{ primary: { sx: { fontSize: '0.82rem', fontWeight: 500 } } }}
+                />
+              )}
+            </ListItemButton>
+          </Tooltip>
+        </Box>
       </Box>
     </Box>
   )

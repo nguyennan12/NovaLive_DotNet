@@ -31,13 +31,13 @@ public sealed class CreateLivestreamViewerTokenCommandHandler(
         }
 
         string account;
-        if (currentUser.UserId.HasValue && currentUser.UserId.Value != Guid.Empty)
-        {
-            account = currentUser.UserId.Value.ToString();
-        }
-        else if (!string.IsNullOrWhiteSpace(command.Request?.GuestId))
+        if (!string.IsNullOrWhiteSpace(command.Request?.GuestId))
         {
             account = command.Request.GuestId.Trim();
+        }
+        else if (currentUser.UserId.HasValue && currentUser.UserId.Value != Guid.Empty)
+        {
+            account = $"viewer_{currentUser.UserId.Value:N}_{Guid.NewGuid():N}";
         }
         else
         {

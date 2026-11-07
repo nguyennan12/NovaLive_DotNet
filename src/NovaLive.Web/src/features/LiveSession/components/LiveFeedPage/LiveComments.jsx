@@ -137,7 +137,7 @@ const LiveComments = ({ comments, onSend, commentError, likes, onLike }) => {
             Hãy là người đầu tiên bình luận...
           </Typography>
         )}
-        {comments.map(c => <CommentItem key={c.id} comment={c} />)}
+        {comments.map(c => <CommentItem key={c.id || c._id} comment={c} />)}
       </Box>
 
       {commentError && (

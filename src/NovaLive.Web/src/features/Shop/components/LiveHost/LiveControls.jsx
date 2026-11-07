@@ -5,8 +5,9 @@ import VideocamIcon from '@mui/icons-material/Videocam'
 import VideocamOffIcon from '@mui/icons-material/VideocamOff'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 
-const LiveControls = ({ toggleMic, isMicOn, setConfirmEnd, toggleCam, isCamOn }) => {
+const LiveControls = ({ toggleMic, isMicOn, micError, setConfirmEnd, toggleCam, isCamOn }) => {
   return (
     <Box sx={{
       position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -16,19 +17,21 @@ const LiveControls = ({ toggleMic, isMicOn, setConfirmEnd, toggleCam, isCamOn })
       background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)'
     }}>
 
-      <IconButton
-        onClick={toggleMic}
-        sx={{
-          width: 52, height: 52,
-          bgcolor: isMicOn ? 'rgba(255,255,255,0.15)' : 'rgba(255,59,59,0.8)',
-          color: '#fff',
-          '&:hover': {
-            bgcolor: isMicOn ? 'rgba(255,255,255,0.25)' : 'rgba(255,59,59,1)'
-          }
-        }}
-      >
-        {isMicOn ? <MicIcon /> : <MicOffIcon />}
-      </IconButton>
+      <Tooltip title={micError || (isMicOn ? 'Tắt micro' : 'Bật micro')} arrow>
+        <IconButton
+          onClick={toggleMic}
+          sx={{
+            width: 52, height: 52,
+            bgcolor: isMicOn ? 'rgba(255,255,255,0.15)' : 'rgba(255,59,59,0.8)',
+            color: '#fff',
+            '&:hover': {
+              bgcolor: isMicOn ? 'rgba(255,255,255,0.25)' : 'rgba(255,59,59,1)'
+            }
+          }}
+        >
+          {isMicOn ? <MicIcon /> : <MicOffIcon />}
+        </IconButton>
+      </Tooltip>
 
       <IconButton
         onClick={() => setConfirmEnd(true)}

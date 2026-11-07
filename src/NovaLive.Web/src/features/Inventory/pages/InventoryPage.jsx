@@ -10,7 +10,7 @@ import StockHistory from '../components/InventoryPage/StockHistory'
 import StockInForm from '../components/InventoryPage/StockInForm'
 import StockOutForm from '../components/InventoryPage/StockOutForm'
 import StockOverviewChart from '../components/InventoryPage/StockOverviewChart'
-import { useInventoryStock } from '../hooks/useInventory'
+import { useInventoryAdjustmentOptions, useInventoryStock } from '../hooks/useInventory'
 
 const InventoryPage = () => {
   const [params, setParams] = useState({
@@ -20,7 +20,8 @@ const InventoryPage = () => {
     limit: LIMIT.INVENTORY
   })
 
-  const { skus, totalPages, isLoading, isPlaceholderData } = useInventoryStock(params)
+  const { skus, totalPages, totalCount, isLoading, isPlaceholderData } = useInventoryStock(params)
+  const { skus: adjustmentSkus } = useInventoryAdjustmentOptions()
 
   return (
     <Box sx={{
@@ -78,12 +79,11 @@ const InventoryPage = () => {
           <StockOverviewChart />
         </Grid>
 
-
         <Grid size={{ xs: 12, md: 6 }}>
-          <StockInForm skus={skus} setParams={setParams} />
+          <StockInForm skus={adjustmentSkus} />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <StockOutForm skus={skus} setParams={setParams} />
+          <StockOutForm skus={adjustmentSkus} />
         </Grid>
 
         <Grid size={{ xs: 12, lg: 7 }}>
@@ -92,6 +92,7 @@ const InventoryPage = () => {
             isStale={isPlaceholderData}
             skus={skus}
             totalPages={totalPages}
+            totalCount={totalCount}
             params={params}
             setParams={setParams}
           />

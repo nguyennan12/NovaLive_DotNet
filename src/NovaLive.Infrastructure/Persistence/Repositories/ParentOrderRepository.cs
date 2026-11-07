@@ -47,13 +47,13 @@ public sealed class ParentOrderRepository(AppDbContext db) : IParentOrderReposit
         string? status, DateTimeOffset? from, DateTimeOffset? to, int page, int size, CancellationToken ct)
     {
         var query = db.ParentOrders.AsNoTracking().Where(p => p.BuyerId == buyerId);
-        if (!string.IsNullOrWhiteSpace(status))
+        if (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "all", StringComparison.OrdinalIgnoreCase))
         {
             // Each parent tab reflects fulfilment progress; COD payment state remains independent.
             query = status.ToLowerInvariant() switch
             {
                 "pending" => query.Where(p => db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.PendingPayment)),
-                "processing" => query.Where(p => !db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.PendingPayment)
+                "confirmed" => query.Where(p => !db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.PendingPayment)
                     && db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.Confirmed || s.Status == SubOrderStatus.Processing))),
                 "shipped" => query.Where(p => !db.SubOrders.Any(s => s.ParentOrderId == p.Id && (s.Status == SubOrderStatus.PendingPayment || s.Status == SubOrderStatus.Confirmed || s.Status == SubOrderStatus.Processing))
                     && db.SubOrders.Any(s => s.ParentOrderId == p.Id && s.Status == SubOrderStatus.Shipping)),

@@ -20,7 +20,7 @@ export function ReturnDetailDialog({ item, onClose }: { item: OrderReturn; onClo
   const [note, setNote] = useState(''); const [evidence, setEvidence] = useState<string[]>([])
   const address = item.returnAddress || warehouses.data?.find(warehouse => warehouse.isReturn)
   const pending = item.status === 'Pending' && remaining > 0
-  const receiving = ['SellerApproved', 'AdminApproved'].includes(item.status)
+  const receiving = item.status === 'SellerApproved'
   function confirm() {
     if (action === 'approve') mutation.mutate({ id: item.id, decision: { action, note: note.trim() } }, { onSuccess: onClose })
     if (action === 'reject') mutation.mutate({ id: item.id, decision: { action, reason: note.trim(), evidenceUrls: evidence } }, { onSuccess: onClose })
@@ -28,8 +28,10 @@ export function ReturnDetailDialog({ item, onClose }: { item: OrderReturn; onClo
   }
   return <><Dialog open fullWidth maxWidth='md' onClose={mutation.isPending ? undefined : onClose} aria-labelledby='return-detail-title'><DialogTitle id='return-detail-title'>Trả hàng · {item.subOrderCode}</DialogTitle><DialogContent><Stack spacing={2.5}>
     <Stack direction='row' spacing={2}><StatusBadge status={item.status} /><DateText value={item.createdAt} /></Stack>
-    {item.status === 'Pending' && <><ReturnCountdown createdAt={item.createdAt} /><Alert severity={remaining < 86_400_000 ? 'warning' : 'info'}>Shop có 3 ngày kể từ khi tạo yêu cầu để phản hồi. Quá hạn sẽ được hệ thống chuyển tới bộ phận phân xử.</Alert></>}
+    {item.status === 'Pending' && remaining > 0 && <><ReturnCountdown createdAt={item.createdAt} /><Alert severity={remaining < 86_400_000 ? 'warning' : 'info'}>Shop có 3 ngày kể từ khi tạo yêu cầu để phản hồi. Hết hạn thì BE khóa thao tác duyệt/từ chối; liên hệ hỗ trợ NovaLive để xử lý tiếp.</Alert></>}
+    {item.status === 'Pending' && remaining <= 0 && <Alert severity='error'>Yêu cầu đã quá hạn phản hồi. Shop không thể duyệt hoặc từ chối qua API này; vui lòng liên hệ hỗ trợ NovaLive để được xử lý.</Alert>}
     {item.status === 'AdminDispute' && <Alert severity='info'>Đang chờ Admin phân xử. Shop chỉ có thể xem thông tin yêu cầu này.</Alert>}
+    {receiving && <Alert severity='info'>Đã duyệt trả hàng. Người mua gửi hàng về địa chỉ kho bên dưới; sau khi nhận và kiểm tra hàng, bấm “Xác nhận đã nhận hàng hoàn”. BE sẽ kiểm tra số dư ví Shop, nhập lại tồn kho và hoàn tất yêu cầu.</Alert>}
     <Typography><strong>Lý do:</strong> {returnReasons[item.reason]}</Typography>
     <Typography><strong>Số tiền yêu cầu hoàn:</strong> <MoneyText value={item.requestedRefundAmount} /></Typography>
     {item.approvedRefundAmount !== null && <Typography>Số tiền hoàn được duyệt: <MoneyText value={item.approvedRefundAmount} /></Typography>}

@@ -18,9 +18,7 @@ export const registerUserAPI = async (data) => {
     password: data.password,
     fullName: data.fullName.trim()
   }
-  const response = await authorizedAxiosInstance.post('auth/register', payload)
-  toast.success('Đăng ký tài khoản thành công! Vui lòng kiểm tra mã OTP để kích hoạt.', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/register', payload)
 }
 
 export const verifyOtpAPI = async (data) => {
@@ -28,22 +26,18 @@ export const verifyOtpAPI = async (data) => {
     userId: data.userId,
     otpCode: data.otpCode || data.otpToken || data.otp
   }
-  const response = await authorizedAxiosInstance.post('auth/verify-otp', payload)
-  toast.success('Xác thực tài khoản thành công! Bạn có thể đăng nhập ngay.', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/verify-otp', payload)
 }
 
 export const resendOtpAPI = async (data) => {
   const payload = {
     emailOrPhone: typeof data === 'string' ? data : (data.emailOrPhone || data.email)
   }
-  const response = await authorizedAxiosInstance.post('auth/resend-otp', payload)
-  toast.success('Mã OTP mới đã được gửi!', { theme: 'colored' })
-  return response
+  return await authorizedAxiosInstance.post('auth/resend-otp', payload)
 }
 
-export const refreshTokenAPI = async (refreshToken) => {
-  return await authorizedAxiosInstance.post('auth/refresh', refreshToken ? { refreshToken } : {})
+export const refreshTokenAPI = async () => {
+  return await authorizedAxiosInstance.post('auth/refresh')
 }
 
 export const logoutAPI = async () => {
@@ -92,12 +86,18 @@ export const getMyProfileAPI = async () => {
 
 export const updateMyProfileAPI = async (data) => {
   const request = {
-    fullName: data.fullName || data.user_name,
+    fullName: (data.fullName || data.user_name || '').trim(),
     phone: data.phone ?? data.user_phone ?? null,
     birthday: data.birthday ?? data.user_birthday ?? null,
     gender: data.gender ?? data.user_gender ?? null,
     avatarUrl: data.avatarUrl ?? data.user_avatar ?? null
   }
+
+  if (typeof request.phone === 'string' && !request.phone.trim()) request.phone = null
+  if (typeof request.birthday === 'string' && !request.birthday.trim()) request.birthday = null
+  if (typeof request.gender === 'string' && !request.gender.trim()) request.gender = null
+  if (typeof request.avatarUrl === 'string' && !request.avatarUrl.trim()) request.avatarUrl = null
+
   return normalizeUserProfile(await authorizedAxiosInstance.put('users/me', request))
 }
 

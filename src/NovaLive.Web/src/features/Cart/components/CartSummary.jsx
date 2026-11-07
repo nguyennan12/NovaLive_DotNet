@@ -42,11 +42,11 @@ function CartSummary() {
     (sum, item) => sum + (item.isFlashSale ? item.flashSalePrice : item.price) * item.quantity,
     0
   )
-  if (canCheckout) {
+  if (canCheckout && user) {
     payload = {
       cartId,
       shopOrderIds: buildShopOrderIds(selectedItems, appliedshopDiscounts),
-      userAddressId: user.default_address_id,
+      userAddressId: user?.default_address_id,
       productDiscountCode: appliedProductVoucher?.code ?? '',
       shippingDiscountCode: appliedFreeshipVoucher?.code ?? ''
     }

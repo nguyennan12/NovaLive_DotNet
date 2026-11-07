@@ -18,7 +18,8 @@ public static class FlashSaleMappings
     public static FlashSaleItemResponse ToResponse(
         this FlashSaleItem item,
         Sku? sku = null,
-        Spu? spu = null) =>
+        Spu? spu = null,
+        int totalSoldCount = 0) =>
         new(
             item.Id,
             item.CampaignId,
@@ -34,5 +35,6 @@ public static class FlashSaleMappings
             item.ReservedQty,
             item.PerUserLimit,
             item.Status.ToString(),
-            item.RejectionReason);
+            item.RejectionReason,
+            totalSoldCount);
 }

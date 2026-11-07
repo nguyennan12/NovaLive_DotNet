@@ -18,7 +18,8 @@ public sealed class SearchProductsQueryHandler(
         CancellationToken ct)
     {
         var req = query.Request;
-        var cacheKey = $"products:search:kw:{req.Keyword?.Trim().ToLowerInvariant()}:cat:{req.CategoryId}:shop:{req.ShopId}:min:{req.MinPrice}:max:{req.MaxPrice}:sort:{req.SortBy?.Trim().ToLowerInvariant()}:p:{req.Page}:s:{req.Size}";
+        var catKey = req.CategoryId?.ToString() ?? req.CategorySlug ?? req.Category ?? "all";
+        var cacheKey = $"products:search:kw:{req.Keyword?.Trim().ToLowerInvariant()}:cat:{catKey.ToLowerInvariant()}:shop:{req.ShopId}:min:{req.MinPrice}:max:{req.MaxPrice}:sort:{req.SortBy?.Trim().ToLowerInvariant()}:p:{req.Page}:s:{req.Size}";
 
         var cached = await cacheService.GetAsync<PagedResult<ProductSummaryResponse>>(cacheKey, ct);
         if (cached is not null)

@@ -43,6 +43,8 @@ public record ProductAttributeDto(
 public record ProductSearchRequest(
     string? Keyword = null,
     Guid? CategoryId = null,
+    string? Category = null,
+    string? CategorySlug = null,
     Guid? ShopId = null,
     decimal? MinPrice = null,
     decimal? MaxPrice = null,
@@ -53,15 +55,11 @@ public record ProductSearchRequest(
 public record SearchProductsRequest(
     Guid? ShopId = null,
     Guid? CategoryId = null,
+    string? Category = null,
+    string? CategorySlug = null,
     string? Keyword = null,
     decimal? MinPrice = null,
     decimal? MaxPrice = null,
     string? SortBy = null,
-    int Page = 1,
-    int Size = 20) : ProductSearchRequest(Keyword, CategoryId, ShopId, MinPrice, MaxPrice, SortBy, Page, Size);
-
-public record GetSellerProductsRequest(
-    Guid? CategoryId = null,
-    string? Keyword = null,
     int Page = 1,
     int Size = 20) : PagedRequest(Page, Size);

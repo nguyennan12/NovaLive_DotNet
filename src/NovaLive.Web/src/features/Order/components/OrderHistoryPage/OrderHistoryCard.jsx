@@ -3,16 +3,16 @@ import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined'
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded'
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded'
 import AssignmentReturnRoundedIcon from '@mui/icons-material/AssignmentReturnRounded'
-import { Box, Button, Chip, CircularProgress, Divider, Skeleton, Typography } from '@mui/material'
+import { Box, Button, Chip, Divider, Skeleton, Typography } from '@mui/material'
 import { forwardRef, useState } from 'react'
-import { useSelector } from 'react-redux'
 import { formatDate, formatVND } from '~/common/utils/formatters'
-import { selectCurrentUser } from '~/store/user/userSlice'
 import { STATUS_CONFIG, canCancelOrder, isDeliveredWithinReturnWindow, getRemainingReturnDays } from '../../constants/orderStatus'
 import CancelOrderDialog from '../shared/CancelOrderDialog'
 import PaymentQrModal from '../shared/PaymentQrModal'
 import RequestReturnDialog from '../shared/RequestReturnDialog'
+import ReviewOrderDialog from '~/features/Review/components/ReviewOrderDialog'
 import { glassSx } from '~/theme'
+import OrderThumbnail from '../shared/OrderThumbnail'
 
 function StatusChip({ status }) {
   const cfg = STATUS_CONFIG[status] || {}
@@ -36,7 +36,7 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
   const [showCancel, setShowCancel] = useState(false)
   const [showPaymentQr, setShowPaymentQr] = useState(false)
   const [showReturn, setShowReturn] = useState(false)
-  const user = useSelector(selectCurrentUser)
+  const [showReview, setShowReview] = useState(false)
 
   const { _id, order_trackingNumber, order_status, order_products = [], order_checkout = {}, order_payment = {}, createdAt, deliveredAt } = order
 
@@ -109,18 +109,7 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
         <Box sx={{ px: 2, py: 1.5 }}>
           {firstProduct ? (
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              <Box
-                component="img"
-                src={firstProduct.productId?.spu_thumb}
-                alt={firstProduct.productId?.spu_name}
-                sx={{
-                  width: 64, height: 64, borderRadius: 1.5,
-                  objectFit: 'cover', flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider',
-                  bgcolor: 'rgba(0,0,0,0.03)'
-                }}
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
+              <OrderThumbnail src={firstProduct.productId?.spu_thumb} alt={firstProduct.productId?.spu_name} width={64} height={64} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{
                   fontSize: '0.85rem', fontWeight: 600,
@@ -217,10 +206,10 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
               </Button>
             )}
 
-            {order_status === 'delivered' && withinReturn && (
+            {(order_status === 'delivered' || order_status === 'completed') && order_products.length > 0 && (
               <Button
                 size="small"
-                onClick={() => alert('Tính năng đánh giá đang phát triển')}
+                onClick={() => setShowReview(true)}
                 sx={{
                   fontSize: '0.76rem', fontWeight: 600, py: 0.5, px: 1.5,
                   border: '1px solid rgba(52,133,247,0.35)', color: 'secondary.main',
@@ -289,6 +278,12 @@ const OrderHistoryCard = forwardRef(function OrderHistoryCard({ order, onViewDet
         onClose={() => setShowReturn(false)}
         order={order}
         onSuccess={() => onOrderUpdated?.()}
+      />
+
+      <ReviewOrderDialog
+        open={showReview}
+        onClose={() => setShowReview(false)}
+        items={order_products}
       />
     </>
   )

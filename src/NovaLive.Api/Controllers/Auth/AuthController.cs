@@ -90,7 +90,10 @@ public sealed class AuthController(ISender sender, SessionCookies cookies) : Api
             return Failure(result);
         }
         cookies.Write(Response, result.Value!);
-        return Ok(ApiResponse<AuthResponse>.Ok(result.Value!.Response));
+        // Session credentials are carried only by HttpOnly cookies. Returning them in JSON
+        // makes the cookie flow vulnerable to token theft through script access.
+        var session = result.Value!.Response;
+        return Ok(ApiResponse<CookieSessionResponse>.Ok(new(session.ExpiresAt, session.User)));
     }
 
     private IActionResult Respond<T>(Result<T> result) => result.IsSuccess
@@ -108,3 +111,5 @@ public sealed class AuthController(ISender sender, SessionCookies cookies) : Api
         return new ObjectResult(problem) { StatusCode = problem.Status, ContentTypes = { "application/problem+json" } };
     }
 }
+
+public sealed record CookieSessionResponse(DateTime ExpiresAt, UserSummaryDto User);

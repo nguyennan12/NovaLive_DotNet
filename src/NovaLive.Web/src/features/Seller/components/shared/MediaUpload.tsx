@@ -15,7 +15,10 @@ export function MediaUpload({ label, urls, onChange, multiple = false, video = f
       if (!file.type.startsWith('image/') && !(video && file.type.startsWith('video/'))) { setError('Chọn tệp ảnh hoặc video được hỗ trợ.'); return }
       const max = file.type.startsWith('video/') ? 100 : 10
       if (file.size > max * 1024 * 1024) { setError(`Tệp ${file.name} vượt quá giới hạn ${max} MB.`); return }
-      try { result.push((await upload.mutateAsync({ file })).url) } catch { return }
+      try {
+        const res = await upload.mutateAsync({ file })
+        if (res.url) result.push(res.url)
+      } catch { return }
     }
     onChange(result)
   }

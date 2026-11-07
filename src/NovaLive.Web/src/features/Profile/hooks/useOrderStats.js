@@ -12,7 +12,7 @@ export const useOrderStats = () => {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['order_stats_summary'],
-    queryFn: () => getMyOrdersAPI({ limit: 500 }),
+    queryFn: () => getMyOrdersAPI({ limit: 100 }),
     staleTime: 2 * 60 * 1000,
     enabled: !!currentUser,
     retry: false

@@ -25,7 +25,7 @@ const PAYMENT_METHODS = [
   },
   {
     value: 'cod',
-    label: 'Thanh toán khi nhận hàng (COD)',
+    label: 'Thanh toán khi nhận hàng COD',
     desc: 'Thanh toán tiền mặt trực tiếp cho nhân viên giao hàng khi nhận kiện hàng',
     Icon: LocalAtmRoundedIcon,
     color: '#16a34a',

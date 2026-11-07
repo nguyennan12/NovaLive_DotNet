@@ -1,5 +1,4 @@
 import HourglassEmptyRoundedIcon from '@mui/icons-material/HourglassEmptyRounded'
-import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded'
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded'
 import LocalShippingRoundedIcon from '@mui/icons-material/LocalShippingRounded'
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
@@ -7,7 +6,6 @@ import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 
 export const ORDER_STATUS = {
   PENDING: 'pending',
-  PROCESSING: 'processing',
   CONFIRMED: 'confirmed',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
@@ -22,18 +20,11 @@ export const STATUS_CONFIG = {
     borderColor: 'rgba(245,158,11,0.25)',
     Icon: HourglassEmptyRoundedIcon
   },
-  processing: {
-    label: 'Đang xử lý',
-    color: '#3485f7',
-    bgColor: 'rgba(52,133,247,0.1)',
-    borderColor: 'rgba(52,133,247,0.25)',
-    Icon: AutorenewRoundedIcon
-  },
   confirmed: {
     label: 'Đã xác nhận',
-    color: '#3485f7',
-    bgColor: 'rgba(52,133,247,0.1)',
-    borderColor: 'rgba(52,133,247,0.25)',
+    color: '#16a34a',
+    bgColor: 'rgba(22,163,74,0.1)',
+    borderColor: 'rgba(22,163,74,0.25)',
     Icon: CheckCircleOutlineRoundedIcon
   },
   shipped: {
@@ -62,17 +53,17 @@ export const STATUS_CONFIG = {
 // Tabs cho OrderHistoryPage
 export const ORDER_TABS = [
   { label: 'Chờ xác nhận', status: 'pending' },
-  { label: 'Đang xử lý', status: 'processing' },
+  { label: 'Đã xác nhận', status: 'confirmed' },
   { label: 'Đang giao', status: 'shipped' },
   { label: 'Đã giao', status: 'delivered' },
   { label: 'Đã hủy', status: 'cancelled' },
-  { label: 'Tất cả', statuses: 'all' }
+  { label: 'Trả hàng / Hoàn tiền', status: 'returns' },
+  { label: 'Tất cả', status: 'all' }
 ]
 
 // Timeline các bước theo thứ tự logic của đơn hàng
 export const STATUS_TIMELINE_STEPS = [
   { status: 'pending', label: 'Đặt hàng thành công' },
-  { status: 'processing', label: 'Đang xử lý' },
   { status: 'confirmed', label: 'Đã xác nhận' },
   { status: 'shipped', label: 'Đang giao hàng' },
   { status: 'delivered', label: 'Giao hàng thành công' }

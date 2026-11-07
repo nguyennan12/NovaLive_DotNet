@@ -191,6 +191,10 @@ const theme = extendTheme({
           minWidth: 0,
           padding: '6px 12px',
           color: 'var(--mui-palette-primary-contrastText)',
+          '&.Mui-selected': {
+            color: 'var(--mui-palette-secondary-main)',
+            fontWeight: 600
+          },
           '&.Mui-selected .MuiSvgIcon-root': {
             color: 'var(--mui-palette-secondary-main) !important',
             fontWeight: 600

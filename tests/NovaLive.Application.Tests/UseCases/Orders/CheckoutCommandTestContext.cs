@@ -4,6 +4,7 @@ using NovaLive.Application.Abstractions.Persistence.Repositories;
 using NovaLive.Application.UseCases.Orders;
 using NovaLive.Application.UseCases.Orders.Commands.Checkout;
 using NovaLive.Contracts.V1.Orders;
+using NovaLive.Contracts.V1.Shipping;
 using NovaLive.Domain.Common;
 using NovaLive.Domain.Orders;
 using NovaLive.Domain.Payments;
@@ -52,6 +53,12 @@ public sealed class CheckoutCommandTestContext
             .Callback((Payment p, CancellationToken _) => PaymentList.Add(p)).Returns(Task.CompletedTask);
         Outbox.Setup(p => p.AddAsync(It.IsAny<OutboxMessage>(), It.IsAny<CancellationToken>()))
             .Callback((OutboxMessage p, CancellationToken _) => Messages.Add(p)).Returns(Task.CompletedTask);
+        Outbox.Setup(p => p.HasCodSettlementEligibleShipmentDeliveredEventAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid shipmentId, CancellationToken _) => Messages.Any(message =>
+                message.EventType == nameof(ShipmentDeliveredEvent)
+                && message.Payload.Contains(shipmentId.ToString())
+                && (message.Payload.Contains("\"isVerifiedWebhook\":true")
+                    || message.Payload.Contains("\"isSellerConfirmedDelivery\":true"))));
         Draft.Discounts.Setup(d => d.TryConsumeAsync(It.IsAny<Guid>(), Draft.UserId, Draft.Now, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         Draft.Discounts.Setup(d => d.AddUsageAsync(It.IsAny<DiscountUsage>(), It.IsAny<CancellationToken>()))
             .Callback((DiscountUsage d, CancellationToken _) => Usages.Add(d)).Returns(Task.CompletedTask);
@@ -65,6 +72,7 @@ public sealed class CheckoutCommandTestContext
         Draft.Spus.Object, Draft.Shops.Object, Draft.Inventories.Object, Draft.Addresses.Object,
         Draft.Warehouses.Object, Draft.Discounts.Object, Draft.Shipping.Object, Draft.User.Object, Draft.Clock.Object, Draft.FlashSales.Object),
         Transactions.Object, Draft.Carts.Object, Draft.Inventories.Object, Parents.Object, Subs.Object,
-        Items.Object, Histories.Object, Payments.Object, Draft.Discounts.Object, Outbox.Object, Draft.User.Object, Draft.Clock.Object, Draft.FlashSales.Object);
+        Items.Object, Histories.Object, Payments.Object, Draft.Discounts.Object, Outbox.Object,
+        Draft.LivestreamProducts.Object, Draft.User.Object, Draft.Clock.Object, Draft.FlashSales.Object);
     public Task<Result<CheckoutResponse>> Run(CheckoutRequest? request = null) => Handler.Handle(new(request ?? Request, "test-key"), default);
 }

@@ -67,11 +67,21 @@ public sealed class GetPublicProductDetailQueryHandler(
             return sku.ToPublicResponse(inv, skuImgs);
         }).ToList();
 
+        var soldCount = await (
+            from oi in dbContext.OrderItems.AsNoTracking()
+            join so in dbContext.SubOrders.AsNoTracking() on oi.SubOrderId equals so.Id
+            where skuIds.Contains(oi.SkuId)
+                && so.Status != SubOrderStatus.Cancelled
+                && so.Status != SubOrderStatus.PendingPayment
+            select oi.Quantity
+        ).SumAsync(ct);
+
         var response = spu.ToPublicDetailResponse(
             shop?.ShopName ?? "Gian hàng",
             category?.Name ?? "Danh mục",
             skuResponses,
-            attributes);
+            attributes,
+            soldCount);
 
         await cacheService.SetAsync(cacheKey, response, CacheTtl, ct);
 
